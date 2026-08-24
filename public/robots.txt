@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+
+# Disallow admin routes from being indexed
+Disallow: /admin
+Disallow: /api/
+
+# Sitemap
+Sitemap: https://shopease.in/sitemap.xml
