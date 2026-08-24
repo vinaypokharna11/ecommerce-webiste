@@ -1,3 +1,84 @@
-/.env.local
-/node_modules
-/prompt
+# ─── Next.js ──────────────────────────────────────────────────────────────────
+.next/
+out/
+build/
+dist/
+
+# ─── Node.js / Dependencies ───────────────────────────────────────────────────
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnp
+.pnp.js
+
+# ─── Environment Variables (NEVER commit secrets!) ────────────────────────────
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env*.local
+
+# ─── Database / Runtime Data ──────────────────────────────────────────────────
+# db.json holds runtime data (orders, messages, inquiries) — keep out of git
+src/data/db.json
+src/database/db.json
+database/db.json
+
+# ─── OS / System Files ────────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ─── IDEs & Editors ───────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.swp
+*.swo
+.sublime-project
+.sublime-workspace
+
+# ─── Logs ─────────────────────────────────────────────────────────────────────
+logs/
+*.log
+*.log.*
+
+# ─── Caches ───────────────────────────────────────────────────────────────────
+.cache/
+.eslintcache
+.stylelintcache
+.parcel-cache/
+.turbo/
+*.tsbuildinfo
+
+# ─── Testing ──────────────────────────────────────────────────────────────────
+coverage/
+.nyc_output/
+test-results/
+
+# ─── Misc / Project Specific ──────────────────────────────────────────────────
+prompt/
+*.bak
+*.orig
+*.temp
+*.tmp
+
+# ─── Vercel / Deployment ──────────────────────────────────────────────────────
+.vercel/
+.netlify/
+
+# ─── TypeScript ───────────────────────────────────────────────────────────────
+*.d.ts.map
+next-env.d.ts
