@@ -12,38 +12,35 @@ const iconMap = {
 
 export const FeatureBenefits = () => {
   return (
-    <section className="py-8 sm:py-12" aria-label="Feature Benefits">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
+    <section className="py-6 sm:py-10" aria-label="Feature Benefits">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
           {FEATURE_BENEFITS.map((feature, idx) => {
-            const Icon = iconMap[feature.icon];
+            const Icon = iconMap[feature.icon] || ShoppingBag;
 
             return (
               <motion.div
                 key={feature.id}
-                initial={{ opacity: 0, y: 24 }}
+                initial={{ opacity: 0, y: 15 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: '-50px' }}
-                transition={{ duration: 0.5, delay: idx * 0.12 }}
-                className="group relative bg-white rounded-3xl p-6 sm:p-7 border border-[#EAE6FD] shadow-card hover:shadow-card-hover transition-all duration-300 hover:-translate-y-1.5 flex items-center gap-5 cursor-default"
+                transition={{ duration: 0.4, delay: idx * 0.08 }}
+                className="bg-white rounded-[26px] p-5 sm:p-6 border border-black/[0.04] shadow-neu-card hover:shadow-neu-card-hover transition-all duration-300 flex items-center gap-4 cursor-default"
               >
-                {/* Icon Container */}
-                <div className={`w-14 h-14 sm:w-16 sm:h-16 rounded-2xl ${feature.iconBg} flex items-center justify-center flex-shrink-0 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3 shadow-sm`}>
-                  <Icon className={`w-7 h-7 sm:w-8 sm:h-8 ${feature.iconColor}`} />
+                {/* Icon Container in #EEEEEC */}
+                <div className="w-12 h-12 rounded-[18px] bg-[#EEEEEC] flex items-center justify-center shrink-0 text-[#171717] shadow-xs">
+                  <Icon className="w-6 h-6 text-[#171717]" />
                 </div>
 
                 {/* Content */}
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-lg sm:text-xl font-bold text-[#15152A] mb-1 group-hover:text-[#6257FF] transition-colors">
+                  <h3 className="text-sm sm:text-base font-extrabold text-[#171717] mb-0.5">
                     {feature.title}
                   </h3>
-                  <p className="text-sm text-[#626276] leading-snug">
+                  <p className="text-xs text-[#777777] leading-snug">
                     {feature.description}
                   </p>
                 </div>
-
-                {/* Subtle Hover Gradient Accent Line */}
-                <div className="absolute inset-x-8 bottom-0 h-0.5 bg-gradient-to-r from-transparent via-[#8B5CF6]/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-full" />
               </motion.div>
             );
           })}

@@ -1,10 +1,10 @@
-# ─── Next.js ──────────────────────────────────────────────────────────────────
+# === Next.js ===
 .next/
 out/
 build/
 dist/
 
-# ─── Node.js / Dependencies ───────────────────────────────────────────────────
+# === Node.js / Dependencies ===
 node_modules/
 npm-debug.log*
 yarn-debug.log*
@@ -13,7 +13,7 @@ pnpm-debug.log*
 .pnp
 .pnp.js
 
-# ─── Environment Variables (NEVER commit secrets!) ────────────────────────────
+# === Environment Variables (NEVER commit these!) ===
 .env
 .env.local
 .env.development.local
@@ -21,13 +21,13 @@ pnpm-debug.log*
 .env.production.local
 .env*.local
 
-# ─── Database / Runtime Data ──────────────────────────────────────────────────
-# db.json holds runtime data (orders, messages, inquiries) — keep out of git
+# === Database / Runtime Data ===
+# db.json stores live orders, messages, inquiries - keep out of git
 src/data/db.json
 src/database/db.json
 database/db.json
 
-# ─── OS / System Files ────────────────────────────────────────────────────────
+# === OS / System Files ===
 .DS_Store
 .DS_Store?
 ._*
@@ -37,7 +37,7 @@ ehthumbs.db
 Thumbs.db
 desktop.ini
 
-# ─── IDEs & Editors ───────────────────────────────────────────────────────────
+# === IDEs & Editors ===
 .vscode/
 .idea/
 *.suo
@@ -50,12 +50,12 @@ desktop.ini
 .sublime-project
 .sublime-workspace
 
-# ─── Logs ─────────────────────────────────────────────────────────────────────
+# === Logs ===
 logs/
 *.log
 *.log.*
 
-# ─── Caches ───────────────────────────────────────────────────────────────────
+# === Caches ===
 .cache/
 .eslintcache
 .stylelintcache
@@ -63,22 +63,22 @@ logs/
 .turbo/
 *.tsbuildinfo
 
-# ─── Testing ──────────────────────────────────────────────────────────────────
+# === Testing ===
 coverage/
 .nyc_output/
 test-results/
 
-# ─── Misc / Project Specific ──────────────────────────────────────────────────
+# === Misc / Project Specific ===
 prompt/
 *.bak
 *.orig
 *.temp
 *.tmp
 
-# ─── Vercel / Deployment ──────────────────────────────────────────────────────
+# === Vercel / Deployment ===
 .vercel/
 .netlify/
 
-# ─── TypeScript ───────────────────────────────────────────────────────────────
+# === TypeScript ===
 *.d.ts.map
 next-env.d.ts

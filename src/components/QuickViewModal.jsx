@@ -1,6 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Star, ShoppingCart, MessageCircle, ShieldCheck, Truck, RotateCcw, Check, Plus, Minus } from 'lucide-react';
+import { 
+  ChevronLeft, 
+  ShoppingBag, 
+  Heart, 
+  CheckCircle2, 
+  Plus, 
+  Minus, 
+  Star,
+  Check,
+  MessageCircle,
+  Sparkles,
+} from 'lucide-react';
+import Image from 'next/image';
 import { STORE_CONFIG } from '../data/mockData';
 import { createProductWhatsAppUrl } from '../utils/whatsapp';
 
@@ -11,18 +23,24 @@ export const QuickViewModal = ({
   onAddToCart,
   cartQuantity = 0,
   onUpdateQuantity,
-  onInquire
+  isFavorite = false,
+  onToggleFavorite,
 }) => {
-  const [selectedSize, setSelectedSize] = useState(null);
+  const [selectedSize, setSelectedSize] = useState('L');
   const [selectedColor, setSelectedColor] = useState(null);
   const [localQty, setLocalQty] = useState(1);
+  const [isFollowing, setIsFollowing] = useState(true);
+  const [activeImgIndex, setActiveImgIndex] = useState(0);
   const [isAdded, setIsAdded] = useState(false);
+
+  const availableSizes = product?.sizes || ['S', 'M', 'L', 'XL'];
 
   useEffect(() => {
     if (product) {
-      setSelectedSize(product.sizes ? product.sizes[0] : null);
+      setSelectedSize(product.sizes ? product.sizes[0] : 'L');
       setSelectedColor(product.colors ? product.colors[0].name : null);
       setLocalQty(1);
+      setActiveImgIndex(0);
       setIsAdded(false);
     }
   }, [product]);
@@ -45,7 +63,8 @@ export const QuickViewModal = ({
   if (!isOpen || !product) return null;
 
   const isOutOfStock = product.stockStatus === 'out_of_stock';
-  const whatsappInquiryUrl = createProductWhatsAppUrl(product, selectedSize, selectedColor);
+  const totalPrice = (product.price || 0) * localQty;
+  const whatsappUrl = createProductWhatsAppUrl(product, selectedSize, selectedColor);
 
   const handleAdd = () => {
     if (isOutOfStock) return;
@@ -61,264 +80,239 @@ export const QuickViewModal = ({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 md:p-6">
+      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
         {/* Backdrop */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={onClose}
-          className="fixed inset-0 bg-[#15152A]/60 backdrop-blur-md transition-opacity"
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity"
         />
 
-        {/* Modal Window / Mobile Bottom Sheet */}
+        {/* Details Screen Container (Direct Match for Reference Screen 2) */}
         <motion.div
-          initial={{ opacity: 0, y: 100, scale: 0.95 }}
+          initial={{ opacity: 0, y: 100, scale: 0.96 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 100, scale: 0.95 }}
-          transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-          className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto bg-white rounded-t-[32px] sm:rounded-[32px] border border-[#EAE6FD] shadow-[0_25px_60px_rgba(98,87,255,0.2)] z-10 p-6 sm:p-8"
+          exit={{ opacity: 0, y: 100, scale: 0.96 }}
+          transition={{ type: 'spring', damping: 26, stiffness: 320 }}
+          className="relative w-full max-w-lg max-h-[92vh] overflow-y-auto bg-white rounded-t-[32px] sm:rounded-[32px] border border-black/5 shadow-glass-modal z-10 p-5 sm:p-7 flex flex-col justify-between"
         >
-          {/* Close Button */}
-          <button
-            onClick={onClose}
-            className="absolute top-4 right-4 sm:top-6 sm:right-6 w-10 h-10 rounded-full bg-[#FAF9FF] hover:bg-[#F1EFFF] text-[#626276] hover:text-[#15152A] flex items-center justify-center transition-colors shadow-sm z-20"
-            aria-label="Close modal"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div>
+            {/* Top Bar Header (Screen 2: Back < | Details | Bag 🛍️) */}
+            <div className="flex items-center justify-between mb-4">
+              <button
+                onClick={onClose}
+                className="w-10 h-10 rounded-full bg-[#EEEEEC] hover:bg-[#E2E2DE] text-[#171717] flex items-center justify-center transition-transform active:scale-95 shadow-sm"
+                aria-label="Back"
+              >
+                <ChevronLeft className="w-5 h-5 stroke-[2.5]" />
+              </button>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8 items-center">
-            
-            {/* Left Column: Product Image Gallery */}
-            <div className="relative aspect-square rounded-2xl bg-gradient-to-br from-[#F5F3FF] via-[#FAF9FF] to-[#FFF0FB] p-6 flex items-center justify-center overflow-hidden border border-[#EAE6FD]">
-              {product.badge && (
-                <span className="absolute top-4 left-4 px-3 py-1 rounded-full text-xs font-bold bg-white/95 backdrop-blur-md text-[#6257FF] border border-[#EAE6FD] shadow-sm">
-                  {product.badge}
-                </span>
-              )}
+              <h2 className="text-base font-extrabold text-[#171717] tracking-tight">
+                Details
+              </h2>
 
-              <img
-                src={product.image}
-                alt={product.name}
-                className="max-h-full max-w-full object-contain drop-shadow-[0_12px_30px_rgba(98,87,255,0.18)]"
-              />
-
-              {isOutOfStock && (
-                <div className="absolute inset-0 bg-white/70 backdrop-blur-xs flex items-center justify-center">
-                  <span className="px-4 py-1.5 rounded-full bg-[#15152A] text-white font-bold text-sm">
-                    Out of Stock
+              <div className="relative">
+                <button
+                  onClick={onClose}
+                  className="w-10 h-10 rounded-full bg-[#EEEEEC] hover:bg-[#E2E2DE] text-[#171717] flex items-center justify-center transition-transform active:scale-95 shadow-sm"
+                  aria-label="Shopping Bag"
+                >
+                  <ShoppingBag className="w-4 h-4" />
+                </button>
+                {cartQuantity > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-[#9FD842] text-[#171717] text-[9px] font-extrabold w-4 h-4 rounded-full flex items-center justify-center border border-white">
+                    {cartQuantity}
                   </span>
-                </div>
-              )}
+                )}
+              </div>
             </div>
 
-            {/* Right Column: Product Details & Controls */}
-            <div>
-              {/* Category & Title */}
-              <div className="mb-3">
-                <span className="text-xs font-bold text-[#8B5CF6] uppercase tracking-wider">
-                  {product.categoryName}
+            {/* Product Image Gallery in #EEEEEC container with dot pagination */}
+            <div className="relative w-full aspect-square rounded-[28px] bg-[#EEEEEC] p-6 flex flex-col items-center justify-between overflow-hidden mb-4">
+              <div className="w-full flex-1 relative flex items-center justify-center">
+                {product.image && (
+                  <Image
+                    src={product.image}
+                    alt={product.name}
+                    fill
+                    className="object-contain p-2 rounded-[20px] transition-transform duration-500 hover:scale-105"
+                    sizes="(max-width: 768px) 90vw, 400px"
+                  />
+                )}
+              </div>
+
+              {/* Dot Pagination */}
+              <div className="flex items-center gap-1.5 pt-2 z-10">
+                <span className="w-2 h-2 rounded-full bg-[#D1D5DB]" />
+                <span className="w-6 h-2 rounded-full bg-[#171717]" />
+                <span className="w-2 h-2 rounded-full bg-[#D1D5DB]" />
+              </div>
+            </div>
+
+            {/* Category + Title + Wishlist Button Row */}
+            <div className="flex items-start justify-between gap-3 mb-4">
+              <div>
+                <span className="text-xs font-semibold text-[#777777] block">
+                  {product.categoryName || 'Footwear'}
                 </span>
-                <h2 className="text-xl sm:text-2xl font-extrabold text-[#15152A] mt-1 leading-snug">
+                <h1 className="text-xl sm:text-2xl font-extrabold text-[#171717] tracking-tight mt-0.5 leading-tight">
                   {product.name}
-                </h2>
+                </h1>
               </div>
 
-              {/* Rating & Stock Status */}
-              <div className="flex items-center gap-3 mb-4 flex-wrap">
-                <div className="flex items-center gap-1 bg-[#FAF9FF] px-2.5 py-1 rounded-full border border-[#EAE6FD]">
-                  <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
-                  <span className="text-xs font-bold text-[#15152A]">{product.rating}</span>
-                  <span className="text-xs text-[#8E8EA0]">({product.reviews} reviews)</span>
+              <button
+                onClick={() => onToggleFavorite && onToggleFavorite(product.id)}
+                className="w-10 h-10 rounded-full bg-[#EEEEEC] hover:bg-[#E2E2DE] flex items-center justify-center transition-transform active:scale-95 shrink-0 shadow-sm"
+                aria-label="Wishlist"
+              >
+                <Heart 
+                  className={`w-5 h-5 transition-colors ${
+                    isFavorite 
+                      ? 'text-red-500 fill-red-500' 
+                      : 'text-[#171717]'
+                  }`} 
+                />
+              </button>
+            </div>
+
+            {/* Official Store Card (Matches Reference Screen 2) */}
+            <div className="flex items-center justify-between p-3 rounded-[20px] bg-[#FAF9F7] border border-black/[0.04] mb-5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-[14px] bg-gradient-to-tr from-amber-200 to-orange-300 flex items-center justify-center text-xs font-bold text-[#171717] shadow-sm">
+                  🛍️
                 </div>
-
-                {isOutOfStock ? (
-                  <span className="text-xs font-bold text-rose-600 bg-rose-50 px-2.5 py-1 rounded-full border border-rose-200">
-                    Out of Stock
-                  </span>
-                ) : product.stockStatus === 'low_stock' ? (
-                  <span className="text-xs font-bold text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200">
-                    Only {product.stockCount} left in stock
-                  </span>
-                ) : (
-                  <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200 flex items-center gap-1">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                    In Stock (Ready to dispatch)
-                  </span>
-                )}
-              </div>
-
-              {/* Price Row */}
-              <div className="flex items-baseline gap-3 mb-4 pb-4 border-b border-[#EAE6FD]">
-                <span className="text-2xl sm:text-3xl font-extrabold text-[#15152A]">
-                  {STORE_CONFIG.currency}{product.price.toLocaleString()}
-                </span>
-                {product.oldPrice && (
-                  <span className="text-base font-medium text-[#A0A0B2] line-through">
-                    {STORE_CONFIG.currency}{product.oldPrice.toLocaleString()}
-                  </span>
-                )}
-                {product.discountPercent && (
-                  <span className="text-xs font-bold text-[#EC5AC8] bg-[#FFF0FB] px-2 py-0.5 rounded-full border border-[#FCD6F2]">
-                    Save {product.discountPercent}%
-                  </span>
-                )}
-              </div>
-
-              {/* Description */}
-              <p className="text-xs sm:text-sm text-[#626276] leading-relaxed mb-5">
-                {product.description}
-              </p>
-
-              {/* Dynamic Variation: Sizes */}
-              {product.sizes && product.sizes.length > 0 && (
-                <div className="mb-4">
-                  <div className="flex items-center justify-between text-xs font-semibold text-[#15152A] mb-2">
-                    <span>Select Size</span>
-                    <span className="text-[#8B5CF6]">Size Guide</span>
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs sm:text-sm font-extrabold text-[#171717]">
+                      {STORE_CONFIG.name} Store
+                    </span>
+                    <CheckCircle2 className="w-3.5 h-3.5 text-[#171717] fill-current text-white" />
                   </div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    {product.sizes.map((size) => (
+                  <span className="text-[11px] font-medium text-[#777777] block">
+                    Official store
+                  </span>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setIsFollowing(!isFollowing)}
+                className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all shadow-sm flex items-center gap-1 ${
+                  isFollowing 
+                    ? 'bg-[#171717] text-white hover:bg-black' 
+                    : 'bg-white text-[#171717] border border-black/10 hover:bg-[#EEEEEC]'
+                }`}
+              >
+                {isFollowing && <Check className="w-3 h-3 stroke-[3]" />}
+                <span>{isFollowing ? 'Following' : 'Follow'}</span>
+              </button>
+            </div>
+
+            {/* Select Size + QTY Selector Row */}
+            <div className="flex items-center justify-between gap-4 mb-5">
+              {/* Select size */}
+              <div>
+                <span className="text-xs font-semibold text-[#777777] block mb-2">
+                  Select size
+                </span>
+                <div className="flex items-center gap-2">
+                  {availableSizes.map((size) => {
+                    const isSelected = selectedSize === size;
+                    return (
                       <button
                         key={size}
                         onClick={() => setSelectedSize(size)}
-                        className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                          selectedSize === size
-                            ? 'bg-[#6257FF] text-white shadow-sm ring-2 ring-[#6257FF]/30'
-                            : 'bg-[#FAF9FF] text-[#15152A] hover:bg-[#EDE9FE] border border-[#EAE6FD]'
+                        className={`w-9 h-9 sm:w-10 sm:h-10 rounded-[14px] font-extrabold text-xs transition-all active:scale-95 shadow-sm ${
+                          isSelected
+                            ? 'bg-[#9FD842] text-[#171717] shadow-neu-btn-accent ring-2 ring-[#9FD842]/30'
+                            : 'bg-[#EEEEEC] text-[#171717] hover:bg-[#E2E2DE]'
                         }`}
                       >
                         {size}
                       </button>
-                    ))}
-                  </div>
+                    );
+                  })}
                 </div>
-              )}
+              </div>
 
-              {/* Dynamic Variation: Colors */}
-              {product.colors && product.colors.length > 0 && (
-                <div className="mb-5">
-                  <div className="text-xs font-semibold text-[#15152A] mb-2">
-                    <span>Color: </span>
-                    <span className="font-bold text-[#6257FF]">{selectedColor}</span>
-                  </div>
-                  <div className="flex items-center gap-2.5">
-                    {product.colors.map((color) => (
-                      <button
-                        key={color.name}
-                        onClick={() => setSelectedColor(color.name)}
-                        className={`w-7 h-7 rounded-full transition-transform border-2 ${
-                          selectedColor === color.name
-                            ? 'scale-115 ring-2 ring-[#6257FF] ring-offset-2 border-white'
-                            : 'border-transparent hover:scale-105'
-                        }`}
-                        style={{ backgroundColor: color.hex }}
-                        title={color.name}
-                        aria-label={color.name}
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Quantity & CTA Row */}
-              <div className="space-y-3 pt-2">
-                <div className="flex items-center gap-3">
-                  {/* Quantity selector */}
-                  <div className="flex items-center bg-[#F5F3FF] border border-[#EAE6FD] rounded-xl p-1">
-                    <button
-                      onClick={() => setLocalQty(Math.max(1, localQty - 1))}
-                      className="w-8 h-8 rounded-lg bg-white text-[#15152A] hover:bg-purple-100 flex items-center justify-center shadow-xs"
-                      aria-label="Decrease quantity"
-                    >
-                      <Minus className="w-4 h-4 text-[#6257FF]" />
-                    </button>
-                    <span className="text-sm font-bold text-[#15152A] px-3">
-                      {localQty}
-                    </span>
-                    <button
-                      onClick={() => setLocalQty(localQty + 1)}
-                      className="w-8 h-8 rounded-lg bg-[#6257FF] text-white hover:bg-[#4F46E5] flex items-center justify-center shadow-xs"
-                      aria-label="Increase quantity"
-                    >
-                      <Plus className="w-4 h-4" />
-                    </button>
-                  </div>
-
-                  {/* Add to Cart Button */}
+              {/* QTY Counter */}
+              <div>
+                <span className="text-xs font-semibold text-[#777777] block mb-2 text-right">
+                  QTY
+                </span>
+                <div className="flex items-center bg-[#EEEEEC] rounded-full px-2 py-1 gap-2.5 border border-black/5 shadow-inner">
                   <button
-                    onClick={handleAdd}
-                    disabled={isOutOfStock || isAdded}
-                    className={`flex-1 py-3 px-6 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 shadow-btn transition-all duration-300 ${
-                      isAdded
-                        ? 'bg-emerald-600 text-white'
-                        : isOutOfStock
-                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                        : 'gradient-btn-primary text-white hover:scale-[1.02] active:scale-98'
-                    }`}
+                    onClick={() => setLocalQty(Math.max(1, localQty - 1))}
+                    className="w-7 h-7 rounded-full bg-white text-[#171717] flex items-center justify-center font-bold text-sm shadow-xs hover:bg-[#F5F5F3] active:scale-90 transition-transform"
+                    aria-label="Decrease quantity"
                   >
-                    {isAdded ? (
-                      <>
-                        <Check className="w-4 h-4" />
-                        <span>Added to Cart ✓</span>
-                      </>
-                    ) : (
-                      <>
-                        <ShoppingCart className="w-4 h-4" />
-                        <span>Add {localQty > 1 ? `(${localQty})` : ''} to Cart</span>
-                      </>
-                    )}
+                    <Minus className="w-3 h-3" />
+                  </button>
+                  <span className="text-xs font-extrabold text-[#171717] min-w-[16px] text-center">
+                    {localQty}
+                  </span>
+                  <button
+                    onClick={() => setLocalQty(localQty + 1)}
+                    className="w-7 h-7 rounded-full bg-[#171717] text-white flex items-center justify-center font-bold text-sm shadow-xs hover:bg-black active:scale-90 transition-transform"
+                    aria-label="Increase quantity"
+                  >
+                    <Plus className="w-3 h-3" />
                   </button>
                 </div>
-
-                {/* Primary WhatsApp Order / Inquiry Button */}
-                <div className="flex gap-2">
-                  <a
-                    href={whatsappInquiryUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex-1 py-3 px-4 rounded-2xl bg-[#25D366]/10 hover:bg-[#25D366]/20 border border-[#25D366]/30 text-[#128C7E] font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all active:scale-98"
-                  >
-                    <MessageCircle className="w-4 h-4 text-[#25D366] fill-current" />
-                    <span>Ask on WhatsApp</span>
-                  </a>
-
-                  {onInquire && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onClose();
-                        onInquire(product);
-                      }}
-                      className="py-3 px-4 rounded-2xl bg-[#FFF0FB] hover:bg-[#FCE7F3] border border-[#FCD6F2] text-[#EC5AC8] font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-colors"
-                      title="Bulk or Custom Quote Inquiry"
-                    >
-                      <Sparkles className="w-4 h-4" />
-                      <span>Bulk Quote</span>
-                    </button>
-                  )}
-                </div>
               </div>
-
-              {/* Local Trust Badges */}
-              <div className="grid grid-cols-3 gap-2 mt-6 pt-4 border-t border-[#EAE6FD] text-[11px] text-[#626276] text-center">
-                <div className="flex flex-col items-center gap-1">
-                  <ShieldCheck className="w-4 h-4 text-[#6257FF]" />
-                  <span>100% Genuine</span>
-                </div>
-                <div className="flex flex-col items-center gap-1">
-                  <Truck className="w-4 h-4 text-[#8B5CF6]" />
-                  <span>Fast Delivery</span>
-                </div>
-                <div className="flex flex-col items-center gap-1">
-                  <RotateCcw className="w-4 h-4 text-[#EC5AC8]" />
-                  <span>Easy Exchange</span>
-                </div>
-              </div>
-
             </div>
 
+            {/* Description */}
+            <div className="mb-6">
+              <span className="text-xs font-bold text-[#171717] block mb-1">
+                Description
+              </span>
+              <p className="text-xs text-[#777777] leading-relaxed">
+                {product.description || 'Premium quality materials crafted for maximum comfort and durability. Perfect for daily lifestyle and casual wear.'}
+              </p>
+            </div>
+          </div>
+
+          {/* Sticky Bottom Action Bar (Screen 2: Total price $120 | 🛍️ Add to Cart) */}
+          <div className="pt-4 border-t border-black/[0.06] flex items-center justify-between gap-4 mt-2">
+            <div>
+              <span className="text-[11px] font-semibold text-[#777777] block leading-tight">
+                Total price
+              </span>
+              <span className="text-xl sm:text-2xl font-extrabold text-[#171717]">
+                {STORE_CONFIG.currency}{totalPrice.toLocaleString()}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {/* WhatsApp Inquiry */}
+              <a
+                href={whatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 hover:bg-emerald-100 flex items-center justify-center border border-emerald-200/60 shrink-0 transition-colors shadow-sm"
+                title="Inquire on WhatsApp"
+              >
+                <MessageCircle className="w-5 h-5 fill-emerald-600/20" />
+              </a>
+
+              {/* Main CTA Button in Vibrant Lime Green */}
+              <button
+                onClick={handleAdd}
+                disabled={isOutOfStock}
+                className={`px-6 sm:px-8 py-3.5 rounded-full font-extrabold text-sm sm:text-base flex items-center gap-2.5 transition-all shadow-neu-btn-accent active:scale-95 ${
+                  isOutOfStock
+                    ? 'bg-[#EEEEEC] text-[#A0A0A0] cursor-not-allowed'
+                    : isAdded
+                    ? 'bg-[#171717] text-white'
+                    : 'bg-[#9FD842] hover:bg-[#8EC731] text-[#171717]'
+                }`}
+              >
+                <ShoppingBag className="w-4 h-4" />
+                <span>{isAdded ? 'Added ✓' : 'Add to Cart'}</span>
+              </button>
+            </div>
           </div>
         </motion.div>
       </div>

@@ -4,88 +4,81 @@ import {
   RotateCcw, 
   Headphones, 
   ShoppingBag, 
-  ArrowUpRight,
   Heart
 } from 'lucide-react';
 import { FOOTER_LINKS } from '../data/mockData';
 
 export const Footer = ({ onLinkClick }) => {
   return (
-    <footer className="bg-[#121124] text-white pt-16 pb-24 md:pb-12 mt-16 border-t border-[#252438]">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <footer className="bg-[#171717] text-white pt-12 pb-24 md:pb-12 mt-12 border-t border-black/10">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         
-        {/* Top Feature Highlights Bar (Matching Reference bottom section) */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 pb-12 mb-12 border-b border-[#252438]">
+        {/* Top Highlights Bar */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pb-10 mb-10 border-b border-white/10">
           
-          <div className="flex items-center gap-4 p-4 rounded-2xl bg-white/[0.03] border border-white/[0.05]">
-            <div className="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-[#8B5CF6]">
-              <ShieldCheck className="w-6 h-6" />
+          <div className="flex items-center gap-3.5 p-3.5 rounded-[20px] bg-white/[0.04] border border-white/[0.06]">
+            <div className="w-10 h-10 rounded-[14px] bg-[#9FD842]/20 flex items-center justify-center text-[#9FD842]">
+              <ShieldCheck className="w-5 h-5" />
             </div>
             <div>
-              <h4 className="text-sm font-bold text-white">Secure Payment</h4>
-              <p className="text-xs text-[#8E8EA0] mt-0.5">100% secure payment</p>
+              <h4 className="text-xs font-bold text-white">Secure Payment</h4>
+              <p className="text-[11px] text-[#A0A0A0]">100% secure checkout</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-4 p-4 rounded-2xl bg-white/[0.03] border border-white/[0.05]">
-            <div className="w-12 h-12 rounded-xl bg-pink-500/10 border border-pink-500/20 flex items-center justify-center text-[#EC5AC8]">
-              <RotateCcw className="w-6 h-6" />
+          <div className="flex items-center gap-3.5 p-3.5 rounded-[20px] bg-white/[0.04] border border-white/[0.06]">
+            <div className="w-10 h-10 rounded-[14px] bg-[#9FD842]/20 flex items-center justify-center text-[#9FD842]">
+              <RotateCcw className="w-5 h-5" />
             </div>
             <div>
-              <h4 className="text-sm font-bold text-white">Easy Returns</h4>
-              <p className="text-xs text-[#8E8EA0] mt-0.5">7-day return policy</p>
+              <h4 className="text-xs font-bold text-white">Easy Returns</h4>
+              <p className="text-[11px] text-[#A0A0A0]">7-day return policy</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-4 p-4 rounded-2xl bg-white/[0.03] border border-white/[0.05]">
-            <div className="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-[#6257FF]">
-              <Headphones className="w-6 h-6" />
+          <div className="flex items-center gap-3.5 p-3.5 rounded-[20px] bg-white/[0.04] border border-white/[0.06]">
+            <div className="w-10 h-10 rounded-[14px] bg-[#9FD842]/20 flex items-center justify-center text-[#9FD842]">
+              <Headphones className="w-5 h-5" />
             </div>
             <div>
-              <h4 className="text-sm font-bold text-white">24/7 Support</h4>
-              <p className="text-xs text-[#8E8EA0] mt-0.5">We're here to help</p>
+              <h4 className="text-xs font-bold text-white">24/7 Support</h4>
+              <p className="text-[11px] text-[#A0A0A0]">WhatsApp & phone assistance</p>
             </div>
           </div>
 
         </div>
 
         {/* Main Footer Links & Company Info */}
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-10 pb-12">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 pb-10">
           
-          {/* Brand Info Column */}
-          <div className="md:col-span-4">
-            <div className="flex items-center gap-2.5 mb-4">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#6257FF] to-[#8B5CF6] flex items-center justify-center text-white shadow-md">
+          {/* Brand Info */}
+          <div className="md:col-span-4 space-y-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-full bg-[#9FD842] flex items-center justify-center text-[#171717]">
                 <ShoppingBag className="w-4 h-4" />
               </div>
-              <span className="text-xl font-bold tracking-tight text-white">ShopEase</span>
+              <span className="text-lg font-extrabold tracking-tight text-white">Nakoda Imitation</span>
             </div>
 
-            <p className="text-sm text-[#8E8EA0] leading-relaxed max-w-sm mb-6">
-              Shop smart and live better with high quality products, curated deals, and an ultra-seamless modern shopping experience.
+            <p className="text-xs text-[#A0A0A0] leading-relaxed max-w-sm">
+              Your trusted destination for premium imitation jewelry, bridal sets, fashion accessories, and instant WhatsApp ordering.
             </p>
-
-            <div className="flex items-center gap-2 text-xs text-[#8E8EA0]">
-              <span>Designed with precision</span>
-              <Heart className="w-3.5 h-3.5 text-[#EC5AC8] fill-current" />
-              <span>for modern shoppers</span>
-            </div>
           </div>
 
-          {/* Links Columns */}
+          {/* Links */}
           <div className="md:col-span-8 grid grid-cols-3 gap-6">
             
             {/* Shop Column */}
             <div>
-              <h4 className="text-xs font-bold uppercase tracking-wider text-white mb-4">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-white mb-3">
                 Shop
               </h4>
-              <ul className="space-y-2.5">
+              <ul className="space-y-2">
                 {FOOTER_LINKS.shop.map((link) => (
                   <li key={link.label}>
                     <button
                       onClick={() => onLinkClick(link.label)}
-                      className="text-sm text-[#8E8EA0] hover:text-white transition-colors text-left"
+                      className="text-xs text-[#A0A0A0] hover:text-white transition-colors text-left"
                     >
                       {link.label}
                     </button>
@@ -96,15 +89,15 @@ export const Footer = ({ onLinkClick }) => {
 
             {/* Support Column */}
             <div>
-              <h4 className="text-xs font-bold uppercase tracking-wider text-white mb-4">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-white mb-3">
                 Support
               </h4>
-              <ul className="space-y-2.5">
+              <ul className="space-y-2">
                 {FOOTER_LINKS.support.map((link) => (
                   <li key={link.label}>
                     <button
                       onClick={() => onLinkClick(link.label)}
-                      className="text-sm text-[#8E8EA0] hover:text-white transition-colors text-left"
+                      className="text-xs text-[#A0A0A0] hover:text-white transition-colors text-left"
                     >
                       {link.label}
                     </button>
@@ -115,15 +108,15 @@ export const Footer = ({ onLinkClick }) => {
 
             {/* Company Column */}
             <div>
-              <h4 className="text-xs font-bold uppercase tracking-wider text-white mb-4">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-white mb-3">
                 Company
               </h4>
-              <ul className="space-y-2.5">
+              <ul className="space-y-2">
                 {FOOTER_LINKS.company.map((link) => (
                   <li key={link.label}>
                     <button
                       onClick={() => onLinkClick(link.label)}
-                      className="text-sm text-[#8E8EA0] hover:text-white transition-colors text-left"
+                      className="text-xs text-[#A0A0A0] hover:text-white transition-colors text-left"
                     >
                       {link.label}
                     </button>
@@ -136,19 +129,12 @@ export const Footer = ({ onLinkClick }) => {
 
         </div>
 
-        {/* Bottom Copyright */}
-        <div className="pt-8 border-t border-[#252438] flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#8E8EA0]">
-          <p>© 2026 ShopEase. All rights reserved.</p>
-          <div className="flex items-center gap-6">
-            <button onClick={() => onLinkClick('Privacy Policy')} className="hover:text-white transition-colors">
-              Privacy Policy
-            </button>
-            <button onClick={() => onLinkClick('Terms of Service')} className="hover:text-white transition-colors">
-              Terms of Service
-            </button>
-            <button onClick={() => onLinkClick('Cookie Settings')} className="hover:text-white transition-colors">
-              Cookie Settings
-            </button>
+        {/* Bottom copyright */}
+        <div className="pt-6 border-t border-white/10 flex items-center justify-between text-[11px] text-[#777777] flex-wrap gap-2">
+          <p>© 2026 Nakoda Imitation. All rights reserved.</p>
+          <div className="flex items-center gap-4">
+            <button onClick={() => onLinkClick('Privacy Policy')} className="hover:text-[#A0A0A0]">Privacy Policy</button>
+            <button onClick={() => onLinkClick('Terms of Service')} className="hover:text-[#A0A0A0]">Terms of Service</button>
           </div>
         </div>
 

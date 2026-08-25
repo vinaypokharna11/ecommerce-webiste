@@ -37,33 +37,33 @@ export const FilterDrawer = ({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={onClose}
-          className="fixed inset-0 bg-[#15152A]/50 backdrop-blur-sm"
+          className="fixed inset-0 bg-black/40 backdrop-blur-xs"
         />
 
-        {/* Drawer Window (Desktop Right, Mobile Bottom/Right) */}
+        {/* Drawer Window (Floating Glass Panel) */}
         <motion.aside
           initial={{ x: '100%' }}
           animate={{ x: 0 }}
           exit={{ x: '100%' }}
           transition={{ type: 'spring', damping: 28, stiffness: 300 }}
-          className="relative w-full max-w-md bg-white/95 backdrop-blur-xl h-full shadow-2xl border-l border-[#EAE6FD] z-10 flex flex-col justify-between overflow-hidden"
+          className="relative w-full max-w-md bg-white/95 backdrop-blur-2xl h-full shadow-2xl border-l border-black/5 z-10 flex flex-col justify-between overflow-hidden"
           aria-label="Filter products"
         >
           {/* Drawer Header */}
-          <div className="p-6 border-b border-[#EAE6FD] flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-purple-100 flex items-center justify-center text-[#6257FF]">
+          <div className="p-6 border-b border-black/[0.06] flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-full bg-[#EEEEEC] flex items-center justify-center text-[#171717]">
                 <SlidersHorizontal className="w-4 h-4" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-[#15152A]">Filter Products</h3>
-                <p className="text-xs text-[#626276]">Refine results to find exact items</p>
+                <h3 className="text-base font-extrabold text-[#171717]">Filters</h3>
+                <p className="text-xs text-[#777777]">Refine catalog products</p>
               </div>
             </div>
 
             <button
               onClick={onClose}
-              className="w-9 h-9 rounded-full bg-[#FAF9FF] hover:bg-[#F1EFFF] flex items-center justify-center text-[#626276] transition-colors"
+              className="w-9 h-9 rounded-full bg-[#EEEEEC] hover:bg-[#E2E2DE] flex items-center justify-center text-[#171717] transition-colors"
               aria-label="Close filter drawer"
             >
               <X className="w-4 h-4" />
@@ -75,7 +75,7 @@ export const FilterDrawer = ({
             
             {/* Category Filter */}
             <div>
-              <label className="text-xs font-bold uppercase tracking-wider text-[#6257FF] block mb-3">
+              <label className="text-xs font-bold text-[#171717] block mb-3">
                 Category
               </label>
               <div className="grid grid-cols-2 gap-2">
@@ -83,15 +83,15 @@ export const FilterDrawer = ({
                   <button
                     key={cat.id}
                     onClick={() => onUpdateFilters({ category: cat.id })}
-                    className={`px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-between transition-all ${
+                    className={`px-3.5 py-2.5 rounded-[16px] text-xs font-bold flex items-center justify-between transition-all active:scale-95 ${
                       filters.category === cat.id
-                        ? 'bg-[#6257FF] text-white shadow-sm'
-                        : 'bg-[#FAF9FF] text-[#15152A] hover:bg-[#F1EFFF] border border-[#EAE6FD]'
+                        ? 'bg-[#9FD842] text-[#171717] shadow-sm'
+                        : 'bg-[#EEEEEC] text-[#171717] hover:bg-[#E2E2DE]'
                     }`}
                   >
                     <span>{cat.name}</span>
                     <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
-                      filters.category === cat.id ? 'bg-white/20 text-white' : 'bg-[#EAE6FD] text-[#6257FF]'
+                      filters.category === cat.id ? 'bg-white text-[#171717]' : 'bg-white/70 text-[#777777]'
                     }`}>
                       {cat.count}
                     </span>
@@ -103,10 +103,10 @@ export const FilterDrawer = ({
             {/* Price Range Slider */}
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="text-xs font-bold uppercase tracking-wider text-[#6257FF]">
+                <label className="text-xs font-bold text-[#171717]">
                   Max Price
                 </label>
-                <span className="text-sm font-extrabold text-[#15152A]">
+                <span className="text-xs font-extrabold text-[#171717] bg-[#F5F5F3] px-2.5 py-1 rounded-full border border-black/5">
                   {STORE_CONFIG.currency}{filters.maxPrice.toLocaleString()}
                 </span>
               </div>
@@ -114,53 +114,50 @@ export const FilterDrawer = ({
                 type="range"
                 min="500"
                 max="5000"
-                step="250"
+                step="100"
                 value={filters.maxPrice}
                 onChange={(e) => onUpdateFilters({ maxPrice: Number(e.target.value) })}
-                className="w-full h-2 bg-[#EAE6FD] rounded-lg appearance-none cursor-pointer accent-[#6257FF]"
+                className="w-full accent-[#9FD842] bg-[#EEEEEC] h-2 rounded-lg cursor-pointer"
               />
-              <div className="flex justify-between text-[11px] text-[#8E8EA0] mt-1 font-medium">
+              <div className="flex justify-between text-[11px] text-[#A0A0A0] mt-1 font-medium">
                 <span>{STORE_CONFIG.currency}500</span>
                 <span>{STORE_CONFIG.currency}2,500</span>
-                <span>{STORE_CONFIG.currency}5,000+</span>
+                <span>{STORE_CONFIG.currency}5,000</span>
               </div>
             </div>
 
-            {/* In Stock Only Toggle */}
-            <div className="flex items-center justify-between p-3.5 rounded-2xl bg-[#FAF9FF] border border-[#EAE6FD]">
-              <div>
-                <span className="text-sm font-bold text-[#15152A] block">In Stock Only</span>
-                <span className="text-xs text-[#626276]">Hide items currently sold out</span>
-              </div>
-              <button
-                type="button"
-                onClick={() => onUpdateFilters({ inStockOnly: !filters.inStockOnly })}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  filters.inStockOnly ? 'bg-[#6257FF]' : 'bg-gray-200'
-                }`}
-              >
-                <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    filters.inStockOnly ? 'translate-x-6' : 'translate-x-1'
-                  }`}
+            {/* Stock Availability */}
+            <div>
+              <label className="text-xs font-bold text-[#171717] block mb-3">
+                Availability
+              </label>
+              <label className="flex items-center gap-3 p-3 rounded-[16px] bg-[#EEEEEC] hover:bg-[#E2E2DE] cursor-pointer transition-colors">
+                <input
+                  type="checkbox"
+                  checked={filters.inStockOnly}
+                  onChange={(e) => onUpdateFilters({ inStockOnly: e.target.checked })}
+                  className="w-4 h-4 rounded text-[#171717] accent-[#9FD842] focus:ring-0"
                 />
-              </button>
+                <span className="text-xs font-bold text-[#171717]">
+                  In Stock Items Only
+                </span>
+              </label>
             </div>
 
             {/* Minimum Discount Filter */}
             <div>
-              <label className="text-xs font-bold uppercase tracking-wider text-[#6257FF] block mb-3">
-                Minimum Discount
+              <label className="text-xs font-bold text-[#171717] block mb-3">
+                Discount
               </label>
               <div className="flex flex-wrap gap-2">
                 {discountOptions.map((opt) => (
                   <button
                     key={opt.value}
                     onClick={() => onUpdateFilters({ minDiscount: opt.value })}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                    className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all ${
                       filters.minDiscount === opt.value
-                        ? 'bg-[#EC5AC8] text-white shadow-sm ring-2 ring-pink-200'
-                        : 'bg-[#FAF9FF] text-[#626276] hover:bg-[#FFF0FB] border border-[#EAE6FD]'
+                        ? 'bg-[#9FD842] text-[#171717] shadow-sm'
+                        : 'bg-[#EEEEEC] text-[#777777] hover:text-[#171717] hover:bg-[#E2E2DE]'
                     }`}
                   >
                     {opt.label}
@@ -169,9 +166,9 @@ export const FilterDrawer = ({
               </div>
             </div>
 
-            {/* Rating Filter */}
+            {/* Minimum Rating Filter */}
             <div>
-              <label className="text-xs font-bold uppercase tracking-wider text-[#6257FF] block mb-3">
+              <label className="text-xs font-bold text-[#171717] block mb-3">
                 Customer Rating
               </label>
               <div className="space-y-2">
@@ -179,17 +176,17 @@ export const FilterDrawer = ({
                   <button
                     key={opt.value}
                     onClick={() => onUpdateFilters({ minRating: opt.value })}
-                    className={`w-full px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center justify-between transition-all ${
+                    className={`w-full px-3.5 py-2 rounded-[14px] text-xs font-bold flex items-center justify-between transition-all ${
                       filters.minRating === opt.value
-                        ? 'bg-[#EDE9FE] text-[#6257FF] border border-[#8B5CF6]/40'
-                        : 'bg-[#FAF9FF] text-[#15152A] hover:bg-[#F1EFFF] border border-[#EAE6FD]'
+                        ? 'bg-[#171717] text-white shadow-sm'
+                        : 'bg-[#EEEEEC] text-[#171717] hover:bg-[#E2E2DE]'
                     }`}
                   >
-                    <div className="flex items-center gap-1.5">
-                      <Star className={`w-3.5 h-3.5 ${opt.value > 0 ? 'text-amber-400 fill-amber-400' : 'text-gray-400'}`} />
-                      <span>{opt.label}</span>
-                    </div>
-                    {filters.minRating === opt.value && <Check className="w-3.5 h-3.5 text-[#6257FF]" />}
+                    <span className="flex items-center gap-1.5">
+                      <Star className={`w-3.5 h-3.5 ${opt.value > 0 ? 'fill-[#9FD842] text-[#9FD842]' : ''}`} />
+                      {opt.label}
+                    </span>
+                    {filters.minRating === opt.value && <Check className="w-3.5 h-3.5 stroke-[3]" />}
                   </button>
                 ))}
               </div>
@@ -198,10 +195,10 @@ export const FilterDrawer = ({
           </div>
 
           {/* Drawer Footer Actions */}
-          <div className="p-6 border-t border-[#EAE6FD] bg-[#FAF9FF]/80 flex items-center gap-3">
+          <div className="p-5 border-t border-black/[0.06] bg-white flex items-center gap-3">
             <button
               onClick={onResetFilters}
-              className="py-3 px-4 rounded-2xl bg-white border border-[#EAE6FD] text-[#626276] hover:text-[#15152A] font-bold text-xs flex items-center justify-center gap-1.5 transition-colors shadow-xs"
+              className="flex-1 py-3 px-4 rounded-full bg-[#EEEEEC] hover:bg-[#E2E2DE] text-[#171717] font-bold text-xs flex items-center justify-center gap-2 transition-colors active:scale-95"
             >
               <RotateCcw className="w-3.5 h-3.5" />
               <span>Reset</span>
@@ -209,9 +206,9 @@ export const FilterDrawer = ({
 
             <button
               onClick={onClose}
-              className="flex-1 py-3 px-6 rounded-2xl gradient-btn-primary text-white font-bold text-sm shadow-btn hover:scale-[1.02] active:scale-98 transition-all"
+              className="flex-2 py-3 px-6 rounded-full bg-[#9FD842] hover:bg-[#8EC731] text-[#171717] font-extrabold text-xs flex items-center justify-center gap-2 shadow-neu-btn-accent transition-all active:scale-95"
             >
-              Show {totalResultsCount} Products
+              <span>Show {totalResultsCount} Items</span>
             </button>
           </div>
 

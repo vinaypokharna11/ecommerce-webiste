@@ -1,28 +1,30 @@
 import './globals.css';
 import { CatalogProvider } from '@/context/CatalogContext';
+import { AuthProvider } from '@/context/AuthContext';
+import { AuthModal } from '@/components/AuthModal';
 
 export const metadata = {
   title: {
-    default: 'ShopEase — Shop Smart. Live Better.',
-    template: '%s | ShopEase',
+    default: 'Nakoda Imitation — Premium Jewelry & Lifestyle',
+    template: '%s | Nakoda Imitation',
   },
-  description: 'Explore high quality products, exclusive offers, and instant WhatsApp ordering at ShopEase — your trusted neighborhood store in Bangalore.',
-  keywords: ['ShopEase', 'online store', 'Bangalore shop', 'electronics', 'fashion', 'home living', 'WhatsApp order', 'bulk inquiry'],
-  authors: [{ name: 'ShopEase Store' }],
-  creator: 'ShopEase',
-  metadataBase: new URL('https://shopease.in'),
+  description: 'Explore premium imitation jewelry, fashion accessories, and instant WhatsApp ordering at Nakoda Imitation in Bangalore.',
+  keywords: ['Nakoda Imitation', 'imitation jewelry', 'online store', 'Bangalore jewelry', 'fashion accessories', 'WhatsApp order'],
+  authors: [{ name: 'Nakoda Imitation Store' }],
+  creator: 'Nakoda Imitation',
+  metadataBase: new URL('https://nakodaimitation.com'),
   openGraph: {
     type: 'website',
     locale: 'en_IN',
-    url: 'https://shopease.in',
-    title: 'ShopEase — Shop Smart. Live Better.',
-    description: 'Quality products, exclusive deals & instant WhatsApp ordering. Electronics, Fashion, Home Living & more.',
-    siteName: 'ShopEase',
+    url: 'https://nakodaimitation.com',
+    title: 'Nakoda Imitation — Premium Jewelry & Lifestyle',
+    description: 'Premium imitation jewelry, fashion accessories & instant WhatsApp ordering.',
+    siteName: 'Nakoda Imitation',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'ShopEase — Shop Smart. Live Better.',
-    description: 'Quality products, exclusive deals & instant WhatsApp ordering. Electronics, Fashion, Home Living & more.',
+    title: 'Nakoda Imitation — Premium Jewelry & Lifestyle',
+    description: 'Premium imitation jewelry, fashion accessories & instant WhatsApp ordering.',
   },
   icons: {
     icon: '/favicon.jpg',
@@ -32,7 +34,7 @@ export const metadata = {
 };
 
 export const viewport = {
-  themeColor: '#6257FF',
+  themeColor: '#9FD842',
 };
 
 export default function RootLayout({ children }) {
@@ -40,17 +42,20 @@ export default function RootLayout({ children }) {
     <html lang="en">
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://gstatic.com" crossOrigin="anonymous" />
         <link
-          href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
           rel="stylesheet"
         />
-        <meta name="theme-color" content="#6257FF" />
+        <meta name="theme-color" content="#9FD842" />
       </head>
-      <body className="bg-[#FAF9FF] text-[#15152A] font-sans antialiased selection:bg-[#6257FF] selection:text-white">
-        <CatalogProvider>
-          {children}
-        </CatalogProvider>
+      <body className="bg-[#F5F5F3] text-[#171717] font-sans antialiased selection:bg-[#9FD842] selection:text-[#171717]">
+        <AuthProvider>
+          <CatalogProvider>
+            {children}
+            <AuthModal />
+          </CatalogProvider>
+        </AuthProvider>
       </body>
     </html>
   );

@@ -8,6 +8,7 @@ import { FeatureBenefits } from '@/components/FeatureBenefits';
 import { Categories } from '@/components/Categories';
 import { PopularProducts } from '@/components/PopularProducts';
 import { PromoBanner } from '@/components/PromoBanner';
+import { RecentlyViewed } from '@/components/RecentlyViewed';
 import { CatalogPage } from '@/components/CatalogPage';
 import { OffersPage } from '@/components/OffersPage';
 import { CartPage } from '@/components/CartPage';
@@ -18,19 +19,23 @@ import { Footer } from '@/components/Footer';
 import { Toast } from '@/components/Toast';
 import { QuickViewModal } from '@/components/QuickViewModal';
 import { useCatalog } from '@/context/CatalogContext';
+import { useAuth } from '@/context/AuthContext';
 import { createHelpWhatsAppUrl } from '@/utils/whatsapp';
-import { SlidersHorizontal, Lock } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export default function StorefrontPage() {
   const router = useRouter();
   const { products, storeConfig, catalogStats } = useCatalog();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('home');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [quickViewProduct, setQuickViewProduct] = useState(null);
   const [inquiryProduct, setInquiryProduct] = useState(null);
   const [orders, setOrders] = useState(INITIAL_ORDERS);
   
+  // Track recently viewed products
+  const [recentlyViewedIds, setRecentlyViewedIds] = useState(['prod-1', 'prod-2', 'prod-3', 'prod-5']);
+
   // Initial sample cart items
   const [cartItems, setCartItems] = useState(() => {
     const first = products[0] || {};
@@ -43,8 +48,17 @@ export default function StorefrontPage() {
 
   const [wishlist, setWishlist] = useState({
     'prod-2': true,
+    'prod-4': true,
   });
   const [toasts, setToasts] = useState([]);
+
+  const recordRecentlyViewed = useCallback((productId) => {
+    if (!productId) return;
+    setRecentlyViewedIds((prev) => {
+      const filtered = prev.filter((id) => id !== productId);
+      return [productId, ...filtered].slice(0, 8);
+    });
+  }, []);
 
   // Calculate cart counts & total amount
   const { totalCartCount, totalCartAmount, cartItemsList } = useMemo(() => {
@@ -65,7 +79,7 @@ export default function StorefrontPage() {
 
     setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, 3500);
+    }, 3000);
   }, []);
 
   const handleDismissToast = (id) => {
@@ -74,21 +88,15 @@ export default function StorefrontPage() {
 
   // Nav item interaction
   const handleNavClick = (id, label) => {
-    if (id === 'admin') {
-      router.push('/admin');
-      return;
-    }
-
     const routableTabs = ['home', 'catalog', 'offers', 'contact', 'cart', 'profile'];
     if (routableTabs.includes(id)) {
-      // If navigating away from contact, clear inquiry product
       if (id !== 'contact') setInquiryProduct(null);
       setActiveTab(id);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
-  // Product inquiry jump handler — opens contact page in inquire mode
+  // Product inquiry jump handler
   const handleOpenProductInquiry = (product) => {
     setInquiryProduct(product);
     setActiveTab('contact');
@@ -103,8 +111,15 @@ export default function StorefrontPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  // Quick view handler with tracking
+  const handleQuickView = (product) => {
+    if (product?.id) recordRecentlyViewed(product.id);
+    setQuickViewProduct(product);
+  };
+
   // Add to cart handler
   const handleAddToCart = (product) => {
+    if (product?.id) recordRecentlyViewed(product.id);
     const qtyToAdd = product.quantity || 1;
     setCartItems((prev) => {
       const existing = prev[product.id];
@@ -119,85 +134,84 @@ export default function StorefrontPage() {
     });
 
     addToast(
-      'cart',
-      'Added to Cart! ✓',
-      `${product.name} has been added to your shopping bag.`
+      'success',
+      'Added to Cart! 🛍️',
+      `${product.name} (x${qtyToAdd}) has been added to your shopping bag.`
     );
   };
 
   // Update quantity handler
   const handleUpdateQuantity = (productId, newQuantity) => {
     setCartItems((prev) => {
+      const current = prev[productId];
+      if (!current) return prev;
+
       if (newQuantity <= 0) {
         const next = { ...prev };
         delete next[productId];
+        addToast('info', 'Item Removed 🗑️', `${current.name} was removed from your bag.`);
         return next;
       }
+
       return {
         ...prev,
         [productId]: {
-          ...prev[productId],
+          ...current,
           quantity: newQuantity,
         },
       };
     });
   };
 
-  // Favorite toggle handler
-  const handleToggleFavorite = (productId) => {
+  // Wishlist favorite toggle
+  const handleToggleFavorite = (product) => {
     setWishlist((prev) => {
-      const isFav = !prev[productId];
+      const isFav = !!prev[product.id];
+      const next = { ...prev };
       if (isFav) {
-        addToast('heart', 'Saved to Wishlist ❤️', 'Item has been added to your saved list.');
+        delete next[product.id];
+        addToast('info', 'Removed from Wishlist', `${product.name} removed.`);
       } else {
-        addToast('info', 'Removed from Wishlist', 'Item was removed from your saved list.');
+        next[product.id] = true;
+        addToast('success', 'Saved to Wishlist ❤️', `${product.name} added to your favorites.`);
       }
-      return { ...prev, [productId]: isFav };
+      return next;
     });
   };
 
-  // Switch to catalog
-  const handleExploreCatalog = (cat = 'all') => {
-    setSelectedCategory(cat);
+  // Order placement from Cart
+  const handlePlaceOrder = (orderData) => {
+    setOrders((prev) => [orderData, ...prev]);
+    addToast(
+      'success',
+      'Order Confirmed! 🎉',
+      `Order ${orderData.id} has been placed. We'll update you as soon as it ships!`
+    );
+  };
+
+  // General Explore Catalog helper
+  const handleExploreCatalog = (categoryId = 'all') => {
+    setSelectedCategory(categoryId);
     setActiveTab('catalog');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Order placed handler
-  const handlePlaceOrder = async (newOrder) => {
-    setOrders((prev) => [newOrder, ...prev]);
-    addToast(
-      'cart',
-      'Order Confirmed! 🎉',
-      `Order ${newOrder.id} has been placed successfully.`
-    );
-
-    // Also persist order to backend database & trigger automated emails
-    try {
-      await fetch('/api/orders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newOrder),
-      });
-    } catch (e) {
-      console.warn('Order background sync notice:', e);
-    }
-  };
-
-  // Smart Footer link handler
+  // Footer navigation
   const handleFooterLinkClick = (label) => {
     const lower = label.toLowerCase();
-    if ((lower.includes('product') && !lower.includes('inquiry')) || lower.includes('arrival') || lower.includes('seller')) {
+    if (lower.includes('catalog') || lower.includes('product') || lower.includes('shop') || lower.includes('men') || lower.includes('women') || lower.includes('electro') || lower.includes('trend')) {
       handleExploreCatalog('all');
-    } else if (lower.includes('offer')) {
+    } else if (lower.includes('offer') || lower.includes('deal') || lower.includes('coupon') || lower.includes('discount')) {
       setActiveTab('offers');
       window.scrollTo({ top: 0, behavior: 'smooth' });
-    } else if (lower.includes('inquire') || lower.includes('bulk') || lower.includes('corporate') || lower.includes('product inquiry')) {
-      setInquiryProduct(null);
+    } else if (lower.includes('contact') || lower.includes('help') || lower.includes('support') || lower.includes('inquir') || lower.includes('bulk')) {
       setActiveTab('contact');
       window.scrollTo({ top: 0, behavior: 'smooth' });
-    } else if (lower.includes('contact') || lower.includes('help') || lower.includes('faq') || lower.includes('location') || lower.includes('visit')) {
-      setActiveTab('contact');
+    } else if (lower.includes('profile') || lower.includes('account') || lower.includes('order')) {
+      setActiveTab('profile');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (lower.includes('cart') || lower.includes('bag') || lower.includes('checkout')) {
+      setActiveTab('cart');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else if (lower.includes('whatsapp')) {
       window.open(createHelpWhatsAppUrl(storeConfig.whatsappNumber), '_blank');
@@ -209,47 +223,55 @@ export default function StorefrontPage() {
     } else if (lower.includes('privacy') || lower.includes('terms') || lower.includes('cookie')) {
       setActiveTab('profile');
       window.scrollTo({ top: 0, behavior: 'smooth' });
-    } else if (lower.includes('admin')) {
-      router.push('/admin');
     } else {
       handleNavClick(lower, label);
     }
   };
 
   return (
-    <div className="relative min-h-screen bg-[#FAF9FF] text-[#15152A] flex flex-col font-sans overflow-x-hidden selection:bg-[#6257FF] selection:text-white">
+    <div className="relative min-h-screen bg-[#F5F5F3] text-[#171717] flex flex-col font-sans overflow-x-hidden selection:bg-[#9FD842] selection:text-[#171717]">
       
-      {/* Global Background Ambient Glow Layers */}
-      <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[600px] ambient-glow-lavender rounded-full blur-[140px] pointer-events-none -z-20 opacity-70" />
-      <div className="fixed top-[400px] -right-40 w-[600px] h-[600px] ambient-glow-pink rounded-full blur-[140px] pointer-events-none -z-20 opacity-50" />
-      <div className="fixed top-[900px] -left-40 w-[600px] h-[600px] ambient-glow-purple rounded-full blur-[140px] pointer-events-none -z-20 opacity-40" />
-
       {/* Floating Navigation Header */}
       <Navbar
         cartCount={totalCartCount}
         activeTab={activeTab}
         onNavClick={handleNavClick}
+        user={user}
       />
 
-      {/* Main Content Area: Switches smoothly between Home, Catalog, Offers, Inquire, Contact, Cart, Profile */}
+      {/* Main Content Area: Home, Catalog, Offers, Contact, Cart, Profile */}
       <main className="flex-1 w-full">
         {activeTab === 'home' && (
           <>
-            <HeroSection onExploreClick={() => handleExploreCatalog('all')} />
-            <FeatureBenefits />
+            <HeroSection 
+              onExploreClick={() => handleExploreCatalog('all')}
+            />
             <Categories
               onCategoryClick={handleCategoryClick}
               onViewAllClick={() => handleExploreCatalog('all')}
             />
             <PopularProducts
+              cartItems={cartItems}
               wishlist={wishlist}
               onAddToCart={handleAddToCart}
+              onUpdateQuantity={handleUpdateQuantity}
               onToggleFavorite={handleToggleFavorite}
               onViewAllClick={() => handleExploreCatalog('all')}
-              onQuickView={setQuickViewProduct}
-              onInquire={handleOpenProductInquiry}
+              onQuickView={handleQuickView}
             />
+            <FeatureBenefits />
             <PromoBanner onCheckOffers={() => handleNavClick('offers', 'Offers')} />
+            
+            {/* 1. Recently Viewed Section at the End of Home Page */}
+            <RecentlyViewed
+              products={products}
+              recentlyViewedIds={recentlyViewedIds}
+              wishlist={wishlist}
+              onAddToCart={handleAddToCart}
+              onQuickView={handleQuickView}
+              onToggleFavorite={handleToggleFavorite}
+              onExploreCatalog={() => handleExploreCatalog('all')}
+            />
           </>
         )}
 
@@ -270,7 +292,6 @@ export default function StorefrontPage() {
           <OffersPage onExploreCatalog={() => handleExploreCatalog('all')} />
         )}
 
-        {/* Single unified Contact Us tab — handles both Contact and Inquire modes */}
         {activeTab === 'contact' && (
           <ContactInquirePage
             initialMode={inquiryProduct ? 'inquire' : 'contact'}
@@ -283,7 +304,11 @@ export default function StorefrontPage() {
         {activeTab === 'cart' && (
           <CartPage
             cartItems={cartItems}
+            wishlist={wishlist}
+            products={products}
             onUpdateQuantity={handleUpdateQuantity}
+            onAddToCart={handleAddToCart}
+            onToggleFavorite={handleToggleFavorite}
             onExploreCatalog={() => handleExploreCatalog('all')}
             onPlaceOrder={handlePlaceOrder}
           />
@@ -307,31 +332,13 @@ export default function StorefrontPage() {
         onOpenCartModal={() => handleNavClick('cart', 'Cart')}
       />
 
-      {/* Quick Floating "Admin Panel" launcher button */}
-      <div className="fixed bottom-5 left-5 z-40 hidden sm:block">
-        <motion.button
-          whileHover={{ scale: 1.06, y: -2 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={() => router.push('/admin')}
-          className="flex items-center gap-2.5 px-4 py-2.5 rounded-full bg-[#15152A]/90 hover:bg-[#15152A] text-white shadow-[0_10px_30px_rgba(21,21,42,0.3)] backdrop-blur-md border border-white/20 text-xs font-bold transition-all group"
-        >
-          <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-[#6257FF] to-[#EC5AC8] flex items-center justify-center text-white">
-            <Lock className="w-3 h-3" />
-          </div>
-          <span>Admin Portal</span>
-          <span className="px-1.5 py-0.5 rounded-md bg-white/20 text-[10px] font-extrabold text-[#FFD6F0]">
-            {catalogStats.totalProducts} Items
-          </span>
-        </motion.button>
-      </div>
-
       {/* Footer */}
       <Footer onLinkClick={handleFooterLinkClick} />
 
       {/* Interactive Micro-Toasts */}
       <Toast toasts={toasts} onDismiss={handleDismissToast} />
 
-      {/* Global Quick View Modal */}
+      {/* Global Quick View Details Modal */}
       <QuickViewModal
         product={quickViewProduct}
         isOpen={!!quickViewProduct}
@@ -339,7 +346,8 @@ export default function StorefrontPage() {
         onAddToCart={handleAddToCart}
         cartQuantity={quickViewProduct ? (cartItems[quickViewProduct.id]?.quantity || 0) : 0}
         onUpdateQuantity={handleUpdateQuantity}
-        onInquire={handleOpenProductInquiry}
+        isFavorite={quickViewProduct ? !!wishlist[quickViewProduct.id] : false}
+        onToggleFavorite={handleToggleFavorite}
       />
     </div>
   );

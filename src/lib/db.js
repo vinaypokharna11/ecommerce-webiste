@@ -1,11 +1,20 @@
 import fs from 'fs';
 import path from 'path';
 import bcrypt from 'bcryptjs';
+import connectToDatabase from './mongodb.js';
+import User from '../models/User.js';
+import Product from '../models/Product.js';
+import Category from '../models/Category.js';
+import Offer from '../models/Offer.js';
+import Order from '../models/Order.js';
+import Inquiry from '../models/Inquiry.js';
+import ContactMessage from '../models/ContactMessage.js';
+import StoreConfig from '../models/StoreConfig.js';
 
 const DB_FILE_PATH = path.join(process.cwd(), 'src', 'data', 'db.json');
 
-// Initial baseline mock data
-const INITIAL_DB_STATE = {
+// Initial baseline mock data for seeding MongoDB and JSON fallback
+export const INITIAL_DB_STATE = {
   products: [
     {
       id: 'prod-1',
@@ -32,7 +41,6 @@ const INITIAL_DB_STATE = {
       tags: ['audio', 'bluetooth', 'wireless', 'music', 'headphones'],
       isPopular: true,
       isFeatured: true,
-      createdAt: new Date().toISOString(),
     },
     {
       id: 'prod-2',
@@ -58,7 +66,6 @@ const INITIAL_DB_STATE = {
       tags: ['smartwatch', 'fitness', 'health', 'wearable', 'electronics'],
       isPopular: true,
       isFeatured: false,
-      createdAt: new Date().toISOString(),
     },
     {
       id: 'prod-3',
@@ -84,7 +91,6 @@ const INITIAL_DB_STATE = {
       tags: ['shoes', 'sneakers', 'footwear', 'running', 'casual'],
       isPopular: true,
       isFeatured: false,
-      createdAt: new Date().toISOString(),
     },
     {
       id: 'prod-4',
@@ -109,7 +115,6 @@ const INITIAL_DB_STATE = {
       tags: ['bag', 'backpack', 'travel', 'commute', 'accessories'],
       isPopular: true,
       isFeatured: false,
-      createdAt: new Date().toISOString(),
     },
     {
       id: 'prod-5',
@@ -136,7 +141,6 @@ const INITIAL_DB_STATE = {
       tags: ['shirt', 'linen', 'clothing', 'fashion', 'men', 'summer'],
       isPopular: false,
       isFeatured: false,
-      createdAt: new Date().toISOString(),
     },
     {
       id: 'prod-6',
@@ -161,7 +165,6 @@ const INITIAL_DB_STATE = {
       tags: ['sunglasses', 'eyewear', 'accessories', 'summer', 'fashion'],
       isPopular: false,
       isFeatured: false,
-      createdAt: new Date().toISOString(),
     },
     {
       id: 'prod-7',
@@ -186,7 +189,6 @@ const INITIAL_DB_STATE = {
       tags: ['speaker', 'audio', 'bluetooth', 'music', 'electronics'],
       isPopular: false,
       isFeatured: false,
-      createdAt: new Date().toISOString(),
     },
     {
       id: 'prod-8',
@@ -212,7 +214,6 @@ const INITIAL_DB_STATE = {
       tags: ['plant', 'decor', 'home', 'succulent', 'living'],
       isPopular: false,
       isFeatured: false,
-      createdAt: new Date().toISOString(),
     },
     {
       id: 'prod-9',
@@ -237,7 +238,6 @@ const INITIAL_DB_STATE = {
       tags: ['headphones', 'pink', 'audio', 'wireless', 'bluetooth'],
       isPopular: false,
       isFeatured: false,
-      createdAt: new Date().toISOString(),
     },
     {
       id: 'prod-10',
@@ -264,7 +264,6 @@ const INITIAL_DB_STATE = {
       tags: ['tshirt', 'tee', 'clothing', 'oversized', 'streetwear'],
       isPopular: false,
       isFeatured: false,
-      createdAt: new Date().toISOString(),
     },
     {
       id: 'prod-11',
@@ -290,7 +289,6 @@ const INITIAL_DB_STATE = {
       tags: ['shoes', 'loafers', 'leather', 'footwear', 'formal'],
       isPopular: false,
       isFeatured: false,
-      createdAt: new Date().toISOString(),
     },
     {
       id: 'prod-12',
@@ -315,7 +313,6 @@ const INITIAL_DB_STATE = {
       tags: ['wallet', 'leather', 'accessories', 'bifold', 'cardholder'],
       isPopular: false,
       isFeatured: false,
-      createdAt: new Date().toISOString(),
     },
     {
       id: 'prod-13',
@@ -340,7 +337,6 @@ const INITIAL_DB_STATE = {
       tags: ['diffuser', 'home', 'living', 'decor', 'aromatherapy'],
       isPopular: false,
       isFeatured: false,
-      createdAt: new Date().toISOString(),
     },
     {
       id: 'prod-14',
@@ -366,7 +362,6 @@ const INITIAL_DB_STATE = {
       tags: ['running', 'shoes', 'footwear', 'trainers', 'sports'],
       isPopular: false,
       isFeatured: false,
-      createdAt: new Date().toISOString(),
     },
     {
       id: 'prod-15',
@@ -392,7 +387,6 @@ const INITIAL_DB_STATE = {
       tags: ['jacket', 'denim', 'clothing', 'outerwear', 'fashion'],
       isPopular: false,
       isFeatured: false,
-      createdAt: new Date().toISOString(),
     },
     {
       id: 'prod-16',
@@ -414,7 +408,6 @@ const INITIAL_DB_STATE = {
       tags: ['gift', 'hamper', 'special', 'festive', 'box'],
       isPopular: false,
       isFeatured: false,
-      createdAt: new Date().toISOString(),
     },
   ],
   categories: [
@@ -542,12 +535,13 @@ const INITIAL_DB_STATE = {
       customerEmail: 'john.doe@example.com',
       customerPhone: '+91 98765 43210',
       items: [{ id: 'prod-1', name: 'Wireless Headphones', price: 3499, quantity: 1 }],
+      itemSummary: 'Wireless Headphones (x1)',
       amount: 3499,
       status: 'delivered',
+      statusLabel: 'Delivered',
       payMethod: 'Cash on Delivery',
       deliveryAddress: 'Shop #14, Main Market Road, Bangalore — 560001',
       date: 'Aug 20, 2026',
-      createdAt: new Date(Date.now() - 86400000 * 3).toISOString(),
     },
     {
       id: '#SE1002',
@@ -555,12 +549,13 @@ const INITIAL_DB_STATE = {
       customerEmail: 'sarah.j@example.com',
       customerPhone: '+91 98765 43211',
       items: [{ id: 'prod-2', name: 'Smart Watch Pro', price: 2499, quantity: 1 }],
+      itemSummary: 'Smart Watch Pro (x1)',
       amount: 2499,
       status: 'shipped',
+      statusLabel: 'Shipped',
       payMethod: 'Online Payment (UPI)',
       deliveryAddress: 'Flat 302, Palm Heights, Indiranagar, Bangalore — 560038',
       date: 'Aug 15, 2026',
-      createdAt: new Date(Date.now() - 86400000 * 8).toISOString(),
     },
   ],
   contactMessages: [
@@ -573,8 +568,7 @@ const INITIAL_DB_STATE = {
       subject: 'Inquiry regarding weekend store timings',
       message: 'Hi ShopEase team, are your Bangalore store hours the same on Sundays as well? I would like to visit in person.',
       preferredContact: 'WhatsApp',
-      status: 'pending', // 'pending', 'in_progress', 'replied', 'resolved'
-      createdAt: new Date(Date.now() - 86400000 * 2).toISOString(),
+      status: 'pending',
     },
     {
       id: 'CT-1002',
@@ -586,8 +580,7 @@ const INITIAL_DB_STATE = {
       message: 'I received the sneakers yesterday and need UK 9 instead of UK 8. Could you please advise how to proceed with the quick exchange?',
       preferredContact: 'Email',
       status: 'replied',
-      createdAt: new Date(Date.now() - 86400000 * 5).toISOString(),
-    }
+    },
   ],
   inquiries: [
     {
@@ -604,8 +597,7 @@ const INITIAL_DB_STATE = {
       companyName: 'Apex Digital Solutions',
       notes: 'Looking for a corporate gifting order of 25 units with custom company logo embossing if possible. Please provide price breakdown.',
       preferredContact: 'WhatsApp',
-      status: 'pending', // 'pending', 'in_progress', 'quoted', 'resolved'
-      createdAt: new Date(Date.now() - 86400000 * 1).toISOString(),
+      status: 'pending',
     },
     {
       id: 'INQ-5002',
@@ -622,73 +614,112 @@ const INITIAL_DB_STATE = {
       notes: 'I saw UK 10 is currently out of stock. When do you expect new inventory arrival?',
       preferredContact: 'Email',
       status: 'in_progress',
-      createdAt: new Date(Date.now() - 86400000 * 3).toISOString(),
-    }
+    },
   ],
   storeConfig: {
-    name: 'ShopEase',
-    tagline: 'Your Trusted Local Neighborhood Store',
+    name: 'Nakoda Imitation',
+    tagline: 'Premium Imitation Jewelry & Lifestyle Collection',
     whatsappNumber: '919876543210',
     whatsappDisplay: '+91 98765 43210',
     address: 'Shop #14, Main Market Road, Bangalore',
     hours: 'Mon - Sun: 9:30 AM – 9:30 PM',
     currency: '₹',
   },
-  adminUser: {
-    email: process.env.ADMIN_EMAIL || 'admin@shopease.com',
-    passwordHash: bcrypt.hashSync(process.env.ADMIN_PASSWORD || 'admin123', 10),
-    name: 'Master Admin',
-    role: 'superadmin',
-  },
+  users: [],
 };
 
-// Initialize DB file if not present
-export function initDB() {
+// ─── JSON File Storage Helpers (Fallback) ────────────────────────────────────
+function initJSONDB() {
   try {
     const dir = path.dirname(DB_FILE_PATH);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     if (!fs.existsSync(DB_FILE_PATH)) {
       fs.writeFileSync(DB_FILE_PATH, JSON.stringify(INITIAL_DB_STATE, null, 2), 'utf-8');
     }
   } catch (err) {
-    console.error('Error initializing database file', err);
+    console.error('Error initializing fallback JSON database file', err);
   }
 }
 
-// Read entire DB
-export function readDB() {
-  initDB();
+function readJSONDB() {
+  initJSONDB();
   try {
     const data = fs.readFileSync(DB_FILE_PATH, 'utf-8');
     return JSON.parse(data);
   } catch (err) {
-    console.error('Error reading database', err);
     return INITIAL_DB_STATE;
   }
 }
 
-// Write entire DB
-export function writeDB(data) {
-  initDB();
+function writeJSONDB(data) {
+  initJSONDB();
   try {
     fs.writeFileSync(DB_FILE_PATH, JSON.stringify(data, null, 2), 'utf-8');
     return true;
   } catch (err) {
-    console.error('Error writing to database', err);
     return false;
   }
 }
 
-// ─────────── PRODUCTS CRUD ───────────
-export function getProducts(filters = {}) {
-  const db = readDB();
-  let list = db.products || [];
+// ─── MongoDB Auto-Seeding Helper ─────────────────────────────────────────────
+let isSeeded = false;
+async function ensureMongoSeeded() {
+  if (isSeeded) return;
+  try {
+    const productCount = await Product.countDocuments();
+    if (productCount === 0) {
+      console.log('🌱 Seeding default products to MongoDB...');
+      await Product.insertMany(INITIAL_DB_STATE.products);
+    }
 
-  if (filters.category && filters.category !== 'all') {
-    list = list.filter((p) => p.category === filters.category);
+    const categoryCount = await Category.countDocuments();
+    if (categoryCount === 0) {
+      console.log('🌱 Seeding default categories to MongoDB...');
+      await Category.insertMany(INITIAL_DB_STATE.categories);
+    }
+
+    const offerCount = await Offer.countDocuments();
+    if (offerCount === 0) {
+      console.log('🌱 Seeding default offers to MongoDB...');
+      await Offer.insertMany(INITIAL_DB_STATE.offers);
+    }
+
+    const configCount = await StoreConfig.countDocuments();
+    if (configCount === 0) {
+      await StoreConfig.create(INITIAL_DB_STATE.storeConfig);
+    }
+
+    isSeeded = true;
+  } catch (err) {
+    console.warn('MongoDB seed warning:', err.message);
   }
+}
+
+// ─── PRODUCTS CRUD ───────────────────────────────────────────────────────────
+export async function getProducts(filters = {}) {
+  const db = await connectToDatabase();
+  if (db) {
+    await ensureMongoSeeded();
+    const query = {};
+    if (filters.category && filters.category !== 'all') query.category = filters.category;
+    if (filters.stockStatus && filters.stockStatus !== 'all') query.stockStatus = filters.stockStatus;
+    if (filters.isPopular) query.isPopular = true;
+    if (filters.isFeatured) query.isFeatured = true;
+    if (filters.search) {
+      const regex = new RegExp(filters.search, 'i');
+      query.$or = [{ name: regex }, { categoryName: regex }, { tags: regex }, { id: regex }];
+    }
+    const products = await Product.find(query).lean();
+    return products.map(({ _id, __v, ...p }) => p);
+  }
+
+  // Fallback
+  const jdb = readJSONDB();
+  let list = jdb.products || [];
+  if (filters.category && filters.category !== 'all') list = list.filter((p) => p.category === filters.category);
+  if (filters.stockStatus && filters.stockStatus !== 'all') list = list.filter((p) => p.stockStatus === filters.stockStatus);
+  if (filters.isPopular) list = list.filter((p) => p.isPopular);
+  if (filters.isFeatured) list = list.filter((p) => p.isFeatured);
   if (filters.search) {
     const q = filters.search.toLowerCase();
     list = list.filter(
@@ -699,26 +730,23 @@ export function getProducts(filters = {}) {
         (p.tags && p.tags.some((t) => t.toLowerCase().includes(q)))
     );
   }
-  if (filters.stockStatus && filters.stockStatus !== 'all') {
-    list = list.filter((p) => p.stockStatus === filters.stockStatus);
-  }
-  if (filters.isPopular) {
-    list = list.filter((p) => p.isPopular);
-  }
-  if (filters.isFeatured) {
-    list = list.filter((p) => p.isFeatured);
-  }
-
   return list;
 }
 
-export function getProductById(id) {
-  const db = readDB();
-  return db.products.find((p) => p.id === id) || null;
+export async function getProductById(id) {
+  const db = await connectToDatabase();
+  if (db) {
+    await ensureMongoSeeded();
+    const prod = await Product.findOne({ id }).lean();
+    if (!prod) return null;
+    const { _id, __v, ...rest } = prod;
+    return rest;
+  }
+  const jdb = readJSONDB();
+  return (jdb.products || []).find((p) => p.id === id) || null;
 }
 
-export function createProduct(productData) {
-  const db = readDB();
+export async function createProduct(productData) {
   const id = productData.id || `prod-${Date.now()}`;
   const price = Number(productData.price) || 0;
   const oldPrice = Number(productData.oldPrice) || 0;
@@ -744,291 +772,630 @@ export function createProduct(productData) {
     createdAt: new Date().toISOString(),
   };
 
-  db.products = [newProduct, ...(db.products || [])];
-  writeDB(db);
+  const db = await connectToDatabase();
+  if (db) {
+    const created = await Product.create(newProduct);
+    const { _id, __v, ...rest } = created.toObject();
+    return rest;
+  }
+
+  const jdb = readJSONDB();
+  jdb.products = [newProduct, ...(jdb.products || [])];
+  writeJSONDB(jdb);
   return newProduct;
 }
 
-export function updateProduct(id, updateData) {
-  const db = readDB();
-  const index = db.products.findIndex((p) => p.id === id);
-  if (index === -1) return null;
-
-  const current = db.products[index];
-  const merged = { ...current, ...updateData };
-
-  if (merged.price !== undefined && merged.oldPrice !== undefined) {
-    const p = Number(merged.price);
-    const op = Number(merged.oldPrice);
-    if (op > p && op > 0) {
-      merged.discountPercent = Math.round(((op - p) / op) * 100);
+export async function updateProduct(id, updateData) {
+  const db = await connectToDatabase();
+  if (db) {
+    if (updateData.stockCount !== undefined) {
+      const sc = Number(updateData.stockCount);
+      updateData.stockCount = sc;
+      updateData.stockStatus = sc <= 0 ? 'out_of_stock' : sc < 5 ? 'low_stock' : 'in_stock';
     }
+
+    const updated = await Product.findOneAndUpdate({ id }, updateData, { returnDocument: 'after' }).lean();
+    if (!updated) return null;
+    const { _id, __v, ...rest } = updated;
+    return rest;
   }
 
+  const jdb = readJSONDB();
+  const index = (jdb.products || []).findIndex((p) => p.id === id);
+  if (index === -1) return null;
+
+  const current = jdb.products[index];
+  const merged = { ...current, ...updateData };
   if (merged.stockCount !== undefined) {
     const sc = Number(merged.stockCount);
     merged.stockCount = sc;
-    if (sc <= 0) merged.stockStatus = 'out_of_stock';
-    else if (sc < 5) merged.stockStatus = 'low_stock';
-    else merged.stockStatus = 'in_stock';
+    merged.stockStatus = sc <= 0 ? 'out_of_stock' : sc < 5 ? 'low_stock' : 'in_stock';
   }
-
-  merged.updatedAt = new Date().toISOString();
-  db.products[index] = merged;
-  writeDB(db);
+  jdb.products[index] = merged;
+  writeJSONDB(jdb);
   return merged;
 }
 
-export function deleteProduct(id) {
-  const db = readDB();
-  const initialLength = db.products.length;
-  db.products = db.products.filter((p) => p.id !== id);
-  const deleted = db.products.length < initialLength;
-  if (deleted) writeDB(db);
+export async function deleteProduct(id) {
+  const db = await connectToDatabase();
+  if (db) {
+    const res = await Product.deleteOne({ id });
+    return res.deletedCount > 0;
+  }
+
+  const jdb = readJSONDB();
+  const initLen = (jdb.products || []).length;
+  jdb.products = (jdb.products || []).filter((p) => p.id !== id);
+  const deleted = jdb.products.length < initLen;
+  if (deleted) writeJSONDB(jdb);
   return deleted;
 }
 
-// ─────────── CATEGORIES CRUD ───────────
-export function getCategories() {
-  const db = readDB();
-  const products = db.products || [];
-  // Calculate dynamic counts
-  return (db.categories || []).map((cat) => ({
+// ─── CATEGORIES CRUD ─────────────────────────────────────────────────────────
+export async function getCategories() {
+  const db = await connectToDatabase();
+  if (db) {
+    await ensureMongoSeeded();
+    const [categories, products] = await Promise.all([
+      Category.find().lean(),
+      Product.find().select('category').lean(),
+    ]);
+
+    return categories.map(({ _id, __v, ...cat }) => ({
+      ...cat,
+      count: products.filter((p) => p.category === cat.id).length,
+    }));
+  }
+
+  const jdb = readJSONDB();
+  const products = jdb.products || [];
+  return (jdb.categories || []).map((cat) => ({
     ...cat,
     count: products.filter((p) => p.category === cat.id).length,
   }));
 }
 
-export function createCategory(categoryData) {
-  const db = readDB();
-  const id = categoryData.id || categoryData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+export async function createCategory(data) {
+  const id = data.id || data.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
   const newCat = {
-    ...categoryData,
+    ...data,
     id,
-    color: categoryData.color || '#6257FF',
-    accentBg: categoryData.accentBg || 'bg-[#F5F3FF]',
-    iconColor: categoryData.iconColor || 'text-[#6257FF]',
-    icon: categoryData.icon || 'LayoutGrid',
+    color: data.color || '#6257FF',
+    accentBg: data.accentBg || 'bg-[#F5F3FF]',
+    iconColor: data.iconColor || 'text-[#6257FF]',
+    icon: data.icon || 'LayoutGrid',
     itemCount: '0 Items',
   };
-  db.categories = [...(db.categories || []), newCat];
-  writeDB(db);
+
+  const db = await connectToDatabase();
+  if (db) {
+    const created = await Category.create(newCat);
+    const { _id, __v, ...rest } = created.toObject();
+    return rest;
+  }
+
+  const jdb = readJSONDB();
+  jdb.categories = [...(jdb.categories || []), newCat];
+  writeJSONDB(jdb);
   return newCat;
 }
 
-export function updateCategory(id, updateData) {
-  const db = readDB();
-  const index = db.categories.findIndex((c) => c.id === id);
-  if (index === -1) return null;
+export async function updateCategory(id, updateData) {
+  const db = await connectToDatabase();
+  if (db) {
+    const updated = await Category.findOneAndUpdate({ id }, updateData, { returnDocument: 'after' }).lean();
+    if (!updated) return null;
+    const { _id, __v, ...rest } = updated;
+    return rest;
+  }
 
-  db.categories[index] = { ...db.categories[index], ...updateData };
-  writeDB(db);
-  return db.categories[index];
+  const jdb = readJSONDB();
+  const index = (jdb.categories || []).findIndex((c) => c.id === id);
+  if (index === -1) return null;
+  jdb.categories[index] = { ...jdb.categories[index], ...updateData };
+  writeJSONDB(jdb);
+  return jdb.categories[index];
 }
 
-export function deleteCategory(id) {
-  const db = readDB();
-  const initialLength = db.categories.length;
-  db.categories = db.categories.filter((c) => c.id !== id);
-  const deleted = db.categories.length < initialLength;
-  if (deleted) writeDB(db);
+export async function deleteCategory(id) {
+  const db = await connectToDatabase();
+  if (db) {
+    const res = await Category.deleteOne({ id });
+    return res.deletedCount > 0;
+  }
+
+  const jdb = readJSONDB();
+  const initLen = (jdb.categories || []).length;
+  jdb.categories = (jdb.categories || []).filter((c) => c.id !== id);
+  const deleted = jdb.categories.length < initLen;
+  if (deleted) writeJSONDB(jdb);
   return deleted;
 }
 
-// ─────────── OFFERS CRUD ───────────
-export function getOffers() {
-  const db = readDB();
-  return db.offers || [];
+// ─── OFFERS CRUD ─────────────────────────────────────────────────────────────
+export async function getOffers() {
+  const db = await connectToDatabase();
+  if (db) {
+    await ensureMongoSeeded();
+    const offers = await Offer.find().lean();
+    return offers.map(({ _id, __v, ...o }) => o);
+  }
+  const jdb = readJSONDB();
+  return jdb.offers || [];
 }
 
-export function createOffer(offerData) {
-  const db = readDB();
-  const id = offerData.id || `offer-${Date.now()}`;
+export async function createOffer(data) {
+  const id = data.id || `offer-${Date.now()}`;
   const newOffer = {
-    ...offerData,
+    ...data,
     id,
-    code: (offerData.code || 'DEAL10').toUpperCase().trim(),
-    isActive: offerData.isActive !== false,
-    popular: !!offerData.popular,
-    gradient: offerData.gradient || 'from-[#6257FF] to-[#4F46E5]',
-    bgLight: offerData.bgLight || 'bg-[#F5F3FF]',
-    textColor: offerData.textColor || 'text-[#6257FF]',
-    borderColor: offerData.borderColor || 'border-[#EAE6FD]',
-    badgeColor: offerData.badgeColor || 'bg-[#EDE9FE] text-[#6257FF]',
-    icon: offerData.icon || '🎁',
+    code: (data.code || 'DEAL10').toUpperCase().trim(),
+    isActive: data.isActive !== false,
+    popular: !!data.popular,
+    gradient: data.gradient || 'from-[#6257FF] to-[#4F46E5]',
+    bgLight: data.bgLight || 'bg-[#F5F3FF]',
+    textColor: data.textColor || 'text-[#6257FF]',
+    borderColor: data.borderColor || 'border-[#EAE6FD]',
+    badgeColor: data.badgeColor || 'bg-[#EDE9FE] text-[#6257FF]',
+    icon: data.icon || '🎁',
   };
-  db.offers = [newOffer, ...(db.offers || [])];
-  writeDB(db);
+
+  const db = await connectToDatabase();
+  if (db) {
+    const created = await Offer.create(newOffer);
+    const { _id, __v, ...rest } = created.toObject();
+    return rest;
+  }
+
+  const jdb = readJSONDB();
+  jdb.offers = [newOffer, ...(jdb.offers || [])];
+  writeJSONDB(jdb);
   return newOffer;
 }
 
-export function updateOffer(id, updateData) {
-  const db = readDB();
-  const index = db.offers.findIndex((o) => o.id === id);
-  if (index === -1) return null;
+export async function updateOffer(id, updateData) {
+  const db = await connectToDatabase();
+  if (db) {
+    const updated = await Offer.findOneAndUpdate({ id }, updateData, { returnDocument: 'after' }).lean();
+    if (!updated) return null;
+    const { _id, __v, ...rest } = updated;
+    return rest;
+  }
 
-  db.offers[index] = { ...db.offers[index], ...updateData };
-  writeDB(db);
-  return db.offers[index];
+  const jdb = readJSONDB();
+  const index = (jdb.offers || []).findIndex((o) => o.id === id);
+  if (index === -1) return null;
+  jdb.offers[index] = { ...jdb.offers[index], ...updateData };
+  writeJSONDB(jdb);
+  return jdb.offers[index];
 }
 
-export function deleteOffer(id) {
-  const db = readDB();
-  const initialLength = db.offers.length;
-  db.offers = db.offers.filter((o) => o.id !== id);
-  const deleted = db.offers.length < initialLength;
-  if (deleted) writeDB(db);
+export async function deleteOffer(id) {
+  const db = await connectToDatabase();
+  if (db) {
+    const res = await Offer.deleteOne({ id });
+    return res.deletedCount > 0;
+  }
+
+  const jdb = readJSONDB();
+  const initLen = (jdb.offers || []).length;
+  jdb.offers = (jdb.offers || []).filter((o) => o.id !== id);
+  const deleted = jdb.offers.length < initLen;
+  if (deleted) writeJSONDB(jdb);
   return deleted;
 }
 
-// ─────────── ORDERS CRUD ───────────
-export function getOrders() {
-  const db = readDB();
-  return db.orders || [];
+// ─── ORDERS CRUD ─────────────────────────────────────────────────────────────
+export async function getOrders(userId = null) {
+  const db = await connectToDatabase();
+  if (db) {
+    const query = userId
+      ? { $or: [{ userId: String(userId) }, { customerEmail: String(userId).toLowerCase() }] }
+      : {};
+    const orders = await Order.find(query).sort({ createdAt: -1 }).lean();
+    return orders.map(({ _id, __v, ...o }) => o);
+  }
+
+  const jdb = readJSONDB();
+  let orders = jdb.orders || [];
+  if (userId) {
+    const cleanId = String(userId).toLowerCase();
+    orders = orders.filter((o) => (o.userId && String(o.userId).toLowerCase() === cleanId) || (o.customerEmail && o.customerEmail.toLowerCase() === cleanId));
+  }
+  return orders;
 }
 
-export function createOrder(orderData) {
-  const db = readDB();
-  const id = orderData.id || `#SE${Math.floor(1000 + Math.random() * 9000)}`;
+export async function createOrder(data) {
+  const id = data.id || `#SE${Math.floor(1000 + Math.random() * 9000)}`;
+  const dateStr = data.date || new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   const newOrder = {
-    ...orderData,
+    ...data,
     id,
-    date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-    createdAt: new Date().toISOString(),
-    status: orderData.status || 'processing',
-    statusLabel: orderData.status === 'delivered' ? 'Delivered' : orderData.status === 'shipped' ? 'Shipped' : 'Processing',
+    date: dateStr,
+    status: data.status || 'processing',
+    statusLabel: data.status === 'delivered' ? 'Delivered' : data.status === 'shipped' ? 'Shipped' : 'Processing',
   };
-  db.orders = [newOrder, ...(db.orders || [])];
-  writeDB(db);
+
+  const db = await connectToDatabase();
+  if (db) {
+    const created = await Order.create(newOrder);
+    const { _id, __v, ...rest } = created.toObject();
+    return rest;
+  }
+
+  const jdb = readJSONDB();
+  jdb.orders = [newOrder, ...(jdb.orders || [])];
+  writeJSONDB(jdb);
   return newOrder;
 }
 
-export function updateOrderStatus(id, status) {
-  const db = readDB();
-  const order = db.orders.find((o) => o.id === id);
+export async function updateOrderStatus(id, status) {
+  const statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
+  const db = await connectToDatabase();
+  if (db) {
+    const updated = await Order.findOneAndUpdate({ id }, { status, statusLabel }, { returnDocument: 'after' }).lean();
+    if (!updated) return null;
+    const { _id, __v, ...rest } = updated;
+    return rest;
+  }
+
+  const jdb = readJSONDB();
+  const order = (jdb.orders || []).find((o) => o.id === id);
   if (!order) return null;
   order.status = status;
-  order.statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
-  writeDB(db);
+  order.statusLabel = statusLabel;
+  writeJSONDB(jdb);
   return order;
 }
 
-// ─────────── CONTACT MESSAGES CRUD ───────────
-export function getContactMessages() {
-  const db = readDB();
-  return db.contactMessages || INITIAL_DB_STATE.contactMessages || [];
+// ─── INQUIRIES CRUD ──────────────────────────────────────────────────────────
+export async function getInquiries() {
+  const db = await connectToDatabase();
+  if (db) {
+    const list = await Inquiry.find().sort({ createdAt: -1 }).lean();
+    return list.map(({ _id, __v, ...i }) => i);
+  }
+  const jdb = readJSONDB();
+  return jdb.inquiries || [];
 }
 
-export function createContactMessage(data) {
-  const db = readDB();
-  const id = data.id || `CT-${Math.floor(1000 + Math.random() * 9000)}`;
-  const newMsg = {
-    ...data,
-    id,
-    status: data.status || 'pending',
-    createdAt: new Date().toISOString(),
-  };
-  db.contactMessages = [newMsg, ...(db.contactMessages || [])];
-  writeDB(db);
-  return newMsg;
-}
-
-export function updateContactStatus(id, status, adminNotes = '') {
-  const db = readDB();
-  if (!db.contactMessages) db.contactMessages = [];
-  const index = db.contactMessages.findIndex((m) => m.id === id);
-  if (index === -1) return null;
-  db.contactMessages[index] = {
-    ...db.contactMessages[index],
-    status,
-    adminNotes: adminNotes || db.contactMessages[index].adminNotes,
-    updatedAt: new Date().toISOString(),
-  };
-  writeDB(db);
-  return db.contactMessages[index];
-}
-
-export function deleteContactMessage(id) {
-  const db = readDB();
-  if (!db.contactMessages) return false;
-  const initialLength = db.contactMessages.length;
-  db.contactMessages = db.contactMessages.filter((m) => m.id !== id);
-  const deleted = db.contactMessages.length < initialLength;
-  if (deleted) writeDB(db);
-  return deleted;
-}
-
-// ─────────── INQUIRIES CRUD ───────────
-export function getInquiries() {
-  const db = readDB();
-  return db.inquiries || INITIAL_DB_STATE.inquiries || [];
-}
-
-export function createInquiry(data) {
-  const db = readDB();
+export async function createInquiry(data) {
   const id = data.id || `INQ-${Math.floor(1000 + Math.random() * 9000)}`;
   const newInquiry = {
     ...data,
     id,
     status: data.status || 'pending',
-    createdAt: new Date().toISOString(),
   };
-  db.inquiries = [newInquiry, ...(db.inquiries || [])];
-  writeDB(db);
+
+  const db = await connectToDatabase();
+  if (db) {
+    const created = await Inquiry.create(newInquiry);
+    const { _id, __v, ...rest } = created.toObject();
+    return rest;
+  }
+
+  const jdb = readJSONDB();
+  jdb.inquiries = [newInquiry, ...(jdb.inquiries || [])];
+  writeJSONDB(jdb);
   return newInquiry;
 }
 
-export function updateInquiryStatus(id, status, adminNotes = '') {
-  const db = readDB();
-  if (!db.inquiries) db.inquiries = [];
-  const index = db.inquiries.findIndex((i) => i.id === id);
+export async function updateInquiryStatus(id, status, adminNotes = '') {
+  const db = await connectToDatabase();
+  if (db) {
+    const update = { status };
+    if (adminNotes) update.adminNotes = adminNotes;
+    const updated = await Inquiry.findOneAndUpdate({ id }, update, { returnDocument: 'after' }).lean();
+    if (!updated) return null;
+    const { _id, __v, ...rest } = updated;
+    return rest;
+  }
+
+  const jdb = readJSONDB();
+  const index = (jdb.inquiries || []).findIndex((i) => i.id === id);
   if (index === -1) return null;
-  db.inquiries[index] = {
-    ...db.inquiries[index],
+  jdb.inquiries[index] = {
+    ...jdb.inquiries[index],
     status,
-    adminNotes: adminNotes || db.inquiries[index].adminNotes,
-    updatedAt: new Date().toISOString(),
+    adminNotes: adminNotes || jdb.inquiries[index].adminNotes,
   };
-  writeDB(db);
-  return db.inquiries[index];
+  writeJSONDB(jdb);
+  return jdb.inquiries[index];
 }
 
-export function deleteInquiry(id) {
-  const db = readDB();
-  if (!db.inquiries) return false;
-  const initialLength = db.inquiries.length;
-  db.inquiries = db.inquiries.filter((i) => i.id !== id);
-  const deleted = db.inquiries.length < initialLength;
-  if (deleted) writeDB(db);
+export async function deleteInquiry(id) {
+  const db = await connectToDatabase();
+  if (db) {
+    const res = await Inquiry.deleteOne({ id });
+    return res.deletedCount > 0;
+  }
+
+  const jdb = readJSONDB();
+  const initLen = (jdb.inquiries || []).length;
+  jdb.inquiries = (jdb.inquiries || []).filter((i) => i.id !== id);
+  const deleted = jdb.inquiries.length < initLen;
+  if (deleted) writeJSONDB(jdb);
   return deleted;
 }
 
-// ─────────── STORE CONFIG ───────────
-export function getStoreConfig() {
-  const db = readDB();
-  return db.storeConfig || INITIAL_DB_STATE.storeConfig;
+// ─── CONTACT MESSAGES CRUD ───────────────────────────────────────────────────
+export async function getContactMessages() {
+  const db = await connectToDatabase();
+  if (db) {
+    const list = await ContactMessage.find().sort({ createdAt: -1 }).lean();
+    return list.map(({ _id, __v, ...m }) => m);
+  }
+  const jdb = readJSONDB();
+  return jdb.contactMessages || [];
 }
 
-export function updateStoreConfig(configData) {
-  const db = readDB();
-  db.storeConfig = { ...(db.storeConfig || {}), ...configData };
-  writeDB(db);
-  return db.storeConfig;
+export async function createContactMessage(data) {
+  const id = data.id || `CT-${Math.floor(1000 + Math.random() * 9000)}`;
+  const newMsg = {
+    ...data,
+    id,
+    status: data.status || 'pending',
+  };
+
+  const db = await connectToDatabase();
+  if (db) {
+    const created = await ContactMessage.create(newMsg);
+    const { _id, __v, ...rest } = created.toObject();
+    return rest;
+  }
+
+  const jdb = readJSONDB();
+  jdb.contactMessages = [newMsg, ...(jdb.contactMessages || [])];
+  writeJSONDB(jdb);
+  return newMsg;
 }
 
-// ─────────── ADMIN AUTHENTICATION ───────────
-export function verifyAdminCredentials(email, password) {
-  const db = readDB();
-  const admin = db.adminUser || INITIAL_DB_STATE.adminUser;
+export async function updateContactStatus(id, status, adminNotes = '') {
+  const db = await connectToDatabase();
+  if (db) {
+    const update = { status };
+    if (adminNotes) update.adminNotes = adminNotes;
+    const updated = await ContactMessage.findOneAndUpdate({ id }, update, { returnDocument: 'after' }).lean();
+    if (!updated) return null;
+    const { _id, __v, ...rest } = updated;
+    return rest;
+  }
 
-  const emailMatch = admin.email.toLowerCase() === email.toLowerCase().trim();
-  if (!emailMatch) return false;
+  const jdb = readJSONDB();
+  const index = (jdb.contactMessages || []).findIndex((m) => m.id === id);
+  if (index === -1) return null;
+  jdb.contactMessages[index] = {
+    ...jdb.contactMessages[index],
+    status,
+    adminNotes: adminNotes || jdb.contactMessages[index].adminNotes,
+  };
+  writeJSONDB(jdb);
+  return jdb.contactMessages[index];
+}
 
-  const passwordMatch = bcrypt.compareSync(password, admin.passwordHash);
-  return passwordMatch ? { email: admin.email, name: admin.name, role: admin.role } : null;
+export async function deleteContactMessage(id) {
+  const db = await connectToDatabase();
+  if (db) {
+    const res = await ContactMessage.deleteOne({ id });
+    return res.deletedCount > 0;
+  }
+
+  const jdb = readJSONDB();
+  const initLen = (jdb.contactMessages || []).length;
+  jdb.contactMessages = (jdb.contactMessages || []).filter((m) => m.id !== id);
+  const deleted = jdb.contactMessages.length < initLen;
+  if (deleted) writeJSONDB(jdb);
+  return deleted;
+}
+
+// ─── STORE CONFIG ────────────────────────────────────────────────────────────
+export async function getStoreConfig() {
+  const db = await connectToDatabase();
+  if (db) {
+    await ensureMongoSeeded();
+    const config = await StoreConfig.findOne().lean();
+    if (config) {
+      const { _id, __v, ...rest } = config;
+      return rest;
+    }
+  }
+  const jdb = readJSONDB();
+  return jdb.storeConfig || INITIAL_DB_STATE.storeConfig;
+}
+
+export async function updateStoreConfig(configData) {
+  const db = await connectToDatabase();
+  if (db) {
+    let config = await StoreConfig.findOne();
+    if (config) {
+      Object.assign(config, configData);
+      await config.save();
+      const { _id, __v, ...rest } = config.toObject();
+      return rest;
+    } else {
+      const created = await StoreConfig.create(configData);
+      const { _id, __v, ...rest } = created.toObject();
+      return rest;
+    }
+  }
+
+  const jdb = readJSONDB();
+  jdb.storeConfig = { ...(jdb.storeConfig || {}), ...configData };
+  writeJSONDB(jdb);
+  return jdb.storeConfig;
+}
+
+// ─── CUSTOMER AUTHENTICATION (MongoDB + JSON fallback) ───────────────────────
+export async function registerCustomer({ name, email, password, phone = '', address = '', city = '', pincode = '' }) {
+  if (!name || !email || !password) {
+    throw new Error('Name, email, and password are required');
+  }
+
+  const cleanEmail = email.toLowerCase().trim();
+  const passwordHash = bcrypt.hashSync(password, 10);
+  const addresses = address ? [{ title: 'Home', name, phone, address, city, pincode, isDefault: true }] : [];
+
+  const db = await connectToDatabase();
+  if (db) {
+    const existing = await User.findOne({ email: cleanEmail });
+    if (existing) {
+      throw new Error('An account with this email already exists. Please log in.');
+    }
+
+    const newUser = await User.create({
+      name: name.trim(),
+      email: cleanEmail,
+      passwordHash,
+      phone: phone.trim(),
+      role: 'customer',
+      addresses,
+    });
+
+    const userObj = newUser.toObject();
+    delete userObj.passwordHash;
+    delete userObj.__v;
+    return userObj;
+  }
+
+  // Fallback JSON DB
+  const jdb = readJSONDB();
+  if (!jdb.users) jdb.users = [];
+  const existing = jdb.users.find((u) => u.email.toLowerCase() === cleanEmail);
+  if (existing) {
+    throw new Error('An account with this email already exists. Please log in.');
+  }
+
+  const id = `usr-${Date.now()}`;
+  const newUser = {
+    _id: id,
+    id,
+    name: name.trim(),
+    email: cleanEmail,
+    passwordHash,
+    phone: phone.trim(),
+    role: 'customer',
+    addresses,
+    createdAt: new Date().toISOString(),
+  };
+
+  jdb.users.push(newUser);
+  writeJSONDB(jdb);
+
+  const { passwordHash: _, ...sanitized } = newUser;
+  return sanitized;
+}
+
+export async function loginCustomer({ email, password }) {
+  if (!email || !password) {
+    throw new Error('Email and password are required');
+  }
+
+  const cleanEmail = email.toLowerCase().trim();
+  const db = await connectToDatabase();
+  if (db) {
+    const user = await User.findOne({ email: cleanEmail });
+    if (!user) return null;
+
+    const isMatch = bcrypt.compareSync(password, user.passwordHash);
+    if (!isMatch) return null;
+
+    const userObj = user.toObject();
+    delete userObj.passwordHash;
+    delete userObj.__v;
+    return userObj;
+  }
+
+  // Fallback JSON DB
+  const jdb = readJSONDB();
+  const user = (jdb.users || []).find((u) => u.email.toLowerCase() === cleanEmail);
+  if (!user) return null;
+
+  const isMatch = bcrypt.compareSync(password, user.passwordHash);
+  if (!isMatch) return null;
+
+  const { passwordHash: _, ...sanitized } = user;
+  return sanitized;
+}
+
+export async function getCustomerById(id) {
+  const db = await connectToDatabase();
+  if (db) {
+    const user = await User.findById(id).lean();
+    if (!user) return null;
+    const { passwordHash, __v, ...sanitized } = user;
+    return sanitized;
+  }
+
+  const jdb = readJSONDB();
+  const user = (jdb.users || []).find((u) => u._id === id || u.id === id || u.email === id);
+  if (!user) return null;
+  const { passwordHash, ...sanitized } = user;
+  return sanitized;
+}
+
+export async function updateCustomerProfile(id, updateData) {
+  const cleanData = { ...updateData };
+  delete cleanData.passwordHash;
+  delete cleanData.role;
+  delete cleanData._id;
+
+  const db = await connectToDatabase();
+  if (db) {
+    const updated = await User.findByIdAndUpdate(id, cleanData, { returnDocument: 'after' }).lean();
+    if (!updated) return null;
+    const { passwordHash, __v, ...sanitized } = updated;
+    return sanitized;
+  }
+
+  const jdb = readJSONDB();
+  const index = (jdb.users || []).findIndex((u) => u._id === id || u.id === id || u.email === id);
+  if (index === -1) return null;
+
+  jdb.users[index] = { ...jdb.users[index], ...cleanData };
+  writeJSONDB(jdb);
+  const { passwordHash, ...sanitized } = jdb.users[index];
+  return sanitized;
+}
+
+// ─── ADMIN AUTHENTICATION (MongoDB + Environment Variables) ──────────────────
+export async function verifyAdminCredentials(email, password) {
+  if (!email || !password) return null;
+
+  const cleanEmail = email.toLowerCase().trim();
+  const envAdminEmail = (process.env.ADMIN_EMAIL || '').toLowerCase().trim();
+  const envAdminPass = process.env.ADMIN_PASSWORD || '';
+
+  // 1. Check environment variables
+  if (envAdminEmail && envAdminEmail === cleanEmail && envAdminPass) {
+    if (password === envAdminPass) {
+      return {
+        email: envAdminEmail,
+        name: 'Master Admin',
+        role: 'superadmin',
+      };
+    }
+  }
+
+  // 2. Check MongoDB Admin User if configured
+  const db = await connectToDatabase();
+  if (db) {
+    const adminUser = await User.findOne({ email: cleanEmail, role: 'admin' });
+    if (adminUser) {
+      const match = bcrypt.compareSync(password, adminUser.passwordHash);
+      if (match) {
+        return {
+          email: adminUser.email,
+          name: adminUser.name,
+          role: 'admin',
+        };
+      }
+    }
+  }
+
+  return null;
 }
 
 export function resetDatabase() {
-  writeDB(INITIAL_DB_STATE);
+  writeJSONDB(INITIAL_DB_STATE);
   return INITIAL_DB_STATE;
 }

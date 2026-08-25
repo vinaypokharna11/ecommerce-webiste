@@ -23,7 +23,7 @@ export const ASSET_GALLERY = [
   { id: 'backpack_urban', name: 'Water-Resistant Backpack', src: prodBackpack, category: 'accessories' },
   { id: 'giftbox_luxe', name: 'Festive Luxury Gift Hamper', src: promoGiftbox, category: 'accessories' },
   { id: 'plant_succulent', name: 'Ceramic Succulent Plant', src: heroPlant, category: 'home-living' },
-  { id: 'shopping_bag', name: 'ShopEase Signature Bag', src: heroShoppingBag, category: 'general' },
+  { id: 'shopping_bag', name: 'Nakoda Imitation Signature Bag', src: heroShoppingBag, category: 'general' },
 ];
 
 export const BADGE_PRESETS = [

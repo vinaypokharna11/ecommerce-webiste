@@ -402,19 +402,19 @@ export const ContactInquirePage = ({
           <div>
             <h3 className="text-base font-bold text-[#15152A] mb-1">Email Inquiries</h3>
             <p className="text-xs text-[#626276] leading-relaxed mb-4 font-mono font-medium truncate">
-              support@shopease.com
+              support@nakodaimitation.com
             </p>
           </div>
           <div className="flex gap-2">
             <a
-              href="mailto:support@shopease.com"
+              href="mailto:support@nakodaimitation.com"
               className="flex-1 py-2.5 rounded-xl bg-[#EC5AC8] hover:bg-[#D946EF] text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all active:scale-95"
             >
               <Mail className="w-3.5 h-3.5" />
               <span>Email Us</span>
             </a>
             <button
-              onClick={() => handleCopy('support@shopease.com', 'Email Address')}
+              onClick={() => handleCopy('support@nakodaimitation.com', 'Email Address')}
               className="p-2.5 rounded-xl bg-[#FFF0FB] hover:bg-[#FCD6F2] text-[#EC5AC8] border border-[#FCD6F2] transition-colors"
               title="Copy Email Address"
             >
@@ -649,7 +649,7 @@ export const ContactInquirePage = ({
                     <button
                       type="submit"
                       disabled={contactSubmitting}
-                      className="w-full sm:flex-1 py-3.5 px-6 rounded-2xl gradient-btn-primary text-white font-bold text-sm flex items-center justify-center gap-2 shadow-btn hover:scale-[1.01] active:scale-98 transition-all disabled:opacity-50"
+                      className="w-full sm:flex-1 py-3.5 px-6 rounded-full bg-[#171717] hover:bg-black text-white font-extrabold text-sm flex items-center justify-center gap-2 shadow-lg active:scale-98 transition-all disabled:opacity-50"
                     >
                       {contactSubmitting ? (
                         <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -725,7 +725,7 @@ export const ContactInquirePage = ({
 
                 <h4 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
                   <ShieldCheck className="w-4 h-4 text-[#EC5AC8]" />
-                  <span>The ShopEase Promise</span>
+                  <span>The Nakoda Imitation Promise</span>
                 </h4>
 
                 <div className="space-y-3.5 text-xs text-[#EAE6FD]/80">

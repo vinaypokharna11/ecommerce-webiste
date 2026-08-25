@@ -229,7 +229,7 @@ export const AdminLayout = ({ onExitAdmin, onLogout, adminUser }) => {
                       <div className="w-8 h-8 rounded-lg bg-[#6257FF] text-white flex items-center justify-center">
                         <ShoppingBag className="w-4 h-4" />
                       </div>
-                      <span className="font-extrabold text-sm text-[#15152A]">ShopEase Admin</span>
+                      <span className="font-extrabold text-sm text-[#15152A]">{storeConfig.name} Admin</span>
                     </div>
                     <button
                       onClick={() => setIsSidebarOpen(false)}

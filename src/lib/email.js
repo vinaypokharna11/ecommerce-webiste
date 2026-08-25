@@ -25,7 +25,7 @@ function getTransporter() {
       console.log('────────────────────────────────────────────────────────');
       console.log('📧 [MOCK SMTP EMAIL DISPATCH]');
       console.log(`To: ${options.to}`);
-      console.log(`From: ${options.from || process.env.SMTP_FROM || 'orders@shopease.com'}`);
+      console.log(`From: ${options.from || process.env.SMTP_FROM || 'orders@nakodaimitation.com'}`);
       console.log(`Subject: ${options.subject}`);
       console.log('────────────────────────────────────────────────────────');
       return { messageId: `mock-${Date.now()}`, accepted: [options.to] };
@@ -36,7 +36,7 @@ function getTransporter() {
 export async function sendEmail({ to, subject, html, text }) {
   try {
     const transporter = getTransporter();
-    const from = process.env.SMTP_FROM || '"ShopEase Store" <orders@shopease.com>';
+    const from = process.env.SMTP_FROM || '"Nakoda Imitation" <orders@nakodaimitation.com>';
 
     const info = await transporter.sendMail({
       from,
@@ -147,9 +147,9 @@ export async function sendOrderConfirmationEmail(order, storeConfig = {}) {
 
 // ─── Admin Notification Email on New Order ───
 export async function sendAdminNewOrderNotification(order, storeConfig = {}) {
-  const adminEmail = process.env.ADMIN_NOTIFICATION_EMAIL || process.env.ADMIN_EMAIL || 'admin@shopease.com';
+  const adminEmail = process.env.ADMIN_NOTIFICATION_EMAIL || process.env.ADMIN_EMAIL || 'admin@nakodaimitation.com';
   const currency = storeConfig.currency || '₹';
-  const storeName = storeConfig.name || 'ShopEase';
+  const storeName = storeConfig.name || 'Nakoda Imitation';
 
   const html = `
     <div style="font-family: sans-serif; max-width: 550px; margin: 0 auto; padding: 24px; background: #FAF9FF; border-radius: 20px; border: 1px solid #EAE6FD;">
@@ -177,7 +177,7 @@ export async function sendAdminNewOrderNotification(order, storeConfig = {}) {
 
 // ─── Contact Form Confirmation for Customer ───
 export async function sendContactConfirmationEmail(ticket, storeConfig = {}) {
-  const storeName = storeConfig.name || 'ShopEase';
+  const storeName = storeConfig.name || 'Nakoda Imitation';
   const whatsapp = storeConfig.whatsappNumber || '919876543210';
 
   const html = `
@@ -325,8 +325,8 @@ export async function sendInquiryConfirmationEmail(inquiry, storeConfig = {}) {
 
 // ─── Admin Alert for Inquiry Submission ───
 export async function sendAdminInquiryNotification(inquiry, storeConfig = {}) {
-  const adminEmail = process.env.ADMIN_NOTIFICATION_EMAIL || process.env.ADMIN_EMAIL || 'admin@shopease.com';
-  const storeName = storeConfig.name || 'ShopEase';
+  const adminEmail = process.env.ADMIN_NOTIFICATION_EMAIL || process.env.ADMIN_EMAIL || 'admin@nakodaimitation.com';
+  const storeName = storeConfig.name || 'Nakoda Imitation';
 
   const html = `
     <div style="font-family: sans-serif; max-width: 550px; margin: 0 auto; padding: 24px; background: #FAF9FF; border-radius: 20px; border: 1px solid #EAE6FD;">
@@ -361,14 +361,14 @@ export async function sendTestEmail(targetEmail) {
   const html = `
     <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; padding: 24px; background: #F0FDF4; border-radius: 20px; border: 1px solid #BBF7D0; text-align: center;">
       <h2 style="color: #059669; margin-top: 0;">✓ SMTP Email Configuration Working!</h2>
-      <p style="font-size: 14px; color: #15152A;">This test email confirms that your SMTP server connection in ShopEase is functioning properly.</p>
+      <p style="font-size: 14px; color: #15152A;">This test email confirms that your SMTP server connection in Nakoda Imitation is functioning properly.</p>
       <p style="font-size: 12px; color: #8E8EA0; margin-top: 16px;">Timestamp: ${new Date().toLocaleString()}</p>
     </div>
   `;
 
   return sendEmail({
     to: targetEmail,
-    subject: '✓ ShopEase SMTP Test Email — Connection Successful',
+    subject: '✓ Nakoda Imitation SMTP Test Email — Connection Successful',
     html,
   });
 }

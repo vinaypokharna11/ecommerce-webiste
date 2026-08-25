@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getProducts, createProduct } from '@/lib/db';
+import { verifyAdminAuth, unauthorizedResponse } from '@/lib/auth';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET(request) {
   try {
@@ -10,7 +13,7 @@ export async function GET(request) {
     const isPopular = searchParams.get('isPopular') === 'true';
     const isFeatured = searchParams.get('isFeatured') === 'true';
 
-    const products = getProducts({ category, search, stockStatus, isPopular, isFeatured });
+    const products = await getProducts({ category, search, stockStatus, isPopular, isFeatured });
     return NextResponse.json({ success: true, count: products.length, products });
   } catch (error) {
     console.error('Error fetching products:', error);
@@ -20,6 +23,11 @@ export async function GET(request) {
 
 export async function POST(request) {
   try {
+    const admin = verifyAdminAuth(request);
+    if (!admin) {
+      return unauthorizedResponse();
+    }
+
     const body = await request.json();
     if (!body.name || !body.price) {
       return NextResponse.json(
@@ -28,7 +36,7 @@ export async function POST(request) {
       );
     }
 
-    const newProduct = createProduct(body);
+    const newProduct = await createProduct(body);
     return NextResponse.json({ success: true, product: newProduct }, { status: 201 });
   } catch (error) {
     console.error('Error creating product:', error);

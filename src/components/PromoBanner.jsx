@@ -1,94 +1,83 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { ArrowRight, Sparkles, Tag } from 'lucide-react';
+import { ArrowUpRight, Tag, Sparkles } from 'lucide-react';
+import Image from 'next/image';
 import { HERO_ASSETS } from '../data/mockData';
 
 export const PromoBanner = ({ onCheckOffers }) => {
   return (
-    <section className="py-10 sm:py-14" aria-label="Special Promotional Offer">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section className="py-8 sm:py-12" aria-label="Special Promotional Offer">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Banner Container */}
         <motion.div
-          initial={{ opacity: 0, y: 30 }}
+          initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: '-50px' }}
-          transition={{ duration: 0.6 }}
-          className="relative overflow-hidden rounded-[28px] sm:rounded-[36px] gradient-promo-banner shadow-[0_20px_50px_rgba(98,87,255,0.28)] p-8 sm:p-12 lg:p-14"
+          transition={{ duration: 0.5 }}
+          className="relative overflow-hidden rounded-[30px] bg-gradient-to-r from-[#171717] to-[#262626] text-white p-6 sm:p-10 lg:p-12 shadow-neu-card"
         >
-          {/* Background Decorative Rings & Ambient Glows */}
-          <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
-          <div className="absolute bottom-0 left-1/3 w-64 h-64 bg-pink-500/20 rounded-full blur-2xl pointer-events-none" />
+          {/* Subtle Organic Mesh Glow */}
+          <div className="absolute top-0 right-0 w-80 h-80 bg-[#9FD842]/15 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
 
           {/* Grid Layout */}
-          <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+          <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
             
             {/* Left Content */}
-            <div className="lg:col-span-7 text-left">
+            <div className="lg:col-span-7 text-left space-y-3">
               {/* Badge */}
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/15 backdrop-blur-md border border-white/20 text-white shadow-sm mb-4">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#9FD842] text-[#171717] shadow-sm">
                 <Tag className="w-3.5 h-3.5" />
-                <span className="text-xs font-bold uppercase tracking-wider">Limited Time Offer</span>
+                <span className="text-[11px] font-extrabold uppercase tracking-wider">Seasonal Drop</span>
               </div>
 
               {/* Title */}
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white tracking-tight leading-tight mb-4">
-                Special Offer Just for You!
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white tracking-tight leading-tight">
+                Special Offers Just For You
               </h2>
 
               {/* Subtext */}
-              <p className="text-white/85 text-base sm:text-lg mb-8 max-w-md font-normal leading-relaxed">
-                Up to 30% OFF on selected items across all categories.
+              <p className="text-[#A0A0A0] text-xs sm:text-sm max-w-md font-medium leading-relaxed">
+                Up to 30% OFF on selected products across all categories this week.
               </p>
 
               {/* Button */}
-              <button
-                onClick={onCheckOffers}
-                className="group inline-flex items-center gap-3 px-8 py-4 rounded-2xl bg-white text-[#6257FF] font-bold text-base shadow-[0_10px_25px_rgba(0,0,0,0.12)] hover:bg-white hover:text-[#4F46E5] hover:scale-105 active:scale-95 transition-all duration-300 focus:outline-none focus-visible:ring-4 focus-visible:ring-white/50"
-              >
-                <span>Check Offers</span>
-                <ArrowRight className="w-5 h-5 transition-transform duration-300 group-hover:translate-x-1.5" />
-              </button>
+              <div className="pt-2">
+                <button
+                  onClick={onCheckOffers}
+                  className="group inline-flex items-center gap-3 pl-6 pr-2.5 py-2.5 rounded-full bg-[#9FD842] text-[#171717] font-extrabold text-xs sm:text-sm hover:bg-[#8EC731] active:scale-95 transition-all shadow-neu-btn-accent"
+                >
+                  <span>Check Offers</span>
+                  <div className="w-7 h-7 rounded-full bg-[#171717] text-white flex items-center justify-center transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5">
+                    <ArrowUpRight className="w-3.5 h-3.5 stroke-[2.5]" />
+                  </div>
+                </button>
+              </div>
             </div>
 
-            {/* Right Visual: 3D Gift Box & Discount Tag */}
+            {/* Right Visual */}
             <div className="lg:col-span-5 flex items-center justify-center lg:justify-end">
               <div className="relative flex items-center justify-center">
-                
-                {/* 3D Gift Box Image with float animation */}
-                <div className="w-48 sm:w-60 lg:w-72 animate-float-gentle relative z-10">
-                  <img
+                {/* 3D Gift Box / Image */}
+                <div className="w-40 sm:w-52 lg:w-60 relative z-10">
+                  <Image
                     src={HERO_ASSETS.giftbox}
-                    alt="Promotional Gift Box"
-                    className="w-full h-auto object-contain drop-shadow-[0_20px_35px_rgba(0,0,0,0.3)] rounded-3xl"
-                    loading="lazy"
+                    alt="Special Offers"
+                    width={240}
+                    height={240}
+                    className="w-full h-auto object-contain rounded-2xl drop-shadow-lg"
                   />
                 </div>
 
                 {/* 30% OFF Pill Badge */}
-                <motion.div
-                  initial={{ scale: 0.8, opacity: 0 }}
-                  whileInView={{ scale: 1, opacity: 1 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: 0.2, type: 'spring', stiffness: 300 }}
-                  className="absolute -right-2 sm:-right-4 top-1/4 z-20 bg-white/95 backdrop-blur-md rounded-2xl sm:rounded-3xl p-3 sm:p-5 shadow-[0_15px_35px_rgba(0,0,0,0.2)] border border-white flex flex-col items-center justify-center text-center animate-pulse-subtle"
-                >
-                  <span className="text-2xl sm:text-4xl font-extrabold text-[#EC5AC8] leading-none">
+                <div className="absolute -right-2 top-1/4 z-20 bg-white rounded-2xl p-2.5 sm:p-3.5 shadow-lg border border-black/5 flex flex-col items-center justify-center text-center">
+                  <span className="text-xl sm:text-2xl font-extrabold text-[#171717] leading-none">
                     30%
                   </span>
-                  <span className="text-xs sm:text-sm font-bold text-[#6257FF] uppercase tracking-wider mt-0.5">
+                  <span className="text-[10px] font-extrabold text-[#709E1E] uppercase mt-0.5">
                     OFF
                   </span>
-                </motion.div>
-
-                {/* Sparkle decorative points */}
-                <div className="absolute -top-3 left-4 text-white/90 animate-sparkle">
-                  <Sparkles className="w-6 h-6 fill-white" />
                 </div>
-                <div className="absolute -bottom-4 right-10 text-white/80 animate-sparkle" style={{ animationDelay: '1.5s' }}>
-                  <Sparkles className="w-5 h-5 fill-white" />
-                </div>
-
               </div>
             </div>
 

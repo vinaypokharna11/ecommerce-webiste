@@ -17,8 +17,8 @@ import prodLeatherWallet from '../assets/images/prod_leather_wallet.jpg';
 import prodAromaDiffuser from '../assets/images/prod_aroma_diffuser.jpg';
 
 export const STORE_CONFIG = {
-  name: 'ShopEase',
-  tagline: 'Your Trusted Local Neighborhood Store',
+  name: 'Nakoda Imitation',
+  tagline: 'Premium Imitation Jewelry & Lifestyle Collection',
   whatsappNumber: '919876543210',
   whatsappDisplay: '+91 98765 43210',
   address: 'Shop #14, Main Market Road, Bangalore',
@@ -44,12 +44,13 @@ export const NAV_ITEMS = [
 ];
 
 export const CATALOG_CATEGORIES = [
-  { id: 'all', name: 'All Products', count: 16, icon: 'LayoutGrid' },
-  { id: 'clothing', name: 'Clothing', count: 4, icon: 'Shirt' },
-  { id: 'footwear', name: 'Footwear', count: 3, icon: 'Footprints' },
-  { id: 'electronics', name: 'Electronics', count: 4, icon: 'Headphones' },
-  { id: 'accessories', name: 'Accessories', count: 3, icon: 'Watch' },
-  { id: 'home-living', name: 'Home & Living', count: 2, icon: 'Armchair' },
+  { id: 'all', name: 'All Products', count: 16, icon: 'LayoutGrid', image: prodSneakers },
+  { id: 'clothing', name: 'Men\'s outfit', count: 4, icon: 'Shirt', image: prodDenimJacket },
+  { id: 'clothing-women', name: 'Woman\'s outfit', count: 4, icon: 'Shirt', image: catLinenShirt },
+  { id: 'footwear', name: 'Men\'s footwears', count: 3, icon: 'Footprints', image: prodSneakers },
+  { id: 'electronics', name: 'Electronics', count: 4, icon: 'Headphones', image: prodHeadphones },
+  { id: 'accessories', name: 'Accessories', count: 3, icon: 'Watch', image: catSunglasses },
+  { id: 'home-living', name: 'Home & Living', count: 2, icon: 'Armchair', image: heroPlant },
 ];
 
 export const CATALOG_PRODUCTS = [
@@ -571,7 +572,7 @@ export const FAQS_DATA = [
   {
     category: 'Ordering & Inquiries',
     question: 'Can I order directly on WhatsApp?',
-    answer: 'Yes! ShopEase offers a seamless WhatsApp checkout. You can add items to your cart and tap "Order on WhatsApp" or click the WhatsApp icon on any product page to chat directly with our store associate.',
+    answer: 'Yes! Nakoda Imitation offers a seamless WhatsApp checkout. You can add items to your cart and tap "Order on WhatsApp" or click the WhatsApp icon on any product page to chat directly with our store associate.',
   },
   {
     category: 'Delivery & Shipping',
@@ -596,10 +597,10 @@ export const FAQS_DATA = [
 ];
 
 export const STORE_LOCATION_DETAILS = {
-  name: 'ShopEase Flagship Retail & Experience Store',
+  name: 'Nakoda Imitation Flagship Retail Store',
   address: 'Shop #14, Main Market Road, Indiranagar, Bangalore, Karnataka — 560038',
   phone: '+91 98765 43210',
-  email: 'support@shopease.com',
+  email: 'support@nakodaimitation.com',
   hoursWeekday: 'Monday – Saturday: 9:30 AM – 9:30 PM',
   hoursSunday: 'Sunday: 10:00 AM – 9:00 PM',
   landmark: 'Opposite Metro Pillar #142, near Green Park Square',

@@ -106,7 +106,7 @@ export const AdminDashboard = ({ onNavigate, onOpenAddProduct }) => {
           <div>
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 backdrop-blur-sm text-xs font-bold mb-3">
               <Sparkles className="w-3.5 h-3.5" />
-              <span>ShopEase Catalog Control Center</span>
+              <span>Nakoda Imitation Catalog Control Center</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight mb-2">
               Welcome back to your Store Admin!

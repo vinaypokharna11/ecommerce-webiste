@@ -12,9 +12,7 @@ import {
   ArrowRight,
   ShieldCheck,
   AlertCircle,
-  Sparkles,
   ArrowLeft,
-  Key
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -26,16 +24,10 @@ export default function AdminLoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleFillDemo = () => {
-    setEmail('admin@shopease.com');
-    setPassword('admin123');
-    setError('');
-  };
-
   const handleLogin = async (e) => {
     e.preventDefault();
     if (!email || !password) {
-      setError('Please fill in both email and password.');
+      setError('Please provide both admin email and password.');
       return;
     }
 
@@ -52,16 +44,15 @@ export default function AdminLoginPage() {
       const data = await res.json();
 
       if (res.ok && data.success) {
-        // Store token in localStorage as backup and redirect to admin
         if (data.token) {
           localStorage.setItem('shopease_admin_token', data.token);
         }
         router.push('/admin');
       } else {
-        setError(data.error || 'Invalid admin credentials. Try admin@shopease.com / admin123');
+        setError(data.error || 'Invalid administrator credentials. Access denied.');
       }
     } catch (err) {
-      setError('Unable to connect to the authentication server. Please try again.');
+      setError('Unable to connect to the authentication service. Please check your network and try again.');
     } finally {
       setIsLoading(false);
     }
@@ -69,8 +60,7 @@ export default function AdminLoginPage() {
 
   return (
     <div className="min-h-screen bg-[#FAF9FF] text-[#15152A] flex flex-col justify-between relative overflow-hidden font-sans selection:bg-[#6257FF] selection:text-white">
-      
-      {/* Background Radial Ambient Glows */}
+      {/* Ambient Glows */}
       <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] ambient-glow-lavender rounded-full blur-[140px] pointer-events-none -z-10 opacity-70" />
       <div className="fixed bottom-0 right-0 w-[500px] h-[500px] ambient-glow-pink rounded-full blur-[140px] pointer-events-none -z-10 opacity-50" />
 
@@ -114,7 +104,7 @@ export default function AdminLoginPage() {
               Admin Login
             </h1>
             <p className="text-xs text-[#626276] mt-1">
-              Sign in to manage catalog products, categories, coupons, and orders
+              Sign in with your administrator credentials to manage catalog, orders, and inquiries
             </p>
           </div>
 
@@ -143,6 +133,8 @@ export default function AdminLoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="admin@shopease.com"
+                  autoComplete="email"
+                  required
                   className="w-full pl-11 pr-4 py-3 rounded-2xl border border-[#EAE6FD] bg-[#FAF9FF] text-sm text-[#15152A] placeholder-[#8E8EA0] focus:outline-none focus:border-[#6257FF] focus:bg-white transition-all font-medium"
                 />
               </div>
@@ -159,12 +151,15 @@ export default function AdminLoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
+                  autoComplete="current-password"
+                  required
                   className="w-full pl-11 pr-11 py-3 rounded-2xl border border-[#EAE6FD] bg-[#FAF9FF] text-sm text-[#15152A] placeholder-[#8E8EA0] focus:outline-none focus:border-[#6257FF] focus:bg-white transition-all font-medium"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#8E8EA0] hover:text-[#15152A] p-1"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -175,7 +170,7 @@ export default function AdminLoginPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full py-3.5 rounded-2xl gradient-btn-primary text-white font-bold text-sm shadow-btn hover:scale-[1.02] active:scale-98 transition-all flex items-center justify-center gap-2 mt-2 disabled:opacity-60"
+              className="w-full py-3.5 rounded-full bg-[#171717] hover:bg-black text-white font-extrabold text-sm shadow-xl active:scale-98 transition-all flex items-center justify-center gap-2 mt-3 disabled:opacity-60 cursor-pointer"
             >
               {isLoading ? (
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -187,19 +182,6 @@ export default function AdminLoginPage() {
               )}
             </button>
           </form>
-
-          {/* Quick Demo Credentials Helper */}
-          <div className="mt-6 pt-5 border-t border-[#EAE6FD] text-center">
-            <p className="text-[11px] text-[#8E8EA0] mb-2 font-medium">Testing or Demoing?</p>
-            <button
-              type="button"
-              onClick={handleFillDemo}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#F5F3FF] border border-[#EAE6FD] text-xs font-bold text-[#6257FF] hover:bg-[#EDE9FE] transition-colors"
-            >
-              <Key className="w-3.5 h-3.5" />
-              <span>Fill Default Credentials (admin123)</span>
-            </button>
-          </div>
         </motion.div>
       </main>
 

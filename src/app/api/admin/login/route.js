@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server';
 import { verifyAdminCredentials } from '@/lib/db';
-import jwt from 'jsonwebtoken';
-
-const JWT_SECRET = process.env.JWT_SECRET || 'shopease_super_secret_jwt_key_2026';
+import { signToken } from '@/lib/auth';
 
 export async function POST(request) {
   try {
@@ -15,7 +13,7 @@ export async function POST(request) {
       );
     }
 
-    const user = verifyAdminCredentials(email, password);
+    const user = await verifyAdminCredentials(email, password);
     if (!user) {
       return NextResponse.json(
         { success: false, error: 'Invalid admin credentials' },
@@ -24,11 +22,11 @@ export async function POST(request) {
     }
 
     // Sign JWT token
-    const token = jwt.sign(
-      { email: user.email, name: user.name, role: user.role },
-      JWT_SECRET,
-      { expiresIn: '7d' }
-    );
+    const token = signToken({
+      email: user.email,
+      name: user.name,
+      role: user.role,
+    });
 
     const response = NextResponse.json({
       success: true,
@@ -47,7 +45,7 @@ export async function POST(request) {
 
     return response;
   } catch (error) {
-    console.error('Login error:', error);
+    console.error('Admin login error:', error);
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }

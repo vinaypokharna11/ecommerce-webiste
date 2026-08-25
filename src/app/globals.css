@@ -4,142 +4,171 @@
 
 @layer base {
   html {
-    font-family: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
+    font-family: 'Manrope', 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
     scroll-behavior: smooth;
     -webkit-tap-highlight-color: transparent;
   }
   
   body {
-    background-color: #FAF9FF;
-    color: #15152A;
+    background-color: #F5F5F3;
+    color: #171717;
     overflow-x: hidden;
   }
 }
 
-/* Custom Gradients & Glassmorphism */
-.gradient-text-hero {
-  background: linear-gradient(135deg, #6257FF 0%, #7C5CFC 40%, #EC5AC8 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+/* Neumorphic & Glassmorphic Custom Utilities */
+.glass-nav {
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 10px 30px -4px rgba(0, 0, 0, 0.05);
+}
+
+.glass-bottom-nav {
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  box-shadow: 0 12px 36px -4px rgba(0, 0, 0, 0.08), 0 2px 10px rgba(0, 0, 0, 0.03);
+}
+
+.glass-modal-panel {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 24px 60px -10px rgba(0, 0, 0, 0.14);
+}
+
+.glass-pill {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 4px 14px -2px rgba(0, 0, 0, 0.04);
+}
+
+.glass-heart-btn {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+  border-radius: 9999px;
+  transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.glass-heart-btn:hover {
+  transform: scale(1.08);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
+}
+
+/* Elevated Neumorphic Surfaces */
+.neu-card {
+  background: #FFFFFF;
+  border-radius: 26px;
+  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.04), 0 2px 6px -1px rgba(0, 0, 0, 0.02);
+  transition: all 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.neu-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 36px -6px rgba(0, 0, 0, 0.08), 0 4px 12px -2px rgba(0, 0, 0, 0.03);
+}
+
+.neu-img-box {
+  background-color: #EEEEEC;
+  border-radius: 24px;
+  transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.neu-search-box {
+  background: #FFFFFF;
+  border-radius: 9999px;
+  box-shadow: 0 6px 20px -2px rgba(0, 0, 0, 0.04), inset 0 1px 2px rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  transition: all 0.2s ease;
+}
+
+.neu-search-box:focus-within {
+  box-shadow: 0 8px 28px -4px rgba(0, 0, 0, 0.08), 0 0 0 2px #9FD842;
+}
+
+/* Action Buttons */
+.neu-btn-accent {
+  background-color: #9FD842;
+  color: #171717;
+  font-weight: 700;
+  border-radius: 9999px;
+  box-shadow: 0 8px 22px -3px rgba(159, 216, 66, 0.42);
+  transition: all 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.neu-btn-accent:hover {
+  background-color: #8EC731;
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px -4px rgba(159, 216, 66, 0.52);
+}
+
+.neu-btn-accent:active {
+  transform: scale(0.98);
+}
+
+.neu-btn-dark {
+  background-color: #171717;
+  color: #FFFFFF;
+  font-weight: 600;
+  border-radius: 9999px;
+  box-shadow: 0 8px 20px -3px rgba(23, 23, 23, 0.25);
+  transition: all 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.neu-btn-dark:hover {
+  background-color: #000000;
+  transform: translateY(-2px);
+  box-shadow: 0 12px 26px -4px rgba(0, 0, 0, 0.35);
+}
+
+.neu-btn-dark:active {
+  transform: scale(0.98);
+}
+
+.active-nav-pill {
+  background-color: #9FD842;
+  color: #171717;
+  font-weight: 700;
+  border-radius: 9999px;
+  box-shadow: 0 4px 14px -2px rgba(159, 216, 66, 0.4);
+}
+
+/* Hero Promo Banner */
+.hero-promo-banner {
+  background: radial-gradient(circle at 80% 20%, #BFEA67 0%, #9FD842 55%, #85C728 100%);
+  border-radius: 28px;
+  box-shadow: 0 14px 40px -8px rgba(159, 216, 66, 0.35);
 }
 
 .gradient-btn-primary {
-  background: linear-gradient(135deg, #6257FF 0%, #7C5CFC 50%, #EC5AC8 100%);
-  background-size: 200% 200%;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background-color: #171717;
+  color: #FFFFFF;
+  font-weight: 700;
+  transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .gradient-btn-primary:hover {
-  background-position: 100% 0%;
-  box-shadow: 0 12px 30px -5px rgba(98, 87, 255, 0.45), 0 0 20px rgba(236, 90, 200, 0.3);
+  background-color: #000000;
 }
 
-.gradient-promo-banner {
-  background: linear-gradient(115deg, #6257FF 0%, #7E4EE6 45%, #C242B6 80%, #EC5AC8 100%);
+.shadow-btn {
+  box-shadow: 0 6px 18px -2px rgba(0, 0, 0, 0.2);
 }
 
-.glass-nav {
-  background: rgba(255, 255, 255, 0.82);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.95);
-  box-shadow: 0 10px 35px -5px rgba(98, 87, 255, 0.08), 0 2px 10px rgba(0, 0, 0, 0.02);
-}
+/* Utilities */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-.glass-card {
-  background: #FFFFFF;
-  border: 1px solid rgba(234, 230, 253, 0.6);
-  box-shadow: 0 10px 35px -8px rgba(98, 87, 255, 0.07);
-  transition: all 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-
-.glass-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 20px 45px -10px rgba(98, 87, 255, 0.15), 0 0 25px -5px rgba(236, 90, 200, 0.08);
-  border-color: rgba(139, 92, 246, 0.3);
-}
-
-.glass-heart-pill {
-  background: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.95);
-  box-shadow: 0 12px 28px rgba(236, 90, 200, 0.2);
-}
-
-/* Ambient Radial Glows */
-.ambient-glow-purple {
-  background: radial-gradient(circle, rgba(98, 87, 255, 0.16) 0%, rgba(98, 87, 255, 0) 70%);
-}
-
-.ambient-glow-pink {
-  background: radial-gradient(circle, rgba(236, 90, 200, 0.14) 0%, rgba(236, 90, 200, 0) 70%);
-}
-
-.ambient-glow-lavender {
-  background: radial-gradient(circle, rgba(139, 92, 246, 0.18) 0%, rgba(139, 92, 246, 0) 70%);
-}
-
-/* 3D Hero Shadows & Pedestals */
-.hero-pedestal-shadow {
-  box-shadow: 0 20px 50px rgba(98, 87, 255, 0.18);
-}
-
-/* Custom Animations */
-@keyframes floatGentle {
-  0%, 100% {
-    transform: translateY(0px) rotate(0deg);
-  }
-  50% {
-    transform: translateY(-10px) rotate(0.5deg);
-  }
-}
-
-@keyframes floatGentleAlt {
-  0%, 100% {
-    transform: translateY(0px) rotate(0deg);
-  }
-  50% {
-    transform: translateY(-8px) rotate(-1deg);
-  }
-}
-
-@keyframes floatPulse {
-  0%, 100% {
-    transform: translateY(0px) scale(1);
-  }
-  50% {
-    transform: translateY(-6px) scale(1.04);
-  }
-}
-
-@keyframes sparkleFade {
-  0%, 100% {
-    opacity: 0.3;
-    transform: scale(0.8);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.2);
-  }
-}
-
-.animate-float-gentle {
-  animation: floatGentle 5s ease-in-out infinite;
-}
-
-.animate-float-alt {
-  animation: floatGentleAlt 4.2s ease-in-out infinite;
-}
-
-.animate-float-pulse {
-  animation: floatPulse 3.8s ease-in-out infinite;
-}
-
-.animate-sparkle {
-  animation: sparkleFade 3s ease-in-out infinite;
-}
-
-/* Reduced motion preference */
+/* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   *, ::before, ::after {
     animation-delay: -1ms !important;
@@ -151,32 +180,3 @@
     transition-delay: 0s !important;
   }
 }
-
-/* Utility: no-scrollbar (for horizontal scroll) */
-.no-scrollbar::-webkit-scrollbar { display: none; }
-.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-
-/* Product card shadows */
-.shadow-card {
-  box-shadow: 0 4px 20px -4px rgba(98, 87, 255, 0.07), 0 2px 8px rgba(0,0,0,0.04);
-}
-.shadow-card-hover {
-  box-shadow: 0 16px 40px -8px rgba(98, 87, 255, 0.18), 0 0 20px rgba(236, 90, 200, 0.06);
-}
-
-/* Button shadow */
-.shadow-btn {
-  box-shadow: 0 8px 24px -4px rgba(98, 87, 255, 0.4);
-}
-
-/* Nav shadow */
-.shadow-nav {
-  box-shadow: 0 10px 35px -5px rgba(98, 87, 255, 0.10), 0 2px 10px rgba(0,0,0,0.03);
-}
-
-/* Brand color text */
-.text-brand-purple { color: #6257FF; }
-
-/* Slow spin */
-@keyframes spinSlow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-.animate-spin-slow { animation: spinSlow 18s linear infinite; }

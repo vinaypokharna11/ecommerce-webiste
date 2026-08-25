@@ -1,11 +1,17 @@
 import { NextResponse } from 'next/server';
 import { updateCategory, deleteCategory } from '@/lib/db';
+import { verifyAdminAuth, unauthorizedResponse } from '@/lib/auth';
 
 export async function PUT(request, { params }) {
   try {
+    const admin = verifyAdminAuth(request);
+    if (!admin) {
+      return unauthorizedResponse();
+    }
+
     const { id } = params;
     const body = await request.json();
-    const updated = updateCategory(id, body);
+    const updated = await updateCategory(id, body);
 
     if (!updated) {
       return NextResponse.json({ success: false, error: 'Category not found' }, { status: 404 });
@@ -19,8 +25,13 @@ export async function PUT(request, { params }) {
 
 export async function DELETE(request, { params }) {
   try {
+    const admin = verifyAdminAuth(request);
+    if (!admin) {
+      return unauthorizedResponse();
+    }
+
     const { id } = params;
-    const deleted = deleteCategory(id);
+    const deleted = await deleteCategory(id);
 
     if (!deleted) {
       return NextResponse.json({ success: false, error: 'Category not found' }, { status: 404 });

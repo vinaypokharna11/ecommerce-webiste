@@ -9,14 +9,14 @@ import {
   Zap,
   ShoppingBag,
   MessageCircle,
-  Gift,
   Clock,
   ChevronRight
 } from 'lucide-react';
+import Image from 'next/image';
 import { HERO_ASSETS } from '../data/mockData';
 import { useCatalog } from '../context/CatalogContext';
 
-const CouponCard = ({ offer, index, storeConfig }) => {
+const CouponCard = ({ offer, index, storeConfig, onExplore }) => {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = (e) => {
@@ -34,87 +34,85 @@ const CouponCard = ({ offer, index, storeConfig }) => {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 24 }}
+      initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.07, duration: 0.4 }}
-      className={`relative bg-white rounded-3xl border ${offer.borderColor || 'border-[#EAE6FD]'} overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.06)] hover:shadow-[0_12px_35px_rgba(98,87,255,0.14)] hover:-translate-y-1 transition-all duration-300 group flex flex-col justify-between`}
+      transition={{ delay: index * 0.05, duration: 0.35 }}
+      className="relative bg-white rounded-[26px] border border-black/[0.04] p-5 sm:p-6 shadow-neu-card hover:shadow-neu-card-hover transition-all duration-300 flex flex-col justify-between"
     >
       {offer.popular && (
         <div className="absolute top-4 right-4 z-10">
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#EC5AC8] text-white text-[10px] font-bold shadow-md">
-            <Zap className="w-2.5 h-2.5 fill-white" />
-            Most Popular
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#171717] text-white text-[10px] font-bold shadow-sm">
+            <Zap className="w-2.5 h-2.5 fill-[#9FD842] text-[#9FD842]" />
+            Trending
           </span>
         </div>
       )}
 
-      {/* Top gradient band */}
-      <div className={`h-1.5 w-full bg-gradient-to-r ${offer.gradient || 'from-[#6257FF] to-[#8B5CF6]'}`} />
-
-      <div className="p-5 sm:p-6 flex-1 flex flex-col justify-between">
-        <div>
-          {/* Header */}
-          <div className="flex items-start gap-4 mb-4">
-            <div className={`w-14 h-14 rounded-2xl ${offer.bgLight || 'bg-[#F5F3FF]'} border ${offer.borderColor || 'border-[#EAE6FD]'} flex items-center justify-center text-2xl flex-shrink-0 shadow-sm`}>
-              {offer.icon || '🎁'}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap mb-0.5">
-                <span className={`text-2xl font-extrabold text-[#15152A]`}>{offer.title}</span>
-                <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${offer.badgeColor || 'bg-[#EDE9FE] text-[#6257FF]'}`}>
-                  {offer.subtitle}
-                </span>
-              </div>
-              <p className="text-xs text-[#626276] leading-relaxed">{offer.description}</p>
-            </div>
+      <div>
+        {/* Header */}
+        <div className="flex items-start gap-3.5 mb-4">
+          <div className="w-12 h-12 rounded-[16px] bg-[#EEEEEC] flex items-center justify-center text-xl shrink-0 shadow-xs">
+            {offer.icon || '🎁'}
           </div>
-
-          {/* Coupon code row */}
-          <div className={`flex items-center justify-between p-3 rounded-2xl ${offer.bgLight || 'bg-[#F5F3FF]'} border ${offer.borderColor || 'border-[#EAE6FD]'} border-dashed mb-4`}>
-            <div className="flex items-center gap-2">
-              <Tag className={`w-4 h-4 text-[#6257FF]`} />
-              <span className="font-mono font-extrabold text-[#15152A] text-sm tracking-widest">
-                {offer.code}
+          <div>
+            <div className="flex items-center gap-2 flex-wrap mb-0.5">
+              <span className="text-xl font-extrabold text-[#171717]">{offer.title}</span>
+              <span className="text-[11px] font-extrabold px-2 py-0.5 rounded-full bg-[#F3FCDA] text-[#709E1E]">
+                {offer.subtitle}
               </span>
             </div>
-            <button
-              onClick={handleCopy}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all active:scale-90 ${
-                copied
-                  ? 'bg-emerald-500 text-white'
-                  : `bg-gradient-to-r ${offer.gradient || 'from-[#6257FF] to-[#8B5CF6]'} text-white hover:opacity-90`
-              }`}
-            >
-              {copied ? (
-                <>
-                  <Check className="w-3.5 h-3.5" />
-                  Copied!
-                </>
-              ) : (
-                <>
-                  <Copy className="w-3.5 h-3.5" />
-                  Copy Code
-                </>
-              )}
-            </button>
+            <p className="text-xs text-[#777777] leading-relaxed">{offer.description}</p>
           </div>
         </div>
 
-        {/* Validity + Shop Now */}
-        <div className="flex items-center justify-between gap-3 pt-2 border-t border-[#EAE6FD]/60">
-          <div className="flex items-center gap-1.5 text-[11px] text-[#8E8EA0] font-medium">
-            <Clock className="w-3.5 h-3.5" />
-            {offer.expiry || 'No Expiry'}
+        {/* Coupon Code Pill */}
+        <div className="flex items-center justify-between p-2.5 px-3.5 rounded-full bg-[#EEEEEC] border border-black/5 mb-4">
+          <div className="flex items-center gap-2">
+            <Tag className="w-3.5 h-3.5 text-[#171717]" />
+            <span className="font-mono font-extrabold text-[#171717] text-xs tracking-wider">
+              {offer.code}
+            </span>
           </div>
           <button
-            onClick={handleShopOnWhatsApp}
-            className="flex items-center gap-1.5 text-xs font-bold text-[#25D366] hover:text-[#128C7E] transition-colors"
+            onClick={handleCopy}
+            className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all active:scale-90 ${
+              copied
+                ? 'bg-[#171717] text-white'
+                : 'bg-[#9FD842] hover:bg-[#8EC731] text-[#171717] shadow-sm'
+            }`}
           >
-            <MessageCircle className="w-3.5 h-3.5 fill-current" />
-            Shop on WhatsApp
-            <ChevronRight className="w-3.5 h-3.5" />
+            {copied ? (
+              <>
+                <Check className="w-3 h-3 stroke-[3]" />
+                Copied
+              </>
+            ) : (
+              <>
+                <Copy className="w-3 h-3" />
+                Copy
+              </>
+            )}
           </button>
         </div>
+      </div>
+
+      {/* Action Row */}
+      <div className="flex items-center gap-2 pt-2 border-t border-black/[0.04]">
+        <button
+          onClick={onExplore}
+          className="flex-1 py-2 rounded-full bg-[#171717] text-white hover:bg-black font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
+        >
+          <ShoppingBag className="w-3.5 h-3.5" />
+          <span>Shop Now</span>
+        </button>
+
+        <button
+          onClick={handleShopOnWhatsApp}
+          className="p-2 rounded-full bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors border border-emerald-100 shrink-0"
+          title="Order with code on WhatsApp"
+        >
+          <MessageCircle className="w-4 h-4 fill-emerald-600/20" />
+        </button>
       </div>
     </motion.div>
   );
@@ -122,118 +120,58 @@ const CouponCard = ({ offer, index, storeConfig }) => {
 
 export const OffersPage = ({ onExploreCatalog }) => {
   const { offers, storeConfig } = useCatalog();
-  const activeOffers = offers.filter((o) => o.isActive !== false);
 
   return (
-    <section className="relative pt-24 pb-28 md:pt-32 md:pb-32 overflow-hidden min-h-screen">
-      {/* Ambient glows */}
-      <div className="absolute top-20 right-10 w-96 h-96 ambient-glow-purple rounded-full pointer-events-none -z-10 blur-3xl" />
-      <div className="absolute bottom-40 -left-20 w-80 h-80 ambient-glow-pink rounded-full pointer-events-none -z-10 blur-3xl" />
-
+    <section className="pt-20 md:pt-28 pb-24 min-h-screen">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-
-        {/* ── Hero Banner ── */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="relative overflow-hidden rounded-3xl gradient-promo-banner p-6 sm:p-8 mb-10 shadow-[0_15px_50px_rgba(98,87,255,0.25)]"
-        >
-          {/* Decorative circles */}
-          <div className="absolute -top-10 -right-10 w-56 h-56 bg-white/10 rounded-full pointer-events-none" />
-          <div className="absolute bottom-0 right-1/4 w-32 h-32 bg-white/10 rounded-full pointer-events-none" />
-
-          <div className="relative z-10 flex flex-col sm:flex-row items-center sm:items-start justify-between gap-6">
-            {/* Left content */}
-            <div className="text-center sm:text-left">
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/20 backdrop-blur-sm mb-4 text-white text-xs font-bold">
-                <Sparkles className="w-3.5 h-3.5" />
-                Limited Time Deals
-              </div>
-              <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-white leading-tight mb-2">
-                Big Savings
-                <br />
-                <span className="text-[#FFD6F0]">Just for You!</span>
-              </h1>
-              <p className="text-white/80 text-sm sm:text-base max-w-sm mb-6">
-                Up to 50% OFF on selected products across all categories. Use the codes below to unlock your savings!
-              </p>
-              <button
-                onClick={onExploreCatalog}
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-white text-[#6257FF] font-bold text-sm shadow-md hover:scale-105 transition-all active:scale-95"
-              >
-                <ShoppingBag className="w-4 h-4" />
-                Shop Now
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Right: big 50% OFF badge + gift box */}
-            <div className="relative flex-shrink-0 flex items-center justify-center">
-              <div className="relative w-40 sm:w-48">
-                <img
-                  src={HERO_ASSETS.giftbox}
-                  alt="Gift Box Offer"
-                  className="w-full h-auto object-contain drop-shadow-[0_12px_30px_rgba(0,0,0,0.25)]"
-                />
-                <motion.div
-                  animate={{ scale: [1, 1.06, 1] }}
-                  transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
-                  className="absolute -top-4 -right-4 w-20 h-20 rounded-2xl bg-white flex flex-col items-center justify-center shadow-xl"
-                >
-                  <span className="text-2xl font-extrabold text-[#EC5AC8] leading-none">50%</span>
-                  <span className="text-[10px] font-bold text-[#8B5CF6] uppercase tracking-wider">OFF</span>
-                </motion.div>
-              </div>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* ── Section heading: Top Offers ── */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="text-xl sm:text-2xl font-extrabold text-[#15152A]">Top Active Offers</h2>
-            <p className="text-sm text-[#626276] mt-0.5">Copy the code & paste at checkout or send on WhatsApp</p>
-          </div>
-          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#FFF0FB] border border-[#FCD6F2] text-xs font-bold text-[#EC5AC8]">
-            <Gift className="w-3.5 h-3.5" />
-            {activeOffers.length} Active Deals
-          </span>
+        
+        {/* Header */}
+        <div className="text-center max-w-xl mx-auto mb-8">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-[#171717] tracking-tight leading-tight mb-2">
+            Exclusive Deals & Offers
+          </h1>
+          <p className="text-xs sm:text-sm text-[#777777]">
+            Copy any promo coupon code and apply it during checkout or order directly on WhatsApp.
+          </p>
         </div>
 
-        {/* ── Offer Cards Grid ── */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-          {activeOffers.map((offer, index) => (
-            <CouponCard key={offer.id} offer={offer} index={index} storeConfig={storeConfig} />
+        {/* Hero Promo Banner */}
+        <div className="mb-10 overflow-hidden rounded-[28px] bg-gradient-to-r from-[#AEE64C] via-[#9FD842] to-[#88CB27] p-6 sm:p-8 text-[#171717] shadow-neu-card relative">
+          <div className="relative z-10 flex flex-col sm:flex-row items-center justify-between gap-6">
+            <div className="text-center sm:text-left space-y-2">
+              <span className="inline-block px-3 py-1 rounded-full bg-[#171717] text-white text-[10px] font-extrabold uppercase tracking-wide">
+                Flash Deals
+              </span>
+              <h2 className="text-2xl sm:text-3xl font-extrabold leading-tight">
+                Up to 40% OFF Weekend Collection
+              </h2>
+              <p className="text-xs text-[#2D3A16] max-w-md font-medium">
+                Save big on premium apparel, footwear, and accessories. Valid while stocks last.
+              </p>
+            </div>
+
+            <button
+              onClick={onExploreCatalog}
+              className="px-6 py-3 rounded-full bg-[#171717] text-white hover:bg-black font-extrabold text-xs flex items-center gap-2 shadow-neu-btn-dark active:scale-95 transition-all shrink-0"
+            >
+              <span>Explore Collection</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* Coupon Cards Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+          {offers.map((offer, index) => (
+            <CouponCard
+              key={offer.id || index}
+              offer={offer}
+              index={index}
+              storeConfig={storeConfig}
+              onExplore={onExploreCatalog}
+            />
           ))}
         </div>
-
-        {/* ── WhatsApp CTA ── */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5, duration: 0.5 }}
-          className="mt-12 p-6 sm:p-8 rounded-3xl bg-white border border-[#EAE6FD] shadow-[0_4px_20px_rgba(98,87,255,0.06)] text-center"
-        >
-          <div className="w-14 h-14 rounded-2xl bg-[#F0FDF4] flex items-center justify-center mx-auto mb-4">
-            <MessageCircle className="w-7 h-7 text-[#25D366] fill-[#25D366]/20" />
-          </div>
-          <h3 className="text-lg font-extrabold text-[#15152A] mb-2">Want a Custom Deal?</h3>
-          <p className="text-sm text-[#626276] max-w-sm mx-auto mb-5">
-            Chat directly with {storeConfig.name} on WhatsApp to ask about exclusive offers, bundle deals, and bulk pricing.
-          </p>
-          <a
-            href={`https://wa.me/${storeConfig.whatsappNumber}?text=${encodeURIComponent("Hi! I'd like to know about your current special offers and deals.")}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-[#25D366] text-white font-bold text-sm shadow-md hover:bg-[#20bd5a] hover:scale-105 transition-all"
-          >
-            <MessageCircle className="w-4 h-4 fill-white" />
-            Chat with Us on WhatsApp
-            <ArrowRight className="w-4 h-4" />
-          </a>
-        </motion.div>
-
       </div>
     </section>
   );

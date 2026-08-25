@@ -1,3 +1,5 @@
+import daisyui from 'daisyui';
+
 /** @type {import('tailwindcss').Config} */
 export default {
   content: [
@@ -11,56 +13,86 @@ export default {
     extend: {
       colors: {
         brand: {
-          purple: '#6257FF',
-          violet: '#8B5CF6',
-          pink: '#EC5AC8',
-          lavender: '#F5F3FF',
-          lavenderLight: '#FAF9FF',
-          lavenderBorder: '#EAE6FD',
-          dark: '#15152A',
-          darkMuted: '#626276',
-          darkFooter: '#121124',
-          cardBg: '#FFFFFF',
-          badgeBg: '#FFF0FB',
-          badgeText: '#E639B0',
+          bg: '#F5F5F3',
+          card: '#FFFFFF',
+          imgBg: '#EEEEEC',
+          imgBgDark: '#E4E4E0',
+          accent: '#9FD842',
+          accentHover: '#8EC731',
+          accentLight: '#F3FCDA',
+          accentDark: '#709E1E',
+          dark: '#171717',
+          darkMuted: '#777777',
+          lightMuted: '#A0A0A0',
+          border: '#E8E8E5',
+          borderSubtle: 'rgba(0, 0, 0, 0.05)',
         }
       },
       fontFamily: {
-        sans: ['Plus Jakarta Sans', 'Inter', 'system-ui', 'sans-serif'],
+        sans: ['Manrope', 'Plus Jakarta Sans', 'Inter', 'system-ui', 'sans-serif'],
       },
       boxShadow: {
-        'soft': '0 10px 40px -10px rgba(98, 87, 255, 0.08)',
-        'soft-lg': '0 20px 50px -15px rgba(98, 87, 255, 0.12)',
-        'card': '0 8px 30px rgba(98, 87, 255, 0.06)',
-        'card-hover': '0 20px 40px rgba(98, 87, 255, 0.14)',
-        'nav': '0 12px 36px rgba(98, 87, 255, 0.09)',
-        'glow-purple': '0 0 40px rgba(98, 87, 255, 0.35)',
-        'glow-pink': '0 0 40px rgba(236, 90, 200, 0.35)',
-        'btn': '0 10px 25px -5px rgba(98, 87, 255, 0.4)',
+        'neu-card': '0 8px 24px -4px rgba(0, 0, 0, 0.04), 0 2px 6px -1px rgba(0, 0, 0, 0.02)',
+        'neu-card-hover': '0 16px 36px -6px rgba(0, 0, 0, 0.08), 0 4px 12px -2px rgba(0, 0, 0, 0.03)',
+        'neu-search': '0 6px 20px -2px rgba(0, 0, 0, 0.04), inset 0 1px 2px rgba(255, 255, 255, 0.8)',
+        'neu-btn-accent': '0 8px 20px -3px rgba(159, 216, 66, 0.4)',
+        'neu-btn-dark': '0 8px 20px -3px rgba(23, 23, 23, 0.25)',
+        'glass-nav': '0 12px 32px -4px rgba(0, 0, 0, 0.05)',
+        'glass-pill': '0 4px 16px -2px rgba(0, 0, 0, 0.04)',
+        'glass-modal': '0 24px 60px -10px rgba(0, 0, 0, 0.15)',
+        'float-bottom': '0 -4px 28px -4px rgba(0, 0, 0, 0.06)',
       },
       borderRadius: {
-        'card': '20px',
-        'container': '28px',
+        'sm-control': '14px',
+        'btn': '18px',
+        'card': '26px',
+        'card-lg': '30px',
+        'img': '26px',
+        'container': '32px',
         'pill': '9999px',
       },
       animation: {
         'float-slow': 'float 6s ease-in-out infinite',
         'float-medium': 'float 4.5s ease-in-out infinite',
-        'float-fast': 'float 3.5s ease-in-out infinite',
         'pulse-subtle': 'pulseSubtle 3s ease-in-out infinite',
-        'spin-slow': 'spin 20s linear infinite',
       },
       keyframes: {
         float: {
           '0%, 100%': { transform: 'translateY(0px)' },
-          '50%': { transform: 'translateY(-12px)' },
+          '50%': { transform: 'translateY(-6px)' },
         },
         pulseSubtle: {
           '0%, 100%': { opacity: '1', transform: 'scale(1)' },
-          '50%': { opacity: '0.88', transform: 'scale(1.03)' },
+          '50%': { opacity: '0.92', transform: 'scale(1.02)' },
         }
       }
     },
   },
-  plugins: [],
+  plugins: [
+    daisyui,
+  ],
+  daisyui: {
+    themes: [
+      {
+        shopeaseTheme: {
+          "primary": "#9FD842",
+          "primary-content": "#171717",
+          "secondary": "#171717",
+          "secondary-content": "#FFFFFF",
+          "accent": "#9FD842",
+          "neutral": "#171717",
+          "base-100": "#FFFFFF",
+          "base-200": "#EEEEEC",
+          "base-300": "#F5F5F3",
+          "info": "#3ABFF8",
+          "success": "#36D399",
+          "warning": "#FBBD23",
+          "error": "#F87272",
+        },
+      },
+    ],
+    base: false,
+    styled: true,
+    utils: true,
+  },
 }

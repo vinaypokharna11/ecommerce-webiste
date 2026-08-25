@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
 import { getProductById, updateProduct, deleteProduct } from '@/lib/db';
+import { verifyAdminAuth, unauthorizedResponse } from '@/lib/auth';
 
 export async function GET(request, { params }) {
   try {
     const { id } = params;
-    const product = getProductById(id);
+    const product = await getProductById(id);
     if (!product) {
       return NextResponse.json({ success: false, error: 'Product not found' }, { status: 404 });
     }
@@ -16,9 +17,14 @@ export async function GET(request, { params }) {
 
 export async function PUT(request, { params }) {
   try {
+    const admin = verifyAdminAuth(request);
+    if (!admin) {
+      return unauthorizedResponse();
+    }
+
     const { id } = params;
     const body = await request.json();
-    const updated = updateProduct(id, body);
+    const updated = await updateProduct(id, body);
 
     if (!updated) {
       return NextResponse.json({ success: false, error: 'Product not found' }, { status: 404 });
@@ -32,8 +38,13 @@ export async function PUT(request, { params }) {
 
 export async function DELETE(request, { params }) {
   try {
+    const admin = verifyAdminAuth(request);
+    if (!admin) {
+      return unauthorizedResponse();
+    }
+
     const { id } = params;
-    const deleted = deleteProduct(id);
+    const deleted = await deleteProduct(id);
 
     if (!deleted) {
       return NextResponse.json({ success: false, error: 'Product not found' }, { status: 404 });
