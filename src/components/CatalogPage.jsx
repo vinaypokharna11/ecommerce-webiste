@@ -15,6 +15,7 @@ import { useCatalog } from '../context/CatalogContext';
 import { ProductCard } from './ProductCard';
 import { FilterDrawer } from './FilterDrawer';
 import { QuickViewModal } from './QuickViewModal';
+import { TopPagePullReveal } from './TopPagePullReveal';
 import { createProductWhatsAppUrl } from '../utils/whatsapp';
 import { CATALOG_CATEGORIES } from '../data/mockData';
 
@@ -128,23 +129,46 @@ export const CatalogPage = ({
     if (onNotify) onNotify('info', 'Connecting to WhatsApp', `Opening direct chat for ${product.name}`);
   };
 
+  const spotlightTopProduct = products.find((p) => p.category === 'clothing') || products[0];
+  const spotlightRevealedProduct = products.find((p) => p.category === 'accessories' || p.isPopular) || products[1];
+
+  const handleScrollToGrid = () => {
+    const gridElem = document.getElementById('catalog-grid');
+    if (gridElem) {
+      gridElem.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   return (
-    <section className="relative pt-20 md:pt-28 pb-20 overflow-hidden min-h-screen">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        
-        {/* 1. Catalog Header */}
-        <div className="text-center max-w-xl mx-auto mb-6">
-          <motion.h1
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-[#171717] tracking-tight leading-tight mb-2"
-          >
-            Explore Our Products
-          </motion.h1>
-          <p className="text-xs sm:text-sm text-[#777777] font-medium">
-            Find everything available in our shop, all in one place.
-          </p>
-        </div>
+    <div className="w-full">
+      {/* ── 0. Real Hand Reaching from Top & Pulling Catalog Page Upward ── */}
+      <TopPagePullReveal
+        topProduct={spotlightTopProduct}
+        revealedProduct={spotlightRevealedProduct}
+        onAddToCart={onAddToCart}
+        onQuickView={setQuickViewProduct}
+        onToggleFavorite={onToggleFavorite}
+        isFavorite={spotlightRevealedProduct ? !!wishlist[spotlightRevealedProduct.id] : false}
+        onScrollToCatalog={handleScrollToGrid}
+      />
+
+      {/* ── Main Catalog Browsing Section ── */}
+      <section id="catalog-grid" className="relative pt-16 md:pt-20 pb-20 overflow-hidden min-h-screen">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          
+          {/* 1. Catalog Header */}
+          <div className="text-center max-w-xl mx-auto mb-6">
+            <motion.h1
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-[#171717] tracking-tight leading-tight mb-2"
+            >
+              Explore Our Products
+            </motion.h1>
+            <p className="text-xs sm:text-sm text-[#777777] font-medium">
+              Find everything available in our shop, all in one place.
+            </p>
+          </div>
 
         {/* 2. Elevated Search Bar */}
         <div className="max-w-xl mx-auto mb-6">
@@ -362,6 +386,7 @@ export const CatalogPage = ({
           onToggleFavorite={onToggleFavorite}
         />
       )}
-    </section>
+      </section>
+    </div>
   );
 };
