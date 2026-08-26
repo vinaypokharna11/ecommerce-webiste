@@ -1,3 +1,5 @@
+'use client';
+
 import React from 'react';
 import { motion } from 'framer-motion';
 import { ArrowUpRight, Tag, Sparkles } from 'lucide-react';
@@ -7,7 +9,7 @@ import { HERO_ASSETS } from '../data/mockData';
 export const PromoBanner = ({ onCheckOffers }) => {
   return (
     <section className="py-8 sm:py-12" aria-label="Special Promotional Offer">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="w-full max-w-[1720px] mx-auto px-4 sm:px-8 lg:px-12 xl:px-16">
         
         {/* Banner Container */}
         <motion.div

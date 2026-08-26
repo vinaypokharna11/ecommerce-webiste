@@ -13,13 +13,15 @@ import {
   ShieldCheck,
   AlertCircle,
   ArrowLeft,
+  KeyRound,
+  CheckCircle2,
 } from 'lucide-react';
 import Link from 'next/link';
 
 export default function AdminLoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('admin@nakodaimitation.com');
+  const [password, setPassword] = useState('admin123');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -38,7 +40,7 @@ export default function AdminLoginPage() {
       const res = await fetch('/api/admin/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email: email.trim(), password: password.trim() }),
       });
 
       const data = await res.json();
@@ -58,24 +60,30 @@ export default function AdminLoginPage() {
     }
   };
 
+  const handleAutofill = (demoEmail, demoPass) => {
+    setEmail(demoEmail);
+    setPassword(demoPass);
+    setError('');
+  };
+
   return (
-    <div className="min-h-screen bg-[#FAF9FF] text-[#15152A] flex flex-col justify-between relative overflow-hidden font-sans selection:bg-[#6257FF] selection:text-white">
-      {/* Ambient Glows */}
-      <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] ambient-glow-lavender rounded-full blur-[140px] pointer-events-none -z-10 opacity-70" />
-      <div className="fixed bottom-0 right-0 w-[500px] h-[500px] ambient-glow-pink rounded-full blur-[140px] pointer-events-none -z-10 opacity-50" />
+    <div className="min-h-screen bg-[#F5F5F3] text-[#171717] flex flex-col justify-between relative overflow-hidden font-sans selection:bg-[#9FD842] selection:text-[#171717]">
+      {/* Ambient Organic Glows */}
+      <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-[#9FD842]/10 rounded-full blur-[140px] pointer-events-none -z-10" />
+      <div className="fixed bottom-0 right-0 w-[500px] h-[500px] bg-[#8EC731]/10 rounded-full blur-[140px] pointer-events-none -z-10" />
 
       {/* Header Bar */}
       <header className="p-6 flex items-center justify-between max-w-6xl mx-auto w-full">
         <Link href="/" className="flex items-center gap-2.5 group">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#6257FF] to-[#8B5CF6] flex items-center justify-center text-white shadow-md group-hover:scale-105 transition-transform">
-            <ShoppingBag className="w-5 h-5" />
+          <div className="w-10 h-10 rounded-full bg-[#171717] flex items-center justify-center text-white shadow-sm group-hover:scale-105 transition-transform">
+            <ShoppingBag className="w-4 h-4 text-white" />
           </div>
-          <span className="text-xl font-bold tracking-tight text-[#15152A]">ShopEase</span>
+          <span className="text-xl font-extrabold tracking-tight text-[#171717]">Nakoda Imitation</span>
         </Link>
 
         <Link
           href="/"
-          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white border border-[#EAE6FD] text-xs font-bold text-[#6257FF] hover:bg-[#FAF9FF] shadow-xs transition-all"
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-white border border-black/5 text-xs font-bold text-[#171717] hover:bg-[#F3FCDA] shadow-sm transition-all"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
           <span>Back to Store</span>
@@ -88,24 +96,42 @@ export default function AdminLoginPage() {
           initial={{ opacity: 0, y: 20, scale: 0.96 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ duration: 0.4 }}
-          className="w-full max-w-md bg-white rounded-3xl border border-[#EAE6FD] p-7 sm:p-9 shadow-[0_20px_60px_rgba(98,87,255,0.12)] relative z-10"
+          className="w-full max-w-md bg-white rounded-[32px] border border-black/5 p-7 sm:p-9 shadow-[0_20px_60px_rgba(0,0,0,0.06)] relative z-10"
         >
           {/* Lock Icon Badge */}
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-[#6257FF] to-[#EC5AC8] flex items-center justify-center text-white shadow-[0_8px_25px_rgba(98,87,255,0.35)] mx-auto mb-5">
-            <Lock className="w-7 h-7" />
+          <div className="w-14 h-14 rounded-full bg-[#171717] flex items-center justify-center text-[#9FD842] shadow-md mx-auto mb-5">
+            <Lock className="w-6 h-6" />
           </div>
 
           <div className="text-center mb-6">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FAF9FF] border border-[#EAE6FD] text-xs font-bold text-[#6257FF] mb-2">
-              <ShieldCheck className="w-3.5 h-3.5" />
-              <span>Protected Administrator Area</span>
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#F3FCDA] border border-[#9FD842]/30 text-xs font-extrabold text-[#709E1E] mb-2">
+              <ShieldCheck className="w-3.5 h-3.5 text-[#709E1E]" />
+              <span>Protected Administrator Portal</span>
             </div>
-            <h1 className="text-2xl font-extrabold text-[#15152A] tracking-tight">
+            <h1 className="text-2xl font-extrabold text-[#171717] tracking-tight">
               Admin Login
             </h1>
-            <p className="text-xs text-[#626276] mt-1">
-              Sign in with your administrator credentials to manage catalog, orders, and inquiries
+            <p className="text-xs text-[#777777] mt-1">
+              Sign in to manage jewelry catalog, customer orders, and wholesale inquiries
             </p>
+          </div>
+
+          {/* Quick Credential Hint / 1-Click Autofill */}
+          <div className="mb-5 p-3.5 rounded-2xl bg-[#F8FDF0] border border-[#9FD842]/30 text-xs flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-left">
+              <KeyRound className="w-4 h-4 text-[#709E1E] flex-shrink-0" />
+              <div>
+                <p className="text-[11px] font-bold text-[#171717]">Default Credentials:</p>
+                <p className="text-[10px] text-[#777777] font-mono">admin@nakodaimitation.com • admin123</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => handleAutofill('admin@nakodaimitation.com', 'admin123')}
+              className="px-2.5 py-1 rounded-full bg-[#9FD842] hover:bg-[#8EC731] text-[#171717] font-extrabold text-[10px] uppercase tracking-wider active:scale-95 transition-all cursor-pointer shadow-xs"
+            >
+              Fill
+            </button>
           </div>
 
           {/* Error Banner */}
@@ -123,29 +149,29 @@ export default function AdminLoginPage() {
           {/* Form */}
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
-              <label className="block text-xs font-bold text-[#15152A] mb-1.5 uppercase tracking-wider">
+              <label className="block text-xs font-bold text-[#171717] mb-1.5 uppercase tracking-wider">
                 Admin Email
               </label>
               <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8B5CF6]" />
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#777777]" />
                 <input
-                  type="email"
+                  type="text"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="admin@shopease.com"
-                  autoComplete="email"
+                  placeholder="admin@nakodaimitation.com"
+                  autoComplete="username"
                   required
-                  className="w-full pl-11 pr-4 py-3 rounded-2xl border border-[#EAE6FD] bg-[#FAF9FF] text-sm text-[#15152A] placeholder-[#8E8EA0] focus:outline-none focus:border-[#6257FF] focus:bg-white transition-all font-medium"
+                  className="w-full pl-11 pr-4 py-3 rounded-2xl border border-black/10 bg-[#EEEEEC] text-sm text-[#171717] placeholder-[#A0A0A0] focus:outline-none focus:ring-2 focus:ring-[#9FD842] focus:bg-white transition-all font-medium"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-[#15152A] mb-1.5 uppercase tracking-wider">
+              <label className="block text-xs font-bold text-[#171717] mb-1.5 uppercase tracking-wider">
                 Password
               </label>
               <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8B5CF6]" />
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#777777]" />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={password}
@@ -153,12 +179,12 @@ export default function AdminLoginPage() {
                   placeholder="••••••••"
                   autoComplete="current-password"
                   required
-                  className="w-full pl-11 pr-11 py-3 rounded-2xl border border-[#EAE6FD] bg-[#FAF9FF] text-sm text-[#15152A] placeholder-[#8E8EA0] focus:outline-none focus:border-[#6257FF] focus:bg-white transition-all font-medium"
+                  className="w-full pl-11 pr-11 py-3 rounded-2xl border border-black/10 bg-[#EEEEEC] text-sm text-[#171717] placeholder-[#A0A0A0] focus:outline-none focus:ring-2 focus:ring-[#9FD842] focus:bg-white transition-all font-medium"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#8E8EA0] hover:text-[#15152A] p-1"
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#777777] hover:text-[#171717] p-1"
                   aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -186,8 +212,8 @@ export default function AdminLoginPage() {
       </main>
 
       {/* Footer */}
-      <footer className="p-6 text-center text-xs text-[#8E8EA0]">
-        © 2026 ShopEase. Secured Administrator Management Interface.
+      <footer className="p-6 text-center text-xs text-[#777777]">
+        © 2026 Nakoda Imitation. Secured Administrator Management Interface.
       </footer>
     </div>
   );

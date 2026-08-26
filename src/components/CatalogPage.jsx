@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
@@ -15,7 +17,7 @@ import { useCatalog } from '../context/CatalogContext';
 import { ProductCard } from './ProductCard';
 import { FilterDrawer } from './FilterDrawer';
 import { QuickViewModal } from './QuickViewModal';
-import { TopPagePullReveal } from './TopPagePullReveal';
+
 import { createProductWhatsAppUrl } from '../utils/whatsapp';
 import { CATALOG_CATEGORIES } from '../data/mockData';
 
@@ -141,20 +143,11 @@ export const CatalogPage = ({
 
   return (
     <div className="w-full">
-      {/* ── 0. Real Hand Reaching from Top & Pulling Catalog Page Upward ── */}
-      <TopPagePullReveal
-        topProduct={spotlightTopProduct}
-        revealedProduct={spotlightRevealedProduct}
-        onAddToCart={onAddToCart}
-        onQuickView={setQuickViewProduct}
-        onToggleFavorite={onToggleFavorite}
-        isFavorite={spotlightRevealedProduct ? !!wishlist[spotlightRevealedProduct.id] : false}
-        onScrollToCatalog={handleScrollToGrid}
-      />
+
 
       {/* ── Main Catalog Browsing Section ── */}
       <section id="catalog-grid" className="relative pt-16 md:pt-20 pb-20 overflow-hidden min-h-screen">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="w-full max-w-[1720px] mx-auto px-4 sm:px-8 lg:px-12 xl:px-16">
           
           {/* 1. Catalog Header */}
           <div className="text-center max-w-xl mx-auto mb-6">
@@ -319,9 +312,9 @@ export const CatalogPage = ({
           </div>
         )}
 
-        {/* 6. Product Grid: 2-col on mobile, 4-col on desktop */}
+        {/* 6. Product Grid: responsive full width */}
         {filteredProducts.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3.5 sm:gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3.5 sm:gap-6">
             {filteredProducts.map((product) => {
               const currentQty = cartItems[product.id]?.quantity || 0;
               const isFav = !!wishlist[product.id];

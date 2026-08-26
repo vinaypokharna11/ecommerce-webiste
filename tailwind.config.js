@@ -29,7 +29,11 @@ export default {
         }
       },
       fontFamily: {
-        sans: ['Manrope', 'Plus Jakarta Sans', 'Inter', 'system-ui', 'sans-serif'],
+        sans: ['"Plus Jakarta Sans"', 'Manrope', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+        heading: ['"Plus Jakarta Sans"', 'Manrope', 'sans-serif'],
+        manrope: ['Manrope', '"Plus Jakarta Sans"', 'sans-serif'],
+        jakarta: ['"Plus Jakarta Sans"', 'Manrope', 'sans-serif'],
+        serif: ['"Plus Jakarta Sans"', 'Manrope', 'sans-serif'],
       },
       boxShadow: {
         'neu-card': '0 8px 24px -4px rgba(0, 0, 0, 0.04), 0 2px 6px -1px rgba(0, 0, 0, 0.02)',

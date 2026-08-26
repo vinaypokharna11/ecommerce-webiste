@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { 
@@ -123,7 +125,7 @@ export const OffersPage = ({ onExploreCatalog }) => {
 
   return (
     <section className="pt-20 md:pt-28 pb-24 min-h-screen">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="w-full max-w-[1720px] mx-auto px-4 sm:px-8 lg:px-12 xl:px-16">
         
         {/* Header */}
         <div className="text-center max-w-xl mx-auto mb-8">
@@ -161,7 +163,7 @@ export const OffersPage = ({ onExploreCatalog }) => {
         </div>
 
         {/* Coupon Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
           {offers.map((offer, index) => (
             <CouponCard
               key={offer.id || index}

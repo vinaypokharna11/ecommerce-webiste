@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useCallback, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useCallback, useMemo, useRef, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Navbar } from '@/components/Navbar';
 import { HeroSection } from '@/components/HeroSection';
 import { FeatureBenefits } from '@/components/FeatureBenefits';
@@ -23,15 +23,53 @@ import { useAuth } from '@/context/AuthContext';
 import { createHelpWhatsAppUrl } from '@/utils/whatsapp';
 import { motion } from 'framer-motion';
 
-export default function StorefrontPage() {
+function StorefrontContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { products, storeConfig, catalogStats } = useCatalog();
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState('home');
-  const [selectedCategory, setSelectedCategory] = useState('all');
+
+  const tabParam = searchParams.get('tab');
+  const categoryParam = searchParams.get('category');
+
+  const [activeTab, setActiveTab] = useState(() => {
+    const validTabs = ['home', 'catalog', 'offers', 'contact', 'cart', 'profile'];
+    return validTabs.includes(tabParam) ? tabParam : 'home';
+  });
+  const [selectedCategory, setSelectedCategory] = useState(() => categoryParam || 'all');
   const [quickViewProduct, setQuickViewProduct] = useState(null);
   const [inquiryProduct, setInquiryProduct] = useState(null);
   const [orders, setOrders] = useState(INITIAL_ORDERS);
+
+  // Synchronize state when URL query params change (e.g. back/forward navigation or external links)
+  useEffect(() => {
+    const validTabs = ['home', 'catalog', 'offers', 'contact', 'cart', 'profile'];
+    const currentTab = searchParams.get('tab');
+    if (currentTab && validTabs.includes(currentTab)) {
+      setActiveTab(currentTab);
+    } else if (!currentTab) {
+      setActiveTab('home');
+    }
+
+    const currentCat = searchParams.get('category');
+    if (currentCat) {
+      setSelectedCategory(currentCat);
+    }
+  }, [searchParams]);
+
+  // Listen to browser popstate for back/forward buttons
+  useEffect(() => {
+    const handlePopState = () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const tab = urlParams.get('tab') || 'home';
+      const cat = urlParams.get('category') || 'all';
+      setActiveTab(tab);
+      setSelectedCategory(cat);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
   
   // Track recently viewed products
   const [recentlyViewedIds, setRecentlyViewedIds] = useState(['prod-1', 'prod-2', 'prod-3', 'prod-5']);
@@ -51,6 +89,7 @@ export default function StorefrontPage() {
     'prod-4': true,
   });
   const [toasts, setToasts] = useState([]);
+  const lastToastRef = useRef({ key: '', ts: 0 });
 
   const recordRecentlyViewed = useCallback((productId) => {
     if (!productId) return;
@@ -72,9 +111,16 @@ export default function StorefrontPage() {
     };
   }, [cartItems]);
 
-  // Toast dispatcher
+  // Toast dispatcher (with double-trigger deduplication)
   const addToast = useCallback((type, title, message) => {
-    const id = Date.now() + Math.random();
+    const key = `${title}-${message}`;
+    const now = Date.now();
+    if (lastToastRef.current.key === key && now - lastToastRef.current.ts < 500) {
+      return;
+    }
+    lastToastRef.current = { key, ts: now };
+
+    const id = now + Math.random();
     setToasts((prev) => [...prev, { id, type, title, message }]);
 
     setTimeout(() => {
@@ -86,12 +132,20 @@ export default function StorefrontPage() {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 
-  // Nav item interaction
+  // Nav item interaction with smooth browser URL synchronization
   const handleNavClick = (id, label) => {
+    if (id === 'admin') {
+      router.push('/admin');
+      return;
+    }
     const routableTabs = ['home', 'catalog', 'offers', 'contact', 'cart', 'profile'];
     if (routableTabs.includes(id)) {
       if (id !== 'contact') setInquiryProduct(null);
       setActiveTab(id);
+      const newUrl = id === 'home' ? '/' : `/?tab=${id}`;
+      if (typeof window !== 'undefined') {
+        window.history.pushState({ tab: id }, '', newUrl);
+      }
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
@@ -100,15 +154,20 @@ export default function StorefrontPage() {
   const handleOpenProductInquiry = (product) => {
     setInquiryProduct(product);
     setActiveTab('contact');
+    if (typeof window !== 'undefined') {
+      window.history.pushState({ tab: 'contact' }, '', `/?tab=contact&product=${product?.id || ''}`);
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Category click interaction from Home
+  // Category click interaction on Home page (filters inline without switching tab)
   const handleCategoryClick = (category) => {
     const catId = category?.id || 'all';
-    setSelectedCategory(catId);
-    setActiveTab('catalog');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setSelectedCategory((prev) => (prev === catId ? 'all' : catId));
+  };
+
+  const handleResetCategory = () => {
+    setSelectedCategory('all');
   };
 
   // Quick view handler with tracking
@@ -163,17 +222,28 @@ export default function StorefrontPage() {
     });
   };
 
-  // Wishlist favorite toggle
-  const handleToggleFavorite = (product) => {
+  // Wishlist favorite toggle (handles both full product object and ID string)
+  const handleToggleFavorite = (productOrId) => {
+    const productId = typeof productOrId === 'string' ? productOrId : productOrId?.id;
+    if (!productId) return;
+    const foundProduct = typeof productOrId === 'object' && productOrId?.name 
+      ? productOrId 
+      : products.find((p) => p.id === productId);
+    const productName = foundProduct?.name || 'Item';
+
+    const isCurrentlyFav = !!wishlist[productId];
+    if (isCurrentlyFav) {
+      addToast('info', 'Removed from Wishlist 💔', `${productName} was removed from favorites.`);
+    } else {
+      addToast('success', 'Saved to Wishlist ❤️', `${productName} added to your favorites.`);
+    }
+
     setWishlist((prev) => {
-      const isFav = !!prev[product.id];
       const next = { ...prev };
-      if (isFav) {
-        delete next[product.id];
-        addToast('info', 'Removed from Wishlist', `${product.name} removed.`);
+      if (isCurrentlyFav) {
+        delete next[productId];
       } else {
-        next[product.id] = true;
-        addToast('success', 'Saved to Wishlist ❤️', `${product.name} added to your favorites.`);
+        next[productId] = true;
       }
       return next;
     });
@@ -193,6 +263,12 @@ export default function StorefrontPage() {
   const handleExploreCatalog = (categoryId = 'all') => {
     setSelectedCategory(categoryId);
     setActiveTab('catalog');
+    const newUrl = categoryId && categoryId !== 'all' 
+      ? `/?tab=catalog&category=${categoryId}` 
+      : '/?tab=catalog';
+    if (typeof window !== 'undefined') {
+      window.history.pushState({ tab: 'catalog', category: categoryId }, '', newUrl);
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -247,12 +323,14 @@ export default function StorefrontPage() {
               onExploreClick={() => handleExploreCatalog('all')}
             />
             <Categories
+              selectedCategory={selectedCategory}
               onCategoryClick={handleCategoryClick}
-              onViewAllClick={() => handleExploreCatalog('all')}
             />
             <PopularProducts
               cartItems={cartItems}
               wishlist={wishlist}
+              selectedCategory={selectedCategory}
+              onResetCategory={handleResetCategory}
               onAddToCart={handleAddToCart}
               onUpdateQuantity={handleUpdateQuantity}
               onToggleFavorite={handleToggleFavorite}
@@ -309,6 +387,7 @@ export default function StorefrontPage() {
             onUpdateQuantity={handleUpdateQuantity}
             onAddToCart={handleAddToCart}
             onToggleFavorite={handleToggleFavorite}
+            onQuickView={handleQuickView}
             onExploreCatalog={() => handleExploreCatalog('all')}
             onPlaceOrder={handlePlaceOrder}
           />
@@ -350,5 +429,13 @@ export default function StorefrontPage() {
         onToggleFavorite={handleToggleFavorite}
       />
     </div>
+  );
+}
+
+export default function StorefrontPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#F5F5F3]" />}>
+      <StorefrontContent />
+    </Suspense>
   );
 }

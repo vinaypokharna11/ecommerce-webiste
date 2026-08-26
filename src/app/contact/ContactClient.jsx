@@ -38,13 +38,24 @@ export default function ContactClient() {
       router.push('/admin');
       return;
     }
-    router.push('/');
+    if (id === 'contact') {
+      return;
+    }
+    router.push(id === 'home' ? '/' : `/?tab=${id}`);
   };
 
   const handleFooterLinkClick = (label) => {
     const lower = label.toLowerCase();
     if (lower.includes('inquire') || lower.includes('bulk')) {
       router.push('/contact?tab=inquire');
+    } else if (lower.includes('catalog') || lower.includes('product') || lower.includes('shop') || lower.includes('men') || lower.includes('women')) {
+      router.push('/?tab=catalog');
+    } else if (lower.includes('offer') || lower.includes('deal')) {
+      router.push('/?tab=offers');
+    } else if (lower.includes('cart') || lower.includes('bag')) {
+      router.push('/?tab=cart');
+    } else if (lower.includes('profile') || lower.includes('account')) {
+      router.push('/?tab=profile');
     } else if (lower.includes('whatsapp')) {
       window.open(createHelpWhatsAppUrl(storeConfig.whatsappNumber), '_blank');
     } else {

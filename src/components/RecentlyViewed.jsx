@@ -25,7 +25,7 @@ export const RecentlyViewed = ({
   if (!viewedList || viewedList.length === 0) return null;
 
   return (
-    <section className="py-12 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto">
+    <section className="py-12 px-4 sm:px-8 lg:px-12 xl:px-16 w-full max-w-[1720px] mx-auto">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-6">
         <div>
@@ -48,7 +48,7 @@ export const RecentlyViewed = ({
       </div>
 
       {/* Grid of Recently Viewed */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
+      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 sm:gap-5">
         {viewedList.map((product) => {
           const isFav = !!wishlist[product.id];
 

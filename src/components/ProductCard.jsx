@@ -1,3 +1,5 @@
+'use client';
+
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Heart, Star, ShoppingBag, Plus, Minus, MessageCircle, Eye } from 'lucide-react';
@@ -45,15 +47,15 @@ export const ProductCard = ({
         <button
           onClick={(e) => {
             e.stopPropagation();
-            onToggleFavorite(product.id);
+            onToggleFavorite(product);
           }}
-          className="absolute top-2.5 right-2.5 z-10 w-8 h-8 rounded-full bg-white/90 backdrop-blur-md border border-white/80 flex items-center justify-center shadow-sm hover:scale-110 active:scale-90 transition-all duration-200"
+          className="absolute top-2.5 right-2.5 z-10 w-8 h-8 rounded-full bg-white/90 backdrop-blur-md border border-white/80 flex items-center justify-center shadow-sm hover:scale-110 active:scale-90 transition-all duration-200 cursor-pointer"
           aria-label={isFavorite ? 'Remove from wishlist' : 'Save to wishlist'}
         >
           <Heart 
             className={`w-4 h-4 transition-colors ${
               isFavorite 
-                ? 'text-red-500 fill-red-500' 
+                ? 'text-red-500 fill-red-500 stroke-red-500' 
                 : 'text-[#171717] hover:text-red-500'
             }`} 
           />

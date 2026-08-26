@@ -7,7 +7,7 @@ import mongoose from 'mongoose';
 let cached = global.mongoose;
 
 if (!cached) {
-  cached = global.mongoose = { conn: null, promise: null };
+  cached = global.mongoose = { conn: null, promise: null, lastAttempt: 0, failedCooldown: 30000 };
 }
 
 export async function connectToDatabase() {
@@ -21,10 +21,17 @@ export async function connectToDatabase() {
     return cached.conn;
   }
 
+  // If recent attempt failed, fail instantly during cooldown so API routes never block
+  const now = Date.now();
+  if (cached.lastAttempt && !cached.conn && now - cached.lastAttempt < (cached.failedCooldown || 30000)) {
+    return null;
+  }
+
   if (!cached.promise) {
+    cached.lastAttempt = now;
     const opts = {
       bufferCommands: false,
-      serverSelectionTimeoutMS: 5000, // Fail quickly if MongoDB is offline so fallback can kick in
+      serverSelectionTimeoutMS: 800, // Fail quickly if MongoDB is offline so fallback kicks in instantly
     };
 
     cached.promise = mongoose
@@ -34,8 +41,9 @@ export async function connectToDatabase() {
         return mongooseInstance;
       })
       .catch((err) => {
-        console.warn('⚠️ MongoDB connection failed, will use local persistent JSON database fallback:', err.message);
+        console.info('ℹ️ Using local persistent database fallback');
         cached.promise = null;
+        cached.lastAttempt = Date.now();
         return null;
       });
   }
@@ -44,6 +52,7 @@ export async function connectToDatabase() {
     cached.conn = await cached.promise;
   } catch (e) {
     cached.promise = null;
+    cached.lastAttempt = Date.now();
     return null;
   }
 

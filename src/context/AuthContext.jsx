@@ -40,16 +40,25 @@ export const AuthProvider = ({ children }) => {
     checkAuth();
   }, [checkAuth]);
 
-  // Customer Login
+  // Universal Login (Customer or Admin)
   const login = async (email, password) => {
     const res = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email: email.trim(), password: password.trim() }),
     });
 
     const data = await res.json();
     if (res.ok && data.success) {
+      if (data.isAdmin || data.role === 'admin' || data.role === 'superadmin') {
+        if (data.token) {
+          localStorage.setItem('shopease_admin_token', data.token);
+        }
+        setIsAuthModalOpen(false);
+        window.location.href = '/admin';
+        return { success: true, isAdmin: true, redirectTo: '/admin', user: data.user };
+      }
+
       setUser(data.user);
       setIsAuthenticated(true);
       if (authCallback) {
@@ -57,7 +66,7 @@ export const AuthProvider = ({ children }) => {
         setAuthCallback(null);
       }
       setIsAuthModalOpen(false);
-      return { success: true, user: data.user };
+      return { success: true, isAdmin: false, user: data.user };
     }
 
     return { success: false, error: data.error || 'Invalid credentials' };

@@ -124,17 +124,23 @@ function AppContent() {
     });
   };
 
-  // Favorite toggle handler
-  const handleToggleFavorite = (productId) => {
-    setWishlist((prev) => {
-      const isFav = !prev[productId];
-      if (isFav) {
-        addToast('heart', 'Saved to Wishlist ❤️', 'Item has been added to your saved list.');
-      } else {
-        addToast('info', 'Removed from Wishlist', 'Item was removed from your saved list.');
-      }
-      return { ...prev, [productId]: isFav };
-    });
+  // Favorite toggle handler (handles both product object and string ID)
+  const handleToggleFavorite = (productOrId) => {
+    const productId = typeof productOrId === 'string' ? productOrId : productOrId?.id;
+    if (!productId) return;
+    const foundProduct = typeof productOrId === 'object' && productOrId?.name 
+      ? productOrId 
+      : products.find((p) => p.id === productId);
+    const productName = foundProduct?.name || 'Item';
+
+    const isCurrentlyFav = !wishlist[productId];
+    if (isCurrentlyFav) {
+      addToast('heart', 'Saved to Wishlist ❤️', `${productName} added to your favorites.`);
+    } else {
+      addToast('info', 'Removed from Wishlist 💔', `${productName} was removed from favorites.`);
+    }
+
+    setWishlist((prev) => ({ ...prev, [productId]: isCurrentlyFav }));
   };
 
   // Switch to catalog
@@ -241,7 +247,12 @@ function AppContent() {
         {activeTab === 'cart' && (
           <CartPage
             cartItems={cartItems}
+            wishlist={wishlist}
+            products={products}
             onUpdateQuantity={handleUpdateQuantity}
+            onAddToCart={handleAddToCart}
+            onToggleFavorite={handleToggleFavorite}
+            onQuickView={handleQuickView}
             onExploreCatalog={() => handleExploreCatalog('all')}
             onPlaceOrder={handlePlaceOrder}
           />

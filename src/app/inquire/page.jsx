@@ -34,20 +34,25 @@ function InquireContent() {
       router.push('/admin');
       return;
     }
-    if (id === 'home' || id === 'catalog' || id === 'offers' || id === 'cart' || id === 'profile') {
-      router.push('/');
-      return;
-    }
     if (id === 'contact') {
       router.push('/contact');
       return;
     }
+    router.push(id === 'home' ? '/' : `/?tab=${id}`);
   };
 
   const handleFooterLinkClick = (label) => {
     const lower = label.toLowerCase();
     if (lower.includes('contact')) {
       router.push('/contact');
+    } else if (lower.includes('catalog') || lower.includes('product') || lower.includes('shop')) {
+      router.push('/?tab=catalog');
+    } else if (lower.includes('offer')) {
+      router.push('/?tab=offers');
+    } else if (lower.includes('cart')) {
+      router.push('/?tab=cart');
+    } else if (lower.includes('profile')) {
+      router.push('/?tab=profile');
     } else if (lower.includes('whatsapp')) {
       window.open(createHelpWhatsAppUrl(storeConfig.whatsappNumber), '_blank');
     } else {

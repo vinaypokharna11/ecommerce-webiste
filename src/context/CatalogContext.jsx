@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { 
   CATALOG_PRODUCTS as DEFAULT_PRODUCTS, 
   CATALOG_CATEGORIES as DEFAULT_CATALOG_CATEGORIES, 
@@ -121,14 +121,14 @@ export const DEFAULT_OFFERS = [
   },
 ];
 
-// Unified default categories
+// Unified default categories with consistent counts
 export const INITIAL_CATEGORIES = [
-  { id: 'clothing', name: 'Clothing', icon: 'Shirt', color: '#EC5AC8', accentBg: 'bg-[#FFF0FB]', iconColor: 'text-[#EC5AC8]', itemCount: '4 Items', description: 'Shirts, jackets, and trendy apparel' },
-  { id: 'footwear', name: 'Footwear', icon: 'Footprints', color: '#059669', accentBg: 'bg-[#F0FDF4]', iconColor: 'text-[#059669]', itemCount: '3 Items', description: 'Sneakers, runners, and leather loafers' },
-  { id: 'electronics', name: 'Electronics', icon: 'Headphones', color: '#6257FF', accentBg: 'bg-[#F5F3FF]', iconColor: 'text-[#6257FF]', itemCount: '4 Items', description: 'Audio gear, smartwatches & speakers' },
-  { id: 'accessories', name: 'Accessories', icon: 'Watch', color: '#0891B2', accentBg: 'bg-[#F0F9FF]', iconColor: 'text-[#0891B2]', itemCount: '3 Items', description: 'Bags, wallets, sunglasses & gifts' },
-  { id: 'home-living', name: 'Home & Living', icon: 'Armchair', color: '#8B5CF6', accentBg: 'bg-[#F5F3FF]', iconColor: 'text-[#8B5CF6]', itemCount: '2 Items', description: 'Plants, aroma diffusers & home decor' },
-  { id: 'beauty', name: 'Beauty & Care', icon: 'Sparkles', color: '#EC5AC8', accentBg: 'bg-[#FFF0FB]', iconColor: 'text-[#EC5AC8]', itemCount: '0 Items', description: 'Skincare, wellness & self-care items' },
+  { id: 'clothing', name: 'Clothing', icon: 'Shirt', color: '#EC5AC8', accentBg: 'bg-[#FFF0FB]', iconColor: 'text-[#EC5AC8]', itemCount: '4 Items', count: 4, description: 'Shirts, jackets, and trendy apparel' },
+  { id: 'footwear', name: 'Footwear', icon: 'Footprints', color: '#059669', accentBg: 'bg-[#F0FDF4]', iconColor: 'text-[#059669]', itemCount: '3 Items', count: 3, description: 'Sneakers, runners, and leather loafers' },
+  { id: 'electronics', name: 'Electronics', icon: 'Headphones', color: '#6257FF', accentBg: 'bg-[#F5F3FF]', iconColor: 'text-[#6257FF]', itemCount: '4 Items', count: 4, description: 'Audio gear, smartwatches & speakers' },
+  { id: 'accessories', name: 'Accessories', icon: 'Watch', color: '#0891B2', accentBg: 'bg-[#F0F9FF]', iconColor: 'text-[#0891B2]', itemCount: '3 Items', count: 3, description: 'Bags, wallets, sunglasses & gifts' },
+  { id: 'home-living', name: 'Home & Living', icon: 'Armchair', color: '#8B5CF6', accentBg: 'bg-[#F5F3FF]', iconColor: 'text-[#8B5CF6]', itemCount: '2 Items', count: 2, description: 'Plants, aroma diffusers & home decor' },
+  { id: 'beauty', name: 'Beauty & Care', icon: 'Sparkles', color: '#EC5AC8', accentBg: 'bg-[#FFF0FB]', iconColor: 'text-[#EC5AC8]', itemCount: '0 Items', count: 0, description: 'Skincare, wellness & self-care items' },
 ];
 
 const STORAGE_KEYS = {
@@ -142,62 +142,46 @@ const STORAGE_KEYS = {
 const CatalogContext = createContext(null);
 
 export const CatalogProvider = ({ children }) => {
-  // 1. Products State
-  const [products, setProducts] = useState(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEYS.PRODUCTS);
-      return saved ? JSON.parse(saved) : DEFAULT_PRODUCTS;
-    } catch {
-      return DEFAULT_PRODUCTS;
-    }
-  });
+  // 1. Deterministic Initial States (Guarantees matching Server HTML and initial Client DOM)
+  const [products, setProducts] = useState(DEFAULT_PRODUCTS);
+  const [categories, setCategories] = useState(INITIAL_CATEGORIES);
+  const [offers, setOffers] = useState(DEFAULT_OFFERS);
+  const [storeConfig, setStoreConfig] = useState(DEFAULT_STORE_CONFIG);
+  const [activities, setActivities] = useState(() => [
+    { id: 1, title: 'Store Catalog Initialized', time: 'Just now', type: 'system', icon: 'Sparkles' },
+    { id: 2, title: '16 default products loaded', time: 'Just now', type: 'product', icon: 'Package' },
+    { id: 3, title: '6 promotional offers active', time: 'Just now', type: 'offer', icon: 'Tag' },
+  ]);
 
-  // 2. Categories State
-  const [categories, setCategories] = useState(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEYS.CATEGORIES);
-      return saved ? JSON.parse(saved) : INITIAL_CATEGORIES;
-    } catch {
-      return INITIAL_CATEGORIES;
-    }
-  });
+  const isHydratedRef = useRef(false);
 
-  // 3. Offers State
-  const [offers, setOffers] = useState(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEYS.OFFERS);
-      return saved ? JSON.parse(saved) : DEFAULT_OFFERS;
-    } catch {
-      return DEFAULT_OFFERS;
-    }
-  });
-
-  // 4. Store Config State
-  const [storeConfig, setStoreConfig] = useState(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEYS.CONFIG);
-      return saved ? JSON.parse(saved) : DEFAULT_STORE_CONFIG;
-    } catch {
-      return DEFAULT_STORE_CONFIG;
-    }
-  });
-
-  // 5. Recent Admin Activities Log
-  const [activities, setActivities] = useState(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEYS.ACTIVITY);
-      return saved ? JSON.parse(saved) : [
-        { id: 1, title: 'Store Catalog Initialized', time: 'Just now', type: 'system', icon: 'Sparkles' },
-        { id: 2, title: '16 default products loaded', time: 'Just now', type: 'product', icon: 'Package' },
-        { id: 3, title: '6 promotional offers active', time: 'Just now', type: 'offer', icon: 'Tag' },
-      ];
-    } catch {
-      return [];
-    }
-  });
-
-  // Persist changes to localStorage
+  // Load from localStorage on client mount without triggering hydration mismatch
   useEffect(() => {
+    try {
+      const savedProds = localStorage.getItem(STORAGE_KEYS.PRODUCTS);
+      if (savedProds) setProducts(JSON.parse(savedProds));
+
+      const savedCats = localStorage.getItem(STORAGE_KEYS.CATEGORIES);
+      if (savedCats) setCategories(JSON.parse(savedCats));
+
+      const savedOffers = localStorage.getItem(STORAGE_KEYS.OFFERS);
+      if (savedOffers) setOffers(JSON.parse(savedOffers));
+
+      const savedConfig = localStorage.getItem(STORAGE_KEYS.CONFIG);
+      if (savedConfig) setStoreConfig(JSON.parse(savedConfig));
+
+      const savedAct = localStorage.getItem(STORAGE_KEYS.ACTIVITY);
+      if (savedAct) setActivities(JSON.parse(savedAct));
+    } catch (e) {
+      console.warn('Failed to read from localStorage', e);
+    } finally {
+      isHydratedRef.current = true;
+    }
+  }, []);
+
+  // Persist changes to localStorage once client is hydrated
+  useEffect(() => {
+    if (!isHydratedRef.current) return;
     try {
       localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(products));
     } catch (e) {
@@ -206,6 +190,7 @@ export const CatalogProvider = ({ children }) => {
   }, [products]);
 
   useEffect(() => {
+    if (!isHydratedRef.current) return;
     try {
       localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(categories));
     } catch (e) {
@@ -214,6 +199,7 @@ export const CatalogProvider = ({ children }) => {
   }, [categories]);
 
   useEffect(() => {
+    if (!isHydratedRef.current) return;
     try {
       localStorage.setItem(STORAGE_KEYS.OFFERS, JSON.stringify(offers));
     } catch (e) {
@@ -222,6 +208,7 @@ export const CatalogProvider = ({ children }) => {
   }, [offers]);
 
   useEffect(() => {
+    if (!isHydratedRef.current) return;
     try {
       localStorage.setItem(STORAGE_KEYS.CONFIG, JSON.stringify(storeConfig));
     } catch (e) {
@@ -230,6 +217,7 @@ export const CatalogProvider = ({ children }) => {
   }, [storeConfig]);
 
   useEffect(() => {
+    if (!isHydratedRef.current) return;
     try {
       localStorage.setItem(STORAGE_KEYS.ACTIVITY, JSON.stringify(activities.slice(0, 20)));
     } catch (e) {

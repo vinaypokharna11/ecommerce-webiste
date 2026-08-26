@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import Image from 'next/image';
 import { ClothCanvas } from './ClothCanvas';
-import { RealisticHand } from './RealisticHand';
+
 import { STORE_CONFIG } from '../data/mockData';
 
 export const FabricScrollReveal = ({
@@ -224,9 +224,7 @@ export const FabricScrollReveal = ({
             )}
 
             {/* ── LAYER 3 (Photorealistic Human Hand with Kinematics) ── */}
-            {!shouldReduceMotion && (
-              <RealisticHand progress={scrollProgress} />
-            )}
+            {/* Hand animation removed by request */}
           </div>
         </div>
 

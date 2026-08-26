@@ -564,15 +564,7 @@ export const ProfilePage = ({ orders = [], onExploreCatalog, onNavigate }) => {
                 </div>
               </motion.div>
             )
-          ) : (
-            <button
-              onClick={() => openAuthModal()}
-              className="w-full py-4 rounded-full bg-[#171717] hover:bg-black text-white font-extrabold text-sm shadow-xl active:scale-98 transition-all flex items-center justify-center gap-2"
-            >
-              <LogIn className="w-4 h-4 text-[#9FD842]" />
-              <span>Sign In to Unlock Full Profile Features</span>
-            </button>
-          )}
+          ) : null}
 
           {/* Footer note */}
           <p className="text-center text-[11px] text-[#A0A0A0] font-medium pt-5">

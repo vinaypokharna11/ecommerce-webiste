@@ -16,6 +16,7 @@ import {
   Check,
   Star,
   Heart,
+  Eye,
   Sparkles,
   Tag,
   ArrowUpRight,
@@ -354,6 +355,7 @@ export const CartPage = ({
   onUpdateQuantity,
   onAddToCart,
   onToggleFavorite,
+  onQuickView,
   onExploreCatalog,
   onPlaceOrder,
 }) => {
@@ -415,7 +417,7 @@ export const CartPage = ({
   };
 
   return (
-    <section className="pt-24 pb-20 px-4 sm:px-6 max-w-6xl mx-auto min-h-[85vh]">
+    <section className="pt-24 pb-20 px-4 sm:px-8 lg:px-12 xl:px-16 w-full max-w-[1720px] mx-auto min-h-[85vh]">
       {/* Header with Corner Emoji Toggle Pill */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
@@ -732,49 +734,89 @@ export const CartPage = ({
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          {specialProducts.map((prod) => (
-            <motion.div
-              key={prod.id}
-              whileHover={{ y: -3 }}
-              className="bg-white rounded-[22px] border border-black/5 p-3 sm:p-4 shadow-neu-card flex flex-col justify-between group"
-            >
-              <div>
-                <div className="relative w-full aspect-square rounded-2xl bg-[#EEEEEC] overflow-hidden mb-2.5">
-                  <Image
-                    src={prod.image || '/assets/images/prod_headphones.jpg'}
-                    alt={prod.name}
-                    fill
-                    sizes="(max-width: 768px) 50vw, 25vw"
-                    className="object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                  {prod.badge && (
-                    <span className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-[#171717] text-white text-[9px] font-extrabold">
-                      {prod.badge}
-                    </span>
-                  )}
+          {specialProducts.map((prod) => {
+            const isFav = !!wishlist[prod.id];
+            const inCartQty = cartItems[prod.id]?.quantity || 0;
+            const imgSrc = typeof prod.image === 'string' ? prod.image : prod.image?.src || prod.image || '/assets/images/prod_headphones.jpg';
+
+            return (
+              <motion.div
+                key={prod.id}
+                whileHover={{ y: -4 }}
+                onClick={() => onQuickView && onQuickView(prod)}
+                className="bg-white rounded-[24px] border border-black/5 p-3 sm:p-4 shadow-neu-card hover:shadow-neu-card-hover transition-all duration-300 flex flex-col justify-between group cursor-pointer"
+              >
+                <div>
+                  <div className="relative w-full aspect-square rounded-[20px] bg-[#EEEEEC] p-2 flex items-center justify-center overflow-hidden mb-2.5">
+                    <Image
+                      src={imgSrc}
+                      alt={prod.name}
+                      fill
+                      sizes="(max-width: 768px) 50vw, 25vw"
+                      className="object-contain p-2 group-hover:scale-105 transition-transform duration-300"
+                    />
+                    
+                    {/* Badge */}
+                    {prod.badge && (
+                      <span className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-white/90 text-[#171717] border border-black/5 text-[9px] font-extrabold shadow-sm z-10">
+                        {prod.badge}
+                      </span>
+                    )}
+
+                    {/* Heart / Wishlist Like Button */}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (onToggleFavorite) onToggleFavorite(prod);
+                      }}
+                      className="absolute top-2 right-2 z-10 w-7 h-7 rounded-full bg-white/90 backdrop-blur-md border border-white/80 flex items-center justify-center shadow-sm hover:scale-110 active:scale-90 transition-all duration-200 cursor-pointer"
+                      aria-label={isFav ? 'Remove from wishlist' : 'Save to wishlist'}
+                    >
+                      <Heart
+                        className={`w-3.5 h-3.5 transition-colors ${
+                          isFav
+                            ? 'text-red-500 fill-red-500 stroke-red-500'
+                            : 'text-[#171717] hover:text-red-500'
+                        }`}
+                      />
+                    </button>
+
+                    {/* Quick View Hover Badge */}
+                    <div className="absolute bottom-2 inset-x-2 hidden sm:flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-white/95 backdrop-blur-md text-[#171717] text-[10px] font-bold shadow-sm border border-black/5">
+                        <Eye className="w-3 h-3 text-[#709E1E]" />
+                        <span>Quick View</span>
+                      </span>
+                    </div>
+                  </div>
+
+                  <span className="text-[10px] font-bold text-[#777777] uppercase block">{prod.categoryName || 'Product'}</span>
+                  <h4 className="text-xs font-bold text-[#171717] line-clamp-1 group-hover:text-[#709E1E] transition-colors mt-0.5">
+                    {prod.name}
+                  </h4>
                 </div>
 
-                <span className="text-[10px] font-bold text-[#777777] uppercase block">{prod.categoryName}</span>
-                <h4 className="text-xs font-bold text-[#171717] line-clamp-1 group-hover:text-[#709E1E] transition-colors mt-0.5">
-                  {prod.name}
-                </h4>
-              </div>
+                <div className="pt-2.5 mt-2 border-t border-black/5 flex items-center justify-between gap-1">
+                  <span className="text-xs sm:text-sm font-extrabold text-[#171717]">
+                    {STORE_CONFIG.currency}{(prod.price || 0).toLocaleString()}
+                  </span>
 
-              <div className="pt-2.5 mt-2 border-t border-black/5 flex items-center justify-between gap-1">
-                <span className="text-xs sm:text-sm font-extrabold text-[#171717]">
-                  {STORE_CONFIG.currency}{(prod.price || 0).toLocaleString()}
-                </span>
-
-                <button
-                  onClick={() => onAddToCart && onAddToCart(prod)}
-                  className="px-2.5 py-1.5 rounded-full bg-[#9FD842] hover:bg-[#8EC731] text-[#171717] font-extrabold text-[10px] shadow-sm active:scale-95 transition-all flex items-center gap-1"
-                >
-                  <Plus className="w-3 h-3 stroke-[3]" />
-                  <span>Add</span>
-                </button>
-              </div>
-            </motion.div>
-          ))}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (onAddToCart) onAddToCart(prod);
+                    }}
+                    className="px-3 py-1.5 rounded-full bg-[#9FD842] hover:bg-[#8EC731] text-[#171717] font-extrabold text-[11px] shadow-sm active:scale-95 transition-all flex items-center gap-1 cursor-pointer"
+                  >
+                    <Plus className="w-3 h-3 stroke-[3]" />
+                    <span>{inCartQty > 0 ? `Add (${inCartQty})` : 'Add'}</span>
+                  </button>
+                </div>
+              </motion.div>
+            );
+          })}
         </div>
       </div>
 

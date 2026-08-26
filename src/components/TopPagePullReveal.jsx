@@ -12,7 +12,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import Image from 'next/image';
-import { TopReachingHand } from './TopReachingHand';
+
 import { STORE_CONFIG } from '../data/mockData';
 
 export const TopPagePullReveal = ({
@@ -105,14 +105,13 @@ export const TopPagePullReveal = ({
               <Sparkles className="w-3.5 h-3.5 text-[#9FD842]" />
               <span>Interactive Page Pull Experience</span>
             </div>
-            <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-[#171717] tracking-tight mt-1">
-              Scroll Down — Hand Reaches &amp; Pulls Catalog Page Up
+              Scroll Down to Reveal Catalog
             </h2>
           </div>
 
           <div className="hidden sm:flex items-center gap-3 bg-white/85 backdrop-blur-md px-4 py-2 rounded-full border border-black/5 shadow-sm">
             <span className="text-[11px] font-bold text-[#777777]">
-              {scrollProgress < 0.28 ? '1. Hand Reaching from Top' : scrollProgress < 0.88 ? '2. Pulling Page Up' : '3. Revealed'}
+              {scrollProgress < 0.28 ? '1. Scroll Down' : scrollProgress < 0.88 ? '2. Revealing Catalog' : '3. Revealed'}
             </span>
             <div className="w-24 h-2 bg-[#EEEEEC] rounded-full overflow-hidden">
               <div
@@ -251,9 +250,7 @@ export const TopPagePullReveal = ({
         </div>
 
         {/* ── 3. Real Hand Reaching from Top and Pulling Sheet Up ── */}
-        {!shouldReduceMotion && (
-          <TopReachingHand progress={scrollProgress} handX={50} />
-        )}
+        {/* Hand animation removed by request */}
 
         {/* ── Bottom Navigation Controls ── */}
         <div className="w-full max-w-5xl flex items-center justify-between z-20 pb-2">
@@ -267,8 +264,8 @@ export const TopPagePullReveal = ({
             </motion.div>
             <span>
               {scrollProgress < 0.85
-                ? 'Scroll down to pull catalog page upward with hand'
-                : 'Page pulled! Continue scrolling to explore catalog grid'}
+                ? 'Scroll down to reveal catalog'
+                : 'Page revealed! Continue scrolling to explore catalog grid'}
             </span>
           </div>
 

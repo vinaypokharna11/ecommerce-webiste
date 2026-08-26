@@ -16,16 +16,7 @@ import {
   Check,
   ExternalLink,
   ChevronDown,
-  Building2,
-  Package,
-  Layers,
-  ArrowRight,
-  ShieldCheck,
-  Zap,
-  Info,
-  Calendar,
-  DollarSign,
-  AlertCircle
+  Zap
 } from 'lucide-react';
 import { useCatalog } from '../context/CatalogContext';
 import { 
@@ -267,7 +258,7 @@ export const ContactInquirePage = ({
   };
 
   return (
-    <div className="min-h-screen pt-24 pb-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto font-sans">
+    <div className="min-h-screen pt-24 pb-20 px-4 sm:px-8 lg:px-12 xl:px-16 w-full max-w-[1720px] mx-auto font-sans">
       
       {/* ── Top Hero & Mode Switcher ── */}
       <div className="text-center max-w-3xl mx-auto mb-10">
@@ -463,11 +454,11 @@ export const ContactInquirePage = ({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -15 }}
             transition={{ duration: 0.3 }}
-            className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-16"
+            className="max-w-3xl mx-auto mb-16"
           >
             
-            {/* Left: Contact Form */}
-            <div className="lg:col-span-7 bg-white rounded-3xl border border-[#EAE6FD] p-6 sm:p-8 shadow-[0_10px_35px_rgba(98,87,255,0.06)] relative overflow-hidden">
+            {/* Contact Form */}
+            <div className="bg-white rounded-3xl border border-[#EAE6FD] p-6 sm:p-8 shadow-[0_10px_35px_rgba(98,87,255,0.06)] relative overflow-hidden">
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-10 h-10 rounded-2xl bg-[#F5F3FF] border border-[#EAE6FD] flex items-center justify-center text-[#6257FF]">
                   <Mail className="w-5 h-5" />
@@ -675,77 +666,6 @@ export const ContactInquirePage = ({
               )}
             </div>
 
-            {/* Right: Visit Us, Guarantees & Store Info */}
-            <div className="lg:col-span-5 space-y-6">
-              
-              {/* Physical Location Detail Card */}
-              <div className="bg-white rounded-3xl border border-[#EAE6FD] p-6 sm:p-7 shadow-[0_4px_20px_rgba(98,87,255,0.04)]">
-                <div className="flex items-center gap-2.5 text-xs font-bold text-[#8B5CF6] uppercase tracking-wider mb-3">
-                  <Building2 className="w-4 h-4" />
-                  <span>Flagship Retail Store</span>
-                </div>
-
-                <h3 className="text-lg font-bold text-[#15152A] mb-2">{STORE_LOCATION_DETAILS.name}</h3>
-                <p className="text-xs text-[#626276] leading-relaxed mb-4 flex items-start gap-2">
-                  <MapPin className="w-4 h-4 text-[#6257FF] flex-shrink-0 mt-0.5" />
-                  <span>{STORE_LOCATION_DETAILS.address}</span>
-                </p>
-
-                <div className="p-3.5 rounded-2xl bg-[#FAF9FF] border border-[#EAE6FD] text-xs space-y-2 mb-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[#8E8EA0]">Weekdays:</span>
-                    <span className="font-bold text-[#15152A]">{STORE_LOCATION_DETAILS.hoursWeekday}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[#8E8EA0]">Sundays:</span>
-                    <span className="font-bold text-[#15152A]">{STORE_LOCATION_DETAILS.hoursSunday}</span>
-                  </div>
-                  <div className="pt-2 border-t border-[#EAE6FD] text-[11px] text-[#626276]">
-                    📍 <strong>Landmark:</strong> {STORE_LOCATION_DETAILS.landmark}
-                  </div>
-                  <div className="text-[11px] text-[#626276]">
-                    🚗 <strong>Parking:</strong> {STORE_LOCATION_DETAILS.parking}
-                  </div>
-                </div>
-
-                <a
-                  href={STORE_LOCATION_DETAILS.googleMapsUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full py-2.5 rounded-2xl bg-[#FAF9FF] hover:bg-[#F5F3FF] text-[#6257FF] font-bold text-xs border border-[#EAE6FD] flex items-center justify-center gap-1.5 transition-colors"
-                >
-                  <span>Open in Google Maps</span>
-                  <ExternalLink className="w-3.5 h-3.5" />
-                </a>
-              </div>
-
-              {/* Service Commitments Box */}
-              <div className="bg-gradient-to-br from-[#15152A] to-[#252438] text-white rounded-3xl p-6 shadow-xl relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-[#6257FF]/20 rounded-full blur-2xl pointer-events-none" />
-
-                <h4 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4 text-[#EC5AC8]" />
-                  <span>The Nakoda Imitation Promise</span>
-                </h4>
-
-                <div className="space-y-3.5 text-xs text-[#EAE6FD]/80">
-                  <div className="flex items-start gap-2.5">
-                    <Check className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
-                    <span><strong>100% Genuine Products</strong> sourced directly from verified authorized manufacturers.</span>
-                  </div>
-                  <div className="flex items-start gap-2.5">
-                    <Check className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
-                    <span><strong>Easy 7-Day Returns</strong> & replacements for all catalog purchases.</span>
-                  </div>
-                  <div className="flex items-start gap-2.5">
-                    <Check className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
-                    <span><strong>Fast Local Fulfillment</strong> within 24-48 hours across Bangalore.</span>
-                  </div>
-                </div>
-              </div>
-
-            </div>
-
           </motion.div>
         )}
 
@@ -757,11 +677,11 @@ export const ContactInquirePage = ({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -15 }}
             transition={{ duration: 0.3 }}
-            className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-16"
+            className="max-w-3xl mx-auto mb-16"
           >
             
-            {/* Left: Purpose-Built Inquiry Form */}
-            <div className="lg:col-span-8 bg-white rounded-3xl border border-[#EAE6FD] p-6 sm:p-8 shadow-[0_10px_35px_rgba(98,87,255,0.06)]">
+            {/* Purpose-Built Inquiry Form */}
+            <div className="bg-white rounded-3xl border border-[#EAE6FD] p-6 sm:p-8 shadow-[0_10px_35px_rgba(98,87,255,0.06)]">
               
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-10 h-10 rounded-2xl bg-[#FFF0FB] border border-[#FCD6F2] flex items-center justify-center text-[#EC5AC8]">
@@ -849,23 +769,18 @@ export const ContactInquirePage = ({
                     </div>
                   </div>
 
-                  {/* Step 2: Product Selection */}
+                  {/* Step 2: Referenced Jewelry Piece */}
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <label className="text-xs font-bold text-[#15152A]">
-                        2. Select Product or Custom Sourcing Item <span className="text-[#EC5AC8]">*</span>
+                        2. Referenced Jewelry Piece <span className="text-[#EC5AC8]">*</span>
                       </label>
                       <button
                         type="button"
-                        onClick={() =>
-                          setInquiryForm((prev) => ({
-                            ...prev,
-                            isCustomProduct: !prev.isCustomProduct,
-                          }))
-                        }
-                        className="text-xs font-bold text-[#6257FF] hover:underline"
+                        onClick={() => setInquiryForm({ ...inquiryForm, isCustomProduct: !inquiryForm.isCustomProduct })}
+                        className="text-[11px] font-bold text-[#6257FF] hover:underline"
                       >
-                        {inquiryForm.isCustomProduct ? '← Choose from Catalog' : '+ Custom Product not in Catalog'}
+                        {inquiryForm.isCustomProduct ? '← Select from Catalog' : '+ Request Unlisted / Custom Design'}
                       </button>
                     </div>
 
@@ -874,7 +789,7 @@ export const ContactInquirePage = ({
                         <input
                           type="text"
                           required
-                          placeholder="Describe item name (e.g. Custom Printed Bamboo Water Bottles 750ml)"
+                          placeholder="Describe item (e.g., Custom Temple Bridal Choker Set in 100g weight)"
                           value={inquiryForm.customProductName}
                           onChange={(e) => setInquiryForm({ ...inquiryForm, customProductName: e.target.value })}
                           className="w-full px-4 py-3 rounded-2xl bg-[#FAF9FF] border border-[#EAE6FD] text-sm text-[#15152A] focus:bg-white focus:border-[#6257FF] focus:outline-none focus:ring-2 focus:ring-[#6257FF]/10"
@@ -1045,57 +960,8 @@ export const ContactInquirePage = ({
                       <span>⚡ Instant WhatsApp Inquire</span>
                     </button>
                   </div>
-
                 </form>
               )}
-
-            </div>
-
-            {/* Right: Why Inquire with ShopEase & Bulk Perks */}
-            <div className="lg:col-span-4 space-y-6">
-              
-              <div className="bg-white rounded-3xl border border-[#EAE6FD] p-6 sm:p-7 shadow-[0_4px_20px_rgba(98,87,255,0.04)]">
-                <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-4">
-                  <Package className="w-5 h-5" />
-                </div>
-                <h3 className="text-base font-bold text-[#15152A] mb-2">Bulk Order Advantages</h3>
-                <p className="text-xs text-[#626276] leading-relaxed mb-4">
-                  Enjoy tier discounts and end-to-end corporate gifting management.
-                </p>
-
-                <div className="space-y-3 text-xs">
-                  <div className="p-3 rounded-xl bg-[#FAF9FF] border border-[#EAE6FD] flex items-center gap-2.5">
-                    <span className="w-6 h-6 rounded-lg bg-purple-100 text-[#6257FF] flex items-center justify-center font-bold text-xs">1</span>
-                    <span className="text-[#15152A] font-semibold">Tiered volume discounts up to 35% off</span>
-                  </div>
-                  <div className="p-3 rounded-xl bg-[#FAF9FF] border border-[#EAE6FD] flex items-center gap-2.5">
-                    <span className="w-6 h-6 rounded-lg bg-pink-100 text-[#EC5AC8] flex items-center justify-center font-bold text-xs">2</span>
-                    <span className="text-[#15152A] font-semibold">Custom brand packaging & greeting cards</span>
-                  </div>
-                  <div className="p-3 rounded-xl bg-[#FAF9FF] border border-[#EAE6FD] flex items-center gap-2.5">
-                    <span className="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-xs">3</span>
-                    <span className="text-[#15152A] font-semibold">Tax invoice with GST input claim support</span>
-                  </div>
-                  <div className="p-3 rounded-xl bg-[#FAF9FF] border border-[#EAE6FD] flex items-center gap-2.5">
-                    <span className="w-6 h-6 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold text-xs">4</span>
-                    <span className="text-[#15152A] font-semibold">Dedicated account manager for doorstep dispatch</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Quick Catalog link banner */}
-              <div className="p-6 rounded-3xl bg-gradient-to-br from-[#6257FF]/10 via-[#FAF9FF] to-[#EC5AC8]/10 border border-[#EAE6FD] text-center">
-                <Sparkles className="w-6 h-6 text-[#6257FF] mx-auto mb-2" />
-                <h4 className="text-sm font-bold text-[#15152A] mb-1">Looking for Catalog Products?</h4>
-                <p className="text-xs text-[#626276] mb-4">Explore our full 16+ trending inventory with instant pricing.</p>
-                <button
-                  onClick={onExploreCatalog}
-                  className="w-full py-2.5 rounded-2xl bg-white hover:bg-[#FAF9FF] text-[#6257FF] border border-[#EAE6FD] text-xs font-bold shadow-xs transition-colors flex items-center justify-center gap-1.5"
-                >
-                  <span>Browse Product Catalog</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
-              </div>
 
             </div>
 
