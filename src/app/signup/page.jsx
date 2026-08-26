@@ -1,8 +1,13 @@
 'use client';
 
-import React from 'react';
-import LoginPage from '../login/page';
+import React, { Suspense } from 'react';
+import { LoginContent } from '../login/page';
 
 export default function SignupPage() {
-  return <LoginPage />;
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#F5F5F3]" />}>
+      <LoginContent defaultTab="signup" />
+    </Suspense>
+  );
 }
+
