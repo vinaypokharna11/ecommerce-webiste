@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+'use client';
+
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard,
@@ -22,6 +24,7 @@ import {
   LogOut,
   UserCheck,
   MessageSquare,
+  Eye,
 } from 'lucide-react';
 import { useCatalog } from '../../context/CatalogContext';
 import { AdminDashboard } from './AdminDashboard';
@@ -58,34 +61,39 @@ export const AdminLayout = ({ onExitAdmin, onLogout, adminUser }) => {
   };
 
   return (
-    <div className="min-h-screen bg-[#FAF9FF] text-[#15152A] flex flex-col font-sans selection:bg-[#6257FF] selection:text-white">
+    <div className="min-h-screen bg-[#F5F5F3] text-[#171717] flex flex-col font-sans selection:bg-[#9FD842] selection:text-[#171717]">
       
       {/* Background Ambient Glows */}
-      <div className="fixed top-0 left-1/3 w-[800px] h-[500px] ambient-glow-lavender rounded-full blur-[140px] pointer-events-none -z-10 opacity-60" />
-      <div className="fixed bottom-10 right-0 w-[600px] h-[600px] ambient-glow-pink rounded-full blur-[140px] pointer-events-none -z-10 opacity-40" />
+      <div className="fixed top-0 left-1/3 w-[800px] h-[500px] bg-[#9FD842]/10 rounded-full blur-[150px] pointer-events-none -z-10" />
+      <div className="fixed bottom-10 right-0 w-[600px] h-[600px] bg-[#8EC731]/10 rounded-full blur-[150px] pointer-events-none -z-10" />
 
       {/* ── Top Header Bar ── */}
-      <header className="sticky top-0 z-40 bg-white/85 backdrop-blur-xl border-b border-[#EAE6FD] px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between shadow-xs">
+      <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-xl border-b border-black/10 px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between shadow-xs">
         
         {/* Left: Mobile Menu Trigger + Brand Logo */}
         <div className="flex items-center gap-3">
           <button
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="p-2 rounded-xl text-[#626276] hover:bg-[#FAF9FF] lg:hidden"
+            className="p-2 rounded-xl text-[#777777] hover:text-[#171717] hover:bg-[#EEEEEC] lg:hidden cursor-pointer"
             aria-label="Toggle menu"
           >
             {isSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
 
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#6257FF] to-[#8B5CF6] flex items-center justify-center text-white shadow-md">
-              <ShoppingBag className="w-4 h-4" />
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-[#171717] flex items-center justify-center text-[#9FD842] shadow-md">
+              <ShoppingBag className="w-5 h-5" />
             </div>
             <div>
-              <span className="text-base font-extrabold tracking-tight text-[#15152A] block leading-tight">
-                {storeConfig.name} <span className="text-[#EC5AC8] font-bold text-xs">Admin</span>
-              </span>
-              <span className="text-[10px] text-[#8E8EA0] block font-medium">
+              <div className="flex items-center gap-2">
+                <span className="text-base font-extrabold tracking-tight text-[#171717] block leading-tight">
+                  {storeConfig?.name && storeConfig.name !== 'ShopEase' ? storeConfig.name : 'Nakoda Imitation'}
+                </span>
+                <span className="px-2 py-0.5 rounded-full bg-[#F3FCDA] border border-[#9FD842]/30 text-[#709E1E] font-extrabold text-[10px] uppercase tracking-wider">
+                  Admin
+                </span>
+              </div>
+              <span className="text-[11px] text-[#777777] block font-medium">
                 {adminUser?.email || 'Master Administrator'}
               </span>
             </div>
@@ -96,19 +104,19 @@ export const AdminLayout = ({ onExitAdmin, onLogout, adminUser }) => {
         <div className="flex items-center gap-2 sm:gap-3">
           <button
             onClick={onExitAdmin}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-[#EAE6FD] text-xs font-bold text-[#6257FF] hover:bg-[#F5F3FF] shadow-xs transition-all active:scale-95"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-[#EEEEEC] hover:bg-[#E2E2DE] text-xs font-bold text-[#171717] transition-all active:scale-95 cursor-pointer shadow-xs"
             title="Back to Customer Storefront"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Back to Storefront</span>
-            <span className="sm:hidden">Storefront</span>
+            <span className="hidden sm:inline">View Live Store</span>
+            <span className="sm:hidden">Store</span>
           </button>
 
           <button
             onClick={() => setIsAddModalOpen(true)}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl gradient-btn-primary text-white text-xs font-bold shadow-btn hover:scale-105 active:scale-95 transition-all"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#171717] hover:bg-black text-white text-xs font-bold shadow-md hover:scale-105 active:scale-95 transition-all cursor-pointer"
           >
-            <Plus className="w-3.5 h-3.5" />
+            <Plus className="w-3.5 h-3.5 text-[#9FD842]" />
             <span className="hidden sm:inline">Add Product</span>
             <span className="sm:hidden">Add</span>
           </button>
@@ -116,7 +124,7 @@ export const AdminLayout = ({ onExitAdmin, onLogout, adminUser }) => {
           {onLogout && (
             <button
               onClick={onLogout}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-rose-50 border border-rose-100 text-rose-600 hover:bg-rose-100 text-xs font-bold shadow-xs transition-all"
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full bg-rose-50 border border-rose-200 text-rose-600 hover:bg-rose-100 text-xs font-bold shadow-xs transition-all cursor-pointer"
               title="Logout from Admin"
             >
               <LogOut className="w-3.5 h-3.5" />
@@ -127,12 +135,12 @@ export const AdminLayout = ({ onExitAdmin, onLogout, adminUser }) => {
       </header>
 
       {/* ── Main Layout (Sidebar + Content) ── */}
-      <div className="flex-1 flex max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 gap-8">
+      <div className="flex-1 flex max-w-[1720px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 gap-8">
         
         {/* ── Desktop Sidebar Navigation ── */}
         <aside className="w-64 flex-shrink-0 hidden lg:block">
-          <div className="sticky top-20 bg-white rounded-3xl border border-[#EAE6FD] p-4 shadow-[0_4px_20px_rgba(98,87,255,0.04)] space-y-1.5">
-            <div className="px-3 py-2 text-[10px] font-bold text-[#8E8EA0] uppercase tracking-wider">
+          <div className="sticky top-20 bg-white rounded-[28px] border border-black/10 p-4 shadow-[0_4px_24px_rgba(0,0,0,0.03)] space-y-1.5">
+            <div className="px-3 py-2 text-[10px] font-extrabold text-[#999999] uppercase tracking-wider">
               Store Management
             </div>
 
@@ -144,22 +152,22 @@ export const AdminLayout = ({ onExitAdmin, onLogout, adminUser }) => {
                 <button
                   key={item.id}
                   onClick={() => handleNavClick(item.id)}
-                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-all group ${
+                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-all group cursor-pointer ${
                     isActive
-                      ? 'bg-[#EDE9FE] text-[#6257FF] shadow-xs'
-                      : 'text-[#626276] hover:text-[#15152A] hover:bg-[#FAF9FF]'
+                      ? 'bg-[#171717] text-white shadow-sm'
+                      : 'text-[#555555] hover:text-[#171717] hover:bg-[#EEEEEC]/60'
                   }`}
                 >
                   <div className="flex items-center gap-2.5">
                     <Icon className={`w-4 h-4 transition-transform group-hover:scale-110 ${
-                      isActive ? 'text-[#6257FF]' : 'text-[#8E8EA0]'
+                      isActive ? 'text-[#9FD842]' : 'text-[#777777]'
                     }`} />
                     <span>{item.label}</span>
                   </div>
 
                   {item.badge !== undefined && (
                     <span className={`text-[10px] px-2 py-0.5 rounded-full font-extrabold ${
-                      isActive ? 'bg-[#6257FF] text-white' : 'bg-[#FAF9FF] text-[#626276] border border-[#EAE6FD]'
+                      isActive ? 'bg-[#9FD842] text-[#171717]' : 'bg-[#EEEEEC] text-[#555555]'
                     }`}>
                       {item.badge}
                     </span>
@@ -173,30 +181,30 @@ export const AdminLayout = ({ onExitAdmin, onLogout, adminUser }) => {
             })}
 
             {/* Quick Live Preview Box */}
-            <div className="pt-4 mt-4 border-t border-[#EAE6FD] px-2">
-              <div className="p-3.5 rounded-2xl bg-gradient-to-br from-[#F5F3FF] to-[#FFF0FB] border border-[#EAE6FD] text-left">
-                <div className="flex items-center gap-1.5 text-xs font-bold text-[#6257FF] mb-1">
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <span>Instant Live Sync</span>
+            <div className="pt-4 mt-4 border-t border-black/10 px-2">
+              <div className="p-3.5 rounded-2xl bg-[#F8FDF0] border border-[#9FD842]/30 text-left">
+                <div className="flex items-center gap-1.5 text-xs font-extrabold text-[#709E1E] mb-1">
+                  <Sparkles className="w-3.5 h-3.5 text-[#709E1E]" />
+                  <span>Live Store Sync</span>
                 </div>
-                <p className="text-[11px] text-[#626276] leading-relaxed mb-2.5">
-                  All changes made here update your store in real-time.
+                <p className="text-[11px] text-[#666666] leading-relaxed mb-3">
+                  All changes immediately update your live customer store.
                 </p>
                 <button
                   onClick={onExitAdmin}
-                  className="w-full py-1.5 rounded-xl bg-white text-[#6257FF] text-xs font-bold shadow-xs hover:bg-[#FAF9FF] border border-[#EAE6FD] flex items-center justify-center gap-1 mb-2"
+                  className="w-full py-2 rounded-xl bg-white text-[#171717] text-xs font-bold shadow-xs hover:bg-[#EEEEEC] border border-black/10 flex items-center justify-center gap-1.5 mb-2 cursor-pointer transition-colors"
                 >
-                  <span>Preview Store</span>
-                  <ExternalLink className="w-3 h-3" />
+                  <Eye className="w-3.5 h-3.5 text-[#709E1E]" />
+                  <span>Preview Storefront</span>
                 </button>
 
                 {onLogout && (
                   <button
                     onClick={onLogout}
-                    className="w-full py-1.5 rounded-xl bg-rose-50 text-rose-600 text-xs font-bold hover:bg-rose-100 border border-rose-100 flex items-center justify-center gap-1 transition-colors"
+                    className="w-full py-1.5 rounded-xl bg-rose-50 text-rose-600 text-xs font-bold hover:bg-rose-100 border border-rose-200 flex items-center justify-center gap-1 transition-colors cursor-pointer"
                   >
-                    <span>Sign Out</span>
                     <LogOut className="w-3 h-3" />
+                    <span>Sign Out</span>
                   </button>
                 )}
               </div>
@@ -214,7 +222,7 @@ export const AdminLayout = ({ onExitAdmin, onLogout, adminUser }) => {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 onClick={() => setIsSidebarOpen(false)}
-                className="fixed inset-0 bg-[#15152A]/60 backdrop-blur-sm"
+                className="fixed inset-0 bg-black/50 backdrop-blur-sm"
               />
               <motion.div
                 initial={{ x: -280 }}
@@ -224,16 +232,18 @@ export const AdminLayout = ({ onExitAdmin, onLogout, adminUser }) => {
                 className="fixed top-0 bottom-0 left-0 w-72 bg-white p-6 shadow-2xl z-10 flex flex-col justify-between overflow-y-auto"
               >
                 <div>
-                  <div className="flex items-center justify-between pb-4 mb-4 border-b border-[#EAE6FD]">
+                  <div className="flex items-center justify-between pb-4 mb-4 border-b border-black/10">
                     <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-lg bg-[#6257FF] text-white flex items-center justify-center">
+                      <div className="w-8 h-8 rounded-full bg-[#171717] text-[#9FD842] flex items-center justify-center">
                         <ShoppingBag className="w-4 h-4" />
                       </div>
-                      <span className="font-extrabold text-sm text-[#15152A]">{storeConfig.name} Admin</span>
+                      <span className="font-extrabold text-sm text-[#171717]">
+                        {storeConfig?.name && storeConfig.name !== 'ShopEase' ? storeConfig.name : 'Nakoda Imitation'} Admin
+                      </span>
                     </div>
                     <button
                       onClick={() => setIsSidebarOpen(false)}
-                      className="p-1 rounded-lg text-[#626276] hover:bg-[#FAF9FF]"
+                      className="p-1 rounded-lg text-[#777777] hover:bg-[#EEEEEC]"
                     >
                       <X className="w-5 h-5" />
                     </button>
@@ -249,12 +259,12 @@ export const AdminLayout = ({ onExitAdmin, onLogout, adminUser }) => {
                           onClick={() => handleNavClick(item.id)}
                           className={`w-full flex items-center justify-between px-3.5 py-3 rounded-2xl text-xs font-bold ${
                             isActive
-                              ? 'bg-[#EDE9FE] text-[#6257FF]'
-                              : 'text-[#626276] hover:bg-[#FAF9FF]'
+                              ? 'bg-[#171717] text-white'
+                              : 'text-[#555555] hover:bg-[#EEEEEC]'
                           }`}
                         >
                           <div className="flex items-center gap-3">
-                            <Icon className="w-4 h-4" />
+                            <Icon className={`w-4 h-4 ${isActive ? 'text-[#9FD842]' : 'text-[#777777]'}`} />
                             <span>{item.label}</span>
                           </div>
                           {item.badge !== undefined && (
@@ -268,10 +278,10 @@ export const AdminLayout = ({ onExitAdmin, onLogout, adminUser }) => {
                   </div>
                 </div>
 
-                <div className="pt-4 border-t border-[#EAE6FD]">
+                <div className="pt-4 border-t border-black/10">
                   <button
                     onClick={onExitAdmin}
-                    className="w-full py-2.5 rounded-2xl bg-[#FAF9FF] text-[#6257FF] font-bold text-xs border border-[#EAE6FD] flex items-center justify-center gap-2"
+                    className="w-full py-2.5 rounded-2xl bg-[#EEEEEC] text-[#171717] font-bold text-xs border border-black/10 flex items-center justify-center gap-2"
                   >
                     <ArrowLeft className="w-4 h-4" />
                     <span>Back to Customer Store</span>

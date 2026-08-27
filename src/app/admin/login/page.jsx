@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
@@ -24,7 +24,34 @@ export default function AdminLoginPage() {
   const [password, setPassword] = useState('admin123');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [error, setError] = useState('');
+
+  // Auto-redirect if already authenticated
+  useEffect(() => {
+    async function checkExistingAuth() {
+      try {
+        const token = localStorage.getItem('shopease_admin_token');
+        if (!token) {
+          setIsCheckingAuth(false);
+          return;
+        }
+
+        const res = await fetch('/api/admin/auth', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+
+        if (res.ok && data.authenticated) {
+          router.replace('/admin');
+          return;
+        }
+      } catch (e) {}
+      setIsCheckingAuth(false);
+    }
+
+    checkExistingAuth();
+  }, [router]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -59,6 +86,15 @@ export default function AdminLoginPage() {
       setIsLoading(false);
     }
   };
+
+  if (isCheckingAuth) {
+    return (
+      <div className="min-h-screen bg-[#F5F5F3] flex flex-col items-center justify-center gap-3 font-sans">
+        <div className="w-10 h-10 border-3 border-[#171717] border-t-[#9FD842] rounded-full animate-spin" />
+        <p className="text-xs font-bold text-[#171717]">Checking active admin session...</p>
+      </div>
+    );
+  }
 
   const handleAutofill = (demoEmail, demoPass) => {
     setEmail(demoEmail);

@@ -56,7 +56,7 @@ export async function sendEmail({ to, subject, html, text }) {
 // ─── Order Confirmation Email for Customer ───
 export async function sendOrderConfirmationEmail(order, storeConfig = {}) {
   const currency = storeConfig.currency || '₹';
-  const storeName = storeConfig.name || 'ShopEase';
+  const storeName = storeConfig.name || 'Nakoda Imitation';
   const whatsapp = storeConfig.whatsappNumber || '919876543210';
 
   const itemsHtml = (order.items || [])
@@ -235,8 +235,8 @@ export async function sendContactConfirmationEmail(ticket, storeConfig = {}) {
 
 // ─── Admin Alert for Contact Form Submission ───
 export async function sendAdminContactNotification(ticket, storeConfig = {}) {
-  const adminEmail = process.env.ADMIN_NOTIFICATION_EMAIL || process.env.ADMIN_EMAIL || 'admin@shopease.com';
-  const storeName = storeConfig.name || 'ShopEase';
+  const adminEmail = process.env.ADMIN_NOTIFICATION_EMAIL || process.env.ADMIN_EMAIL || 'admin@nakodaimitation.com';
+  const storeName = storeConfig.name || 'Nakoda Imitation';
 
   const html = `
     <div style="font-family: sans-serif; max-width: 550px; margin: 0 auto; padding: 24px; background: #FAF9FF; border-radius: 20px; border: 1px solid #EAE6FD;">
@@ -265,7 +265,7 @@ export async function sendAdminContactNotification(ticket, storeConfig = {}) {
 
 // ─── Inquiry Confirmation for Customer ───
 export async function sendInquiryConfirmationEmail(inquiry, storeConfig = {}) {
-  const storeName = storeConfig.name || 'ShopEase';
+  const storeName = storeConfig.name || 'Nakoda Imitation';
   const whatsapp = storeConfig.whatsappNumber || '919876543210';
 
   const html = `

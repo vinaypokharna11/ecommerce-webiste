@@ -39,55 +39,67 @@ function StorefrontContent() {
   const [selectedCategory, setSelectedCategory] = useState(() => categoryParam || 'all');
   const [quickViewProduct, setQuickViewProduct] = useState(null);
   const [inquiryProduct, setInquiryProduct] = useState(null);
-  const [orders, setOrders] = useState(INITIAL_ORDERS);
+  const [orders, setOrders] = useState([]);
+  const [isClientStorageLoaded, setIsClientStorageLoaded] = useState(false);
 
-  // Synchronize state when URL query params change (e.g. back/forward navigation or external links)
+  // Cart & Wishlist state initialized completely EMPTY for clean start
+  const [cartItems, setCartItems] = useState({});
+  const [wishlist, setWishlist] = useState({});
+  const [recentlyViewedIds, setRecentlyViewedIds] = useState([]);
+
+  // Load persistent user activity from localStorage on mount
   useEffect(() => {
-    const validTabs = ['home', 'catalog', 'offers', 'contact', 'cart', 'profile'];
-    const currentTab = searchParams.get('tab');
-    if (currentTab && validTabs.includes(currentTab)) {
-      setActiveTab(currentTab);
-    } else if (!currentTab) {
-      setActiveTab('home');
+    try {
+      const savedCart = localStorage.getItem('nakoda_cart_v2');
+      if (savedCart) setCartItems(JSON.parse(savedCart));
+
+      const savedWishlist = localStorage.getItem('nakoda_wishlist_v2');
+      if (savedWishlist) setWishlist(JSON.parse(savedWishlist));
+
+      const savedRecent = localStorage.getItem('nakoda_recent_v2');
+      if (savedRecent) setRecentlyViewedIds(JSON.parse(savedRecent));
+
+      const savedOrders = localStorage.getItem('nakoda_orders_v2');
+      if (savedOrders) setOrders(JSON.parse(savedOrders));
+    } catch (e) {
+      console.warn('Failed to load user state from storage', e);
+    } finally {
+      setIsClientStorageLoaded(true);
     }
-
-    const currentCat = searchParams.get('category');
-    if (currentCat) {
-      setSelectedCategory(currentCat);
-    }
-  }, [searchParams]);
-
-  // Listen to browser popstate for back/forward buttons
-  useEffect(() => {
-    const handlePopState = () => {
-      const urlParams = new URLSearchParams(window.location.search);
-      const tab = urlParams.get('tab') || 'home';
-      const cat = urlParams.get('category') || 'all';
-      setActiveTab(tab);
-      setSelectedCategory(cat);
-    };
-
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
   }, []);
-  
-  // Track recently viewed products
-  const [recentlyViewedIds, setRecentlyViewedIds] = useState(['prod-1', 'prod-2', 'prod-3', 'prod-5']);
 
-  // Initial sample cart items
-  const [cartItems, setCartItems] = useState(() => {
-    const first = products[0] || {};
-    const third = products[2] || {};
-    return {
-      [first.id || 'prod-1']: { ...first, quantity: 1 },
-      [third.id || 'prod-3']: { ...third, quantity: 1 },
-    };
-  });
+  // Save cart on user activity
+  useEffect(() => {
+    if (!isClientStorageLoaded) return;
+    try {
+      localStorage.setItem('nakoda_cart_v2', JSON.stringify(cartItems));
+    } catch (e) {}
+  }, [cartItems, isClientStorageLoaded]);
 
-  const [wishlist, setWishlist] = useState({
-    'prod-2': true,
-    'prod-4': true,
-  });
+  // Save wishlist on user activity
+  useEffect(() => {
+    if (!isClientStorageLoaded) return;
+    try {
+      localStorage.setItem('nakoda_wishlist_v2', JSON.stringify(wishlist));
+    } catch (e) {}
+  }, [wishlist, isClientStorageLoaded]);
+
+  // Save recently viewed on user activity
+  useEffect(() => {
+    if (!isClientStorageLoaded) return;
+    try {
+      localStorage.setItem('nakoda_recent_v2', JSON.stringify(recentlyViewedIds));
+    } catch (e) {}
+  }, [recentlyViewedIds, isClientStorageLoaded]);
+
+  // Save orders on user activity
+  useEffect(() => {
+    if (!isClientStorageLoaded) return;
+    try {
+      localStorage.setItem('nakoda_orders_v2', JSON.stringify(orders));
+    } catch (e) {}
+  }, [orders, isClientStorageLoaded]);
+
   const [toasts, setToasts] = useState([]);
   const lastToastRef = useRef({ key: '', ts: 0 });
 

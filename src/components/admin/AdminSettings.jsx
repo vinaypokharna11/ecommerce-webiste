@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -38,7 +40,7 @@ export const AdminSettings = () => {
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
   const [importJsonText, setImportJsonText] = useState('');
   const [importStatus, setImportStatus] = useState(null);
-  const [testEmailAddress, setTestEmailAddress] = useState('admin@shopease.com');
+  const [testEmailAddress, setTestEmailAddress] = useState('admin@nakodaimitation.com');
   const [isSendingTestEmail, setIsSendingTestEmail] = useState(false);
   const [testEmailResult, setTestEmailResult] = useState(null);
 
@@ -124,307 +126,262 @@ export const AdminSettings = () => {
   };
 
   return (
-    <div className="space-y-6 max-w-5xl">
+    <div className="space-y-6 max-w-5xl font-sans">
       
       {/* ── Header ── */}
       <div>
-        <h1 className="text-2xl font-extrabold text-[#15152A] tracking-tight">
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-[#171717] tracking-tight">
           Store Settings & Backup
         </h1>
-        <p className="text-xs sm:text-sm text-[#626276] mt-0.5">
+        <p className="text-xs sm:text-sm text-[#777777] mt-0.5">
           Configure store identity, WhatsApp ordering phone number, and backup/restore catalog data
         </p>
       </div>
 
       {/* ── Store Details Form ── */}
-      <form onSubmit={handleSubmit} className="bg-white rounded-3xl border border-[#EAE6FD] p-6 sm:p-8 shadow-[0_4px_20px_rgba(98,87,255,0.04)] space-y-6">
-        <div className="flex items-center gap-3 pb-4 border-b border-[#EAE6FD]">
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#6257FF] to-[#8B5CF6] flex items-center justify-center text-white shadow-md">
+      <form onSubmit={handleSubmit} className="bg-white rounded-[28px] border border-black/10 p-6 sm:p-8 shadow-[0_4px_20px_rgba(0,0,0,0.02)] space-y-6">
+        <div className="flex items-center gap-3 pb-4 border-b border-black/10">
+          <div className="w-10 h-10 rounded-2xl bg-[#171717] flex items-center justify-center text-[#9FD842] shadow-md">
             <Store className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-base font-extrabold text-[#15152A]">Store Information & WhatsApp Contact</h2>
-            <p className="text-xs text-[#626276]">Used for direct WhatsApp checkout, footer information, and headers</p>
+            <h2 className="text-base font-extrabold text-[#171717]">Store Information & WhatsApp Ordering</h2>
+            <p className="text-xs text-[#777777]">Configures customer checkout WhatsApp destination, footer address, and contact details</p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
           <div>
-            <label className="block text-xs font-bold text-[#15152A] mb-1.5 uppercase tracking-wider">
+            <label className="block text-xs font-bold text-[#171717] mb-1.5 uppercase tracking-wider">
               Store Name
             </label>
             <input
               type="text"
-              value={formData.name}
+              value={formData.name || ''}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full px-4 py-3 rounded-2xl border border-[#EAE6FD] text-sm font-bold text-[#15152A] focus:outline-none focus:border-[#6257FF]"
+              className="w-full px-4 py-3 rounded-2xl border border-black/10 bg-[#EEEEEC]/50 text-sm font-bold text-[#171717] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#9FD842]"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-[#15152A] mb-1.5 uppercase tracking-wider">
-              Tagline / Subheading
+            <label className="block text-xs font-bold text-[#171717] mb-1.5 uppercase tracking-wider">
+              Tagline / Subtitle
             </label>
             <input
               type="text"
-              value={formData.tagline}
+              value={formData.tagline || ''}
               onChange={(e) => setFormData({ ...formData, tagline: e.target.value })}
-              className="w-full px-4 py-3 rounded-2xl border border-[#EAE6FD] text-sm text-[#15152A] focus:outline-none focus:border-[#6257FF]"
+              className="w-full px-4 py-3 rounded-2xl border border-black/10 bg-[#EEEEEC]/50 text-sm text-[#171717] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#9FD842]"
             />
           </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
           <div>
-            <label className="block text-xs font-bold text-[#15152A] mb-1.5 uppercase tracking-wider">
+            <label className="block text-xs font-bold text-[#171717] mb-1.5 uppercase tracking-wider">
               WhatsApp Order Phone (No spaces/symbols, with country code)
             </label>
             <div className="relative">
               <MessageCircle className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#25D366]" />
               <input
                 type="text"
-                value={formData.whatsappNumber}
+                value={formData.whatsappNumber || ''}
                 onChange={(e) => setFormData({ ...formData, whatsappNumber: e.target.value })}
                 placeholder="e.g. 919876543210"
-                className="w-full pl-11 pr-4 py-3 rounded-2xl border border-[#EAE6FD] text-sm font-mono font-bold text-[#15152A] focus:outline-none focus:border-[#6257FF]"
+                className="w-full pl-11 pr-4 py-3 rounded-2xl border border-black/10 bg-[#EEEEEC]/50 text-sm font-mono font-bold text-[#171717] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#9FD842]"
               />
             </div>
-            <p className="text-[11px] text-[#8E8EA0] mt-1">Example: 919876543210 for India (+91)</p>
+            <p className="text-[11px] text-[#888888] mt-1 font-mono">Example: 919876543210 for India (+91)</p>
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-[#15152A] mb-1.5 uppercase tracking-wider">
+            <label className="block text-xs font-bold text-[#171717] mb-1.5 uppercase tracking-wider">
               Display Phone Number
             </label>
             <div className="relative">
-              <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6257FF]" />
+              <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#171717]" />
               <input
                 type="text"
-                value={formData.whatsappDisplay}
-                onChange={(e) => setFormData({ ...formData, whatsappDisplay: e.target.value })}
-                placeholder="e.g. +91 98765 43210"
-                className="w-full pl-11 pr-4 py-3 rounded-2xl border border-[#EAE6FD] text-sm text-[#15152A] focus:outline-none focus:border-[#6257FF]"
+                value={formData.phone || ''}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                placeholder="+91 98765 43210"
+                className="w-full pl-11 pr-4 py-3 rounded-2xl border border-black/10 bg-[#EEEEEC]/50 text-sm text-[#171717] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#9FD842]"
               />
             </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-          <div className="sm:col-span-2">
-            <label className="block text-xs font-bold text-[#15152A] mb-1.5 uppercase tracking-wider">
-              Store Physical Address
-            </label>
-            <input
-              type="text"
-              value={formData.address}
-              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-              className="w-full px-4 py-3 rounded-2xl border border-[#EAE6FD] text-sm text-[#15152A] focus:outline-none focus:border-[#6257FF]"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-[#15152A] mb-1.5 uppercase tracking-wider">
-              Currency Symbol
-            </label>
-            <input
-              type="text"
-              value={formData.currency}
-              onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
-              className="w-full px-4 py-3 rounded-2xl border border-[#EAE6FD] text-sm font-bold text-[#15152A] focus:outline-none focus:border-[#6257FF]"
-            />
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-xs font-bold text-[#15152A] mb-1.5 uppercase tracking-wider">
-            Business Operating Hours
-          </label>
-          <input
-            type="text"
-            value={formData.hours}
-            onChange={(e) => setFormData({ ...formData, hours: e.target.value })}
-            className="w-full px-4 py-3 rounded-2xl border border-[#EAE6FD] text-sm text-[#15152A] focus:outline-none focus:border-[#6257FF]"
-          />
-        </div>
-
-        {/* Submit */}
-        <div className="flex items-center justify-between pt-4 border-t border-[#EAE6FD]">
-          {saveSuccess ? (
-            <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-xl">
-              <Check className="w-4 h-4" />
-              Settings Saved Successfully!
-            </span>
-          ) : <div />}
-
-          <button
-            type="submit"
-            className="px-6 py-3 rounded-2xl gradient-btn-primary text-white font-bold text-xs sm:text-sm shadow-btn hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
-          >
-            <Check className="w-4 h-4" />
-            <span>Save Store Configuration</span>
-          </button>
-        </div>
-      </form>
-
-      {/* ── SMTP Email & Notifications Section ── */}
-      <div className="bg-white rounded-3xl border border-[#EAE6FD] p-6 sm:p-8 shadow-[0_4px_20px_rgba(98,87,255,0.04)] space-y-6">
-        <div className="flex items-center gap-3 pb-4 border-b border-[#EAE6FD]">
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#6257FF] to-[#EC5AC8] text-white flex items-center justify-center shadow-md">
-            <Mail className="w-5 h-5" />
-          </div>
-          <div>
-            <h2 className="text-base font-extrabold text-[#15152A]">SMTP Email & Notification Engine</h2>
-            <p className="text-xs text-[#626276]">Automatic order confirmation emails to customers and new order alerts to store administrator</p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="p-4 rounded-2xl bg-[#FAF9FF] border border-[#EAE6FD]">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-[#8E8EA0] block mb-1">Email Transporter</span>
-            <span className="text-xs font-extrabold text-[#15152A] block">Nodemailer SMTP</span>
-            <span className="text-[11px] text-emerald-600 font-semibold mt-1 inline-flex items-center gap-1">
-              <CheckCircle2 className="w-3 h-3" /> Ready / Active
-            </span>
-          </div>
-
-          <div className="p-4 rounded-2xl bg-[#FAF9FF] border border-[#EAE6FD]">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-[#8E8EA0] block mb-1">Customer Order Mail</span>
-            <span className="text-xs font-extrabold text-[#15152A] block">Instant Receipt & Tracking</span>
-            <span className="text-[11px] text-[#6257FF] font-semibold mt-1 block">Branded HTML Template</span>
-          </div>
-
-          <div className="p-4 rounded-2xl bg-[#FAF9FF] border border-[#EAE6FD]">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-[#8E8EA0] block mb-1">Admin Order Alerts</span>
-            <span className="text-xs font-extrabold text-[#15152A] block">Real-time Order Alerts</span>
-            <span className="text-[11px] text-[#EC5AC8] font-semibold mt-1 block">Items & Value Summary</span>
-          </div>
-        </div>
-
-        {/* Live SMTP Tester Form */}
-        <div className="p-5 rounded-2xl bg-[#FAF9FF] border border-[#EAE6FD] space-y-3">
-          <div>
-            <h3 className="text-xs font-bold uppercase tracking-wider text-[#15152A] mb-1">
-              Live SMTP Connection Tester
-            </h3>
-            <p className="text-xs text-[#626276]">
-              Send a real-time verification email to any inbox to verify your SMTP server dispatch.
-            </p>
-          </div>
-
-          <form onSubmit={handleSendTestEmail} className="flex flex-col sm:flex-row items-center gap-3">
-            <div className="relative flex-1 w-full">
-              <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8B5CF6]" />
-              <input
-                type="email"
-                value={testEmailAddress}
-                onChange={(e) => setTestEmailAddress(e.target.value)}
-                placeholder="recipient@example.com"
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[#EAE6FD] bg-white text-xs text-[#15152A] focus:outline-none focus:border-[#6257FF] font-medium"
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={isSendingTestEmail}
-              className="w-full sm:w-auto px-5 py-2.5 rounded-xl gradient-btn-primary text-white font-bold text-xs shadow-btn hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2 flex-shrink-0 disabled:opacity-60"
-            >
-              {isSendingTestEmail ? (
-                <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <Send className="w-3.5 h-3.5" />
-              )}
-              <span>Send Test Email</span>
-            </button>
-          </form>
-
-          {testEmailResult && (
-            <div className={`p-3 rounded-xl text-xs font-bold flex items-center gap-2 ${
-              testEmailResult.success
-                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                : 'bg-rose-50 text-rose-600 border border-rose-200'
-            }`}>
-              {testEmailResult.success ? <Check className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
-              <span>{testEmailResult.message}</span>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* ── Backup, Export & Factory Reset Section ── */}
-      <div className="bg-white rounded-3xl border border-[#EAE6FD] p-6 sm:p-8 shadow-[0_4px_20px_rgba(98,87,255,0.04)] space-y-6">
-        <div className="flex items-center gap-3 pb-4 border-b border-[#EAE6FD]">
-          <div className="w-10 h-10 rounded-2xl bg-slate-900 text-white flex items-center justify-center shadow-md">
-            <ShieldCheck className="w-5 h-5 text-emerald-400" />
-          </div>
-          <div>
-            <h2 className="text-base font-extrabold text-[#15152A]">Catalog Backup & Data Controls</h2>
-            <p className="text-xs text-[#626276]">Export full JSON backup, restore data, or reset to original sample catalog</p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-          {/* Export */}
-          <div className="p-5 rounded-2xl bg-[#FAF9FF] border border-[#EAE6FD] flex flex-col justify-between">
-            <div>
-              <h3 className="text-sm font-bold text-[#15152A] mb-1">Export Catalog to JSON</h3>
-              <p className="text-xs text-[#626276] leading-relaxed">
-                Download a JSON snapshot containing all {products.length} products, {categories.length} categories, and {offers.length} active coupons.
-              </p>
+          <div>
+            <label className="block text-xs font-bold text-[#171717] mb-1.5 uppercase tracking-wider">
+              Physical Store Address
+            </label>
+            <div className="relative">
+              <MapPin className="absolute left-4 top-3.5 w-4 h-4 text-[#777777]" />
+              <textarea
+                rows={2}
+                value={formData.address || ''}
+                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                className="w-full pl-11 pr-4 py-2.5 rounded-2xl border border-black/10 bg-[#EEEEEC]/50 text-xs text-[#171717] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#9FD842] resize-none"
+              />
             </div>
-            <button
-              onClick={exportCatalogJson}
-              className="mt-4 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-[#EAE6FD] text-xs font-bold text-[#6257FF] hover:bg-[#EDE9FE] shadow-xs transition-all"
-            >
-              <Download className="w-4 h-4" />
-              <span>Download Backup JSON</span>
-            </button>
           </div>
 
-          {/* Factory Reset */}
-          <div className="p-5 rounded-2xl bg-rose-50/40 border border-rose-100 flex flex-col justify-between">
-            <div>
-              <h3 className="text-sm font-bold text-rose-700 mb-1">Reset to Factory Defaults</h3>
-              <p className="text-xs text-[#626276] leading-relaxed">
-                Restore the initial set of 16 mock products, 6 categories, and 6 offers. All custom changes will be overwritten.
-              </p>
+          <div>
+            <label className="block text-xs font-bold text-[#171717] mb-1.5 uppercase tracking-wider">
+              Store Timings / Support Hours
+            </label>
+            <div className="relative">
+              <Clock className="absolute left-4 top-3.5 w-4 h-4 text-[#777777]" />
+              <input
+                type="text"
+                value={formData.timings || '10:00 AM – 9:00 PM (Mon – Sun)'}
+                onChange={(e) => setFormData({ ...formData, timings: e.target.value })}
+                className="w-full pl-11 pr-4 py-3 rounded-2xl border border-black/10 bg-[#EEEEEC]/50 text-xs text-[#171717] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#9FD842]"
+              />
             </div>
-            <button
-              onClick={() => setIsResetModalOpen(true)}
-              className="mt-4 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-rose-600 text-white text-xs font-bold hover:bg-rose-700 shadow-sm transition-all"
-            >
-              <RotateCcw className="w-4 h-4" />
-              <span>Restore Factory Defaults</span>
-            </button>
           </div>
         </div>
 
-        {/* Import JSON File / Text */}
-        <div className="pt-4 border-t border-[#EAE6FD] space-y-3">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-[#15152A]">
-            Import Catalog Backup File
-          </h3>
+        {/* Currency & Thresholds */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 pt-2 border-t border-black/10">
+          <div>
+            <label className="block text-xs font-bold text-[#171717] mb-1.5 uppercase tracking-wider">
+              Currency Symbol
+            </label>
+            <input
+              type="text"
+              value={formData.currency || '₹'}
+              onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
+              className="w-full px-4 py-2.5 rounded-2xl border border-black/10 bg-[#EEEEEC]/50 text-sm font-bold text-center text-[#171717] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#9FD842]"
+            />
+          </div>
 
-          <div className="flex flex-col sm:flex-row items-center gap-3">
-            <label className="flex-1 w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl border border-dashed border-[#8B5CF6]/50 bg-[#FAF9FF] text-xs font-bold text-[#6257FF] hover:bg-[#EDE9FE] cursor-pointer transition-all">
-              <Upload className="w-4 h-4" />
-              <span>Choose Backup JSON File to Upload</span>
+          <div>
+            <label className="block text-xs font-bold text-[#171717] mb-1.5 uppercase tracking-wider">
+              Standard Delivery (₹)
+            </label>
+            <input
+              type="number"
+              value={formData.deliveryFee || 0}
+              onChange={(e) => setFormData({ ...formData, deliveryFee: Number(e.target.value) })}
+              className="w-full px-4 py-2.5 rounded-2xl border border-black/10 bg-[#EEEEEC]/50 text-sm font-bold text-[#171717] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#9FD842]"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-[#171717] mb-1.5 uppercase tracking-wider">
+              Free Delivery Threshold (₹)
+            </label>
+            <input
+              type="number"
+              value={formData.freeDeliveryThreshold || 999}
+              onChange={(e) => setFormData({ ...formData, freeDeliveryThreshold: Number(e.target.value) })}
+              className="w-full px-4 py-2.5 rounded-2xl border border-black/10 bg-[#EEEEEC]/50 text-sm font-bold text-[#171717] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#9FD842]"
+            />
+          </div>
+        </div>
+
+        {/* Save Bar */}
+        <div className="pt-4 border-t border-black/10 flex items-center justify-between">
+          <div>
+            {saveSuccess && (
+              <motion.div
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#F3FCDA] text-[#709E1E] text-xs font-bold"
+              >
+                <Check className="w-3.5 h-3.5" />
+                <span>Store settings updated live!</span>
+              </motion.div>
+            )}
+          </div>
+
+          <button
+            type="submit"
+            className="px-8 py-3 rounded-full bg-[#171717] hover:bg-black text-white font-extrabold text-xs shadow-md active:scale-95 transition-all flex items-center gap-2 cursor-pointer"
+          >
+            <Check className="w-4 h-4 text-[#9FD842]" />
+            <span>Save Store Settings</span>
+          </button>
+        </div>
+      </form>
+
+      {/* ── Catalog Backup & Data Portability ── */}
+      <div className="bg-white rounded-[28px] border border-black/10 p-6 sm:p-8 shadow-[0_4px_20px_rgba(0,0,0,0.02)] space-y-6">
+        <div className="flex items-center gap-3 pb-4 border-b border-black/10">
+          <div className="w-10 h-10 rounded-2xl bg-[#EEEEEC] flex items-center justify-center text-[#171717]">
+            <Download className="w-5 h-5" />
+          </div>
+          <div>
+            <h2 className="text-base font-extrabold text-[#171717]">Catalog Backup & Data Portability</h2>
+            <p className="text-xs text-[#777777]">Download full store backup JSON or restore past catalogs in 1 click</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="p-5 rounded-2xl bg-[#EEEEEC]/40 border border-black/5 flex flex-col justify-between">
+            <div>
+              <h3 className="text-sm font-bold text-[#171717] mb-1">Export Full Store Backup</h3>
+              <p className="text-xs text-[#666666] mb-4">
+                Downloads a complete snapshot of all {products.length} products, {categories.length} categories, and promo offers.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={exportCatalogJson}
+              className="w-full py-2.5 rounded-full bg-white hover:bg-[#EEEEEC] text-[#171717] font-bold text-xs border border-black/10 flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer"
+            >
+              <Download className="w-3.5 h-3.5 text-[#709E1E]" />
+              <span>Download Backup (JSON)</span>
+            </button>
+          </div>
+
+          <div className="p-5 rounded-2xl bg-[#EEEEEC]/40 border border-black/5 flex flex-col justify-between">
+            <div>
+              <h3 className="text-sm font-bold text-[#171717] mb-1">Upload Backup File</h3>
+              <p className="text-xs text-[#666666] mb-4">
+                Restore a previously exported backup file to synchronize products and categories.
+              </p>
+            </div>
+            <label className="w-full py-2.5 rounded-full bg-white hover:bg-[#EEEEEC] text-[#171717] font-bold text-xs border border-black/10 flex items-center justify-center gap-2 shadow-xs cursor-pointer transition-colors">
+              <Upload className="w-3.5 h-3.5 text-[#709E1E]" />
+              <span>Choose Backup JSON</span>
               <input type="file" accept=".json" onChange={handleFileUpload} className="hidden" />
             </label>
           </div>
-
-          {importStatus && (
-            <div className={`p-3 rounded-2xl text-xs font-bold flex items-center gap-2 ${
-              importStatus.success ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-600 border border-rose-200'
-            }`}>
-              {importStatus.success ? <Check className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
-              <span>{importStatus.message}</span>
-            </div>
-          )}
         </div>
 
+        {importStatus && (
+          <div className={`p-3.5 rounded-2xl text-xs font-semibold ${
+            importStatus.success ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-rose-50 text-rose-800 border border-rose-200'
+          }`}>
+            {importStatus.message}
+          </div>
+        )}
       </div>
 
-      {/* ── Reset Confirmation Dialog ── */}
+      {/* ── Factory Reset Danger Zone ── */}
+      <div className="bg-white rounded-[28px] border border-rose-200 p-6 shadow-[0_4px_20px_rgba(0,0,0,0.02)] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <h3 className="text-sm font-extrabold text-rose-700 flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-rose-600" />
+            <span>Reset to Factory Defaults</span>
+          </h3>
+          <p className="text-xs text-[#777777] mt-0.5 max-w-lg">
+            Restores the initial sample products, default categories, and original mock configuration.
+          </p>
+        </div>
+
+        <button
+          onClick={() => setIsResetModalOpen(true)}
+          className="px-5 py-2.5 rounded-full bg-rose-50 text-rose-600 hover:bg-rose-100 text-xs font-bold border border-rose-200 transition-colors cursor-pointer"
+        >
+          Reset Store
+        </button>
+      </div>
+
+      {/* Reset Modal */}
       <AnimatePresence>
         {isResetModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -433,33 +390,33 @@ export const AdminSettings = () => {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsResetModalOpen(false)}
-              className="fixed inset-0 bg-[#15152A]/60 backdrop-blur-sm"
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm"
             />
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="relative w-full max-w-md bg-white rounded-3xl p-6 border border-[#EAE6FD] shadow-2xl z-10 text-center"
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="relative w-full max-w-md bg-white rounded-[32px] p-6 border border-black/10 shadow-2xl z-10 text-center"
             >
-              <div className="w-14 h-14 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto mb-4 border border-rose-100">
+              <div className="w-14 h-14 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center mx-auto mb-4 border border-rose-100">
                 <RotateCcw className="w-7 h-7" />
               </div>
-              <h3 className="text-lg font-bold text-[#15152A] mb-1">
-                Restore Factory Defaults?
+              <h3 className="text-lg font-bold text-[#171717] mb-1">
+                Reset Catalog to Factory Defaults?
               </h3>
-              <p className="text-xs text-[#626276] max-w-xs mx-auto mb-6">
-                This will reset all products, categories, and offers back to the pristine default store catalog.
+              <p className="text-xs text-[#777777] mb-6">
+                This will reset your products, categories, and offers back to standard defaults.
               </p>
               <div className="flex items-center justify-center gap-3">
                 <button
                   onClick={() => setIsResetModalOpen(false)}
-                  className="px-5 py-2.5 rounded-2xl text-xs font-bold text-[#626276] hover:bg-[#FAF9FF]"
+                  className="px-5 py-2.5 rounded-full text-xs font-bold text-[#777777] hover:bg-[#EEEEEC] cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleConfirmReset}
-                  className="px-6 py-2.5 rounded-2xl bg-rose-600 text-white text-xs font-bold hover:bg-rose-700 shadow-md"
+                  className="px-6 py-2.5 rounded-full bg-rose-600 text-white text-xs font-bold hover:bg-rose-700 shadow-md cursor-pointer"
                 >
                   Yes, Reset Catalog
                 </button>

@@ -168,7 +168,16 @@ export const CatalogProvider = ({ children }) => {
       if (savedOffers) setOffers(JSON.parse(savedOffers));
 
       const savedConfig = localStorage.getItem(STORAGE_KEYS.CONFIG);
-      if (savedConfig) setStoreConfig(JSON.parse(savedConfig));
+      if (savedConfig) {
+        try {
+          const parsed = JSON.parse(savedConfig);
+          if (!parsed.name || parsed.name === 'ShopEase') {
+            parsed.name = 'Nakoda Imitation';
+            parsed.tagline = 'Premium Imitation Jewelry & Lifestyle Collection';
+          }
+          setStoreConfig(parsed);
+        } catch (e) {}
+      }
 
       const savedAct = localStorage.getItem(STORAGE_KEYS.ACTIVITY);
       if (savedAct) setActivities(JSON.parse(savedAct));
@@ -246,7 +255,12 @@ export const CatalogProvider = ({ children }) => {
           setOffers(offRes.value.offers);
         }
         if (cfgRes.status === 'fulfilled' && cfgRes.value?.success && cfgRes.value.storeConfig) {
-          setStoreConfig(cfgRes.value.storeConfig);
+          const cfg = cfgRes.value.storeConfig;
+          if (!cfg.name || cfg.name === 'ShopEase') {
+            cfg.name = 'Nakoda Imitation';
+            cfg.tagline = 'Premium Imitation Jewelry & Lifestyle Collection';
+          }
+          setStoreConfig(cfg);
         }
       } catch (err) {
         console.info('Using local client cache for catalog');

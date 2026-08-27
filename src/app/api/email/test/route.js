@@ -4,7 +4,7 @@ import { sendTestEmail } from '@/lib/email';
 export async function POST(request) {
   try {
     const { email } = await request.json();
-    const target = email || process.env.ADMIN_NOTIFICATION_EMAIL || process.env.ADMIN_EMAIL || 'admin@shopease.com';
+    const target = email || process.env.ADMIN_NOTIFICATION_EMAIL || process.env.ADMIN_EMAIL || 'admin@nakodaimitation.com';
 
     const result = await sendTestEmail(target);
     if (result.success) {

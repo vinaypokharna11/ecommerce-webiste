@@ -413,7 +413,7 @@ export const CATALOG_PRODUCTS = [
   },
   {
     id: 'prod-16',
-    name: 'ShopEase Signature Gift & Festive Hamper',
+    name: 'Nakoda Signature Gift & Festive Hamper',
     category: 'accessories',
     categoryName: 'Accessories',
     price: 1999,

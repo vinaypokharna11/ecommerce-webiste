@@ -12,7 +12,8 @@
   position: relative;
   width: 100%;
   height: 100vh;
-  overflow: hidden;
+  overflow: visible;
+  filter: drop-shadow(0 20px 40px rgba(0, 0, 0, 0.12)) drop-shadow(0 6px 14px rgba(0, 0, 0, 0.06));
 }
 
 .scroll-expand__frame {
@@ -98,3 +99,24 @@
   gap: 0.5rem;
   z-index: 20;
 }
+
+@media (max-width: 767px) {
+  .scroll-expand__stage {
+    height: auto;
+    min-height: 85vh;
+    min-height: 85svh;
+  }
+
+  .scroll-expand__frame {
+    position: relative;
+    height: auto;
+    min-height: 85vh;
+    min-height: 85svh;
+    clip-path: none !important;
+  }
+
+  .scroll-expand__hint {
+    display: none !important;
+  }
+}
+

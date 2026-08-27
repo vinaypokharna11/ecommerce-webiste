@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -13,20 +15,21 @@ import {
   Layers,
   Check,
   Palette,
-  AlertCircle
+  AlertCircle,
+  Upload,
 } from 'lucide-react';
 import { ASSET_GALLERY, BADGE_PRESETS } from './adminConstants';
 import { useCatalog } from '../../context/CatalogContext';
 
 const DEFAULT_FORM_STATE = {
   name: '',
-  category: 'electronics',
-  categoryName: 'Electronics',
+  category: 'clothing',
+  categoryName: 'Clothing',
   price: 999,
   oldPrice: 1499,
   discountPercent: 33,
-  rating: 4.8,
-  reviews: 24,
+  rating: 4.9,
+  reviews: 18,
   badge: 'NEW',
   badgeType: 'new',
   stockStatus: 'in_stock',
@@ -38,18 +41,18 @@ const DEFAULT_FORM_STATE = {
   isPopular: false,
   isFeatured: false,
   colors: [
-    { name: 'Matte Black', hex: '#0F172A' },
-    { name: 'Pure White', hex: '#FFFFFF' },
+    { name: 'Gold Polish', hex: '#D4AF37' },
+    { name: 'Silver Tone', hex: '#C0C0C0' },
   ],
   sizes: '',
 };
 
 export const AdminProductModal = ({ isOpen, onClose, product = null }) => {
-  const { categories, addProduct, updateProduct } = useCatalog();
+  const { categories, addProduct, updateProduct, storeConfig } = useCatalog();
   const [formData, setFormData] = useState(DEFAULT_FORM_STATE);
   const [activeTab, setActiveTab] = useState('basic'); // 'basic', 'pricing', 'media', 'inventory', 'variants'
   const [newColorName, setNewColorName] = useState('');
-  const [newColorHex, setNewColorHex] = useState('#6257FF');
+  const [newColorHex, setNewColorHex] = useState('#9FD842');
   const [errors, setErrors] = useState({});
 
   const isEditing = !!product;
@@ -133,6 +136,22 @@ export const AdminProductModal = ({ isOpen, onClose, product = null }) => {
     }));
   };
 
+  const handleImageFileUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (loadEvt) => {
+        const base64 = loadEvt.target.result;
+        setFormData((prev) => ({
+          ...prev,
+          image: base64,
+          customImageUrl: '',
+        }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const validate = () => {
     const errs = {};
     if (!formData.name.trim()) errs.name = 'Product name is required';
@@ -153,7 +172,7 @@ export const AdminProductModal = ({ isOpen, onClose, product = null }) => {
       price: Number(formData.price),
       oldPrice: Number(formData.oldPrice) || undefined,
       stockCount: Number(formData.stockCount) || 0,
-      rating: Number(formData.rating) || 5.0,
+      rating: Number(formData.rating) || 4.9,
       reviews: Number(formData.reviews) || 0,
       image: formData.customImageUrl?.trim() || formData.image,
       tags: typeof formData.tags === 'string'
@@ -178,18 +197,18 @@ export const AdminProductModal = ({ isOpen, onClose, product = null }) => {
     { id: 'pricing', label: 'Pricing & Badges', icon: Tag },
     { id: 'inventory', label: 'Inventory & Stock', icon: Package },
     { id: 'media', label: 'Image & Media', icon: ImageIcon },
-    { id: 'variants', label: 'Colors & Sizes', icon: Palette },
+    { id: 'variants', label: 'Colors & Options', icon: Palette },
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto font-sans">
       {/* Backdrop */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         onClick={onClose}
-        className="fixed inset-0 bg-[#15152A]/60 backdrop-blur-sm"
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm"
       />
 
       {/* Modal Card */}
@@ -197,33 +216,33 @@ export const AdminProductModal = ({ isOpen, onClose, product = null }) => {
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className="relative w-full max-w-3xl bg-white rounded-3xl border border-[#EAE6FD] shadow-[0_25px_70px_rgba(98,87,255,0.22)] overflow-hidden z-10 my-8 max-h-[90vh] flex flex-col"
+        className="relative w-full max-w-3xl bg-white rounded-[32px] border border-black/10 shadow-[0_25px_70px_rgba(0,0,0,0.22)] overflow-hidden z-10 my-8 max-h-[90vh] flex flex-col"
       >
         {/* Modal Header */}
-        <div className="p-6 border-b border-[#EAE6FD] flex items-center justify-between bg-gradient-to-r from-white via-[#FAF9FF] to-[#F5F3FF]">
+        <div className="p-6 border-b border-black/10 flex items-center justify-between bg-[#F8FDF0]/50">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-[#6257FF] to-[#8B5CF6] flex items-center justify-center text-white shadow-md">
+            <div className="w-11 h-11 rounded-2xl bg-[#171717] flex items-center justify-center text-[#9FD842] shadow-md">
               <Package className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-xl font-extrabold text-[#15152A]">
+              <h2 className="text-xl font-extrabold text-[#171717]">
                 {isEditing ? 'Edit Catalog Product' : 'Add New Product to Catalog'}
               </h2>
-              <p className="text-xs text-[#626276]">
-                {isEditing ? `Product SKU: ${product.id}` : 'Fill in the details to publish item on the storefront'}
+              <p className="text-xs text-[#777777]">
+                {isEditing ? `Product SKU: ${product.id}` : 'Fill in the details to publish item on Nakoda Imitation'}
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="w-9 h-9 rounded-full bg-[#FAF9FF] hover:bg-[#F0EEFF] text-[#626276] flex items-center justify-center transition-colors border border-[#EAE6FD]"
+            className="w-9 h-9 rounded-full bg-[#EEEEEC] hover:bg-[#E2E2DE] text-[#171717] flex items-center justify-center transition-colors cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Modal Tabs Navigation */}
-        <div className="px-6 border-b border-[#EAE6FD] bg-[#FAF9FF]/60 flex items-center gap-2 overflow-x-auto no-scrollbar py-2.5">
+        <div className="px-6 border-b border-black/10 bg-[#EEEEEC]/40 flex items-center gap-2 overflow-x-auto no-scrollbar py-2.5">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -232,13 +251,13 @@ export const AdminProductModal = ({ isOpen, onClose, product = null }) => {
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+                className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
                   isActive
-                    ? 'bg-[#6257FF] text-white shadow-sm'
-                    : 'text-[#626276] hover:text-[#15152A] hover:bg-white'
+                    ? 'bg-[#171717] text-white shadow-xs'
+                    : 'text-[#555555] hover:text-[#171717] hover:bg-white'
                 }`}
               >
-                <Icon className="w-3.5 h-3.5" />
+                <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-[#9FD842]' : ''}`} />
                 <span>{tab.label}</span>
               </button>
             );
@@ -252,17 +271,17 @@ export const AdminProductModal = ({ isOpen, onClose, product = null }) => {
           {activeTab === 'basic' && (
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-[#15152A] mb-1.5 uppercase tracking-wider">
+                <label className="block text-xs font-bold text-[#171717] mb-1.5 uppercase tracking-wider">
                   Product Name *
                 </label>
                 <input
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="e.g. Wireless Noise-Canceling Headphones"
+                  placeholder="e.g. Kundan Bridal Necklace Set"
                   className={`w-full px-4 py-3 rounded-2xl border ${
-                    errors.name ? 'border-rose-400 bg-rose-50/20' : 'border-[#EAE6FD] bg-white'
-                  } text-sm text-[#15152A] focus:outline-none focus:border-[#6257FF] shadow-xs`}
+                    errors.name ? 'border-rose-400 bg-rose-50/20' : 'border-black/10 bg-[#EEEEEC]/50'
+                  } text-sm text-[#171717] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#9FD842] shadow-xs`}
                 />
                 {errors.name && (
                   <p className="text-xs text-rose-500 font-semibold mt-1 flex items-center gap-1">
@@ -273,13 +292,13 @@ export const AdminProductModal = ({ isOpen, onClose, product = null }) => {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-[#15152A] mb-1.5 uppercase tracking-wider">
+                  <label className="block text-xs font-bold text-[#171717] mb-1.5 uppercase tracking-wider">
                     Category *
                   </label>
                   <select
                     value={formData.category}
                     onChange={handleCategoryChange}
-                    className="w-full px-4 py-3 rounded-2xl border border-[#EAE6FD] bg-white text-sm text-[#15152A] focus:outline-none focus:border-[#6257FF] shadow-xs cursor-pointer font-medium"
+                    className="w-full px-4 py-3 rounded-2xl border border-black/10 bg-[#EEEEEC]/50 text-sm text-[#171717] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#9FD842] shadow-xs cursor-pointer font-medium"
                   >
                     {categories.map((c) => (
                       <option key={c.id} value={c.id}>
@@ -290,44 +309,44 @@ export const AdminProductModal = ({ isOpen, onClose, product = null }) => {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-[#15152A] mb-1.5 uppercase tracking-wider">
+                  <label className="block text-xs font-bold text-[#171717] mb-1.5 uppercase tracking-wider">
                     Search Tags (comma separated)
                   </label>
                   <input
                     type="text"
                     value={formData.tags}
                     onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
-                    placeholder="e.g. audio, wireless, bluetooth, headphones"
-                    className="w-full px-4 py-3 rounded-2xl border border-[#EAE6FD] bg-white text-sm text-[#15152A] focus:outline-none focus:border-[#6257FF] shadow-xs"
+                    placeholder="e.g. necklace, bridal, kundan, choker"
+                    className="w-full px-4 py-3 rounded-2xl border border-black/10 bg-[#EEEEEC]/50 text-sm text-[#171717] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#9FD842] shadow-xs"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[#15152A] mb-1.5 uppercase tracking-wider">
+                <label className="block text-xs font-bold text-[#171717] mb-1.5 uppercase tracking-wider">
                   Product Description
                 </label>
                 <textarea
                   rows={3}
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Detailed highlights, material quality, features, dimensions..."
-                  className="w-full px-4 py-3 rounded-2xl border border-[#EAE6FD] bg-white text-sm text-[#15152A] focus:outline-none focus:border-[#6257FF] shadow-xs resize-none"
+                  placeholder="Crafted with high-grade brass, antique gold micro-plating, premium synthetic stones..."
+                  className="w-full px-4 py-3 rounded-2xl border border-black/10 bg-[#EEEEEC]/50 text-sm text-[#171717] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#9FD842] shadow-xs resize-none"
                 />
               </div>
 
               {/* Home & Showcase Toggles */}
-              <div className="p-4 rounded-2xl bg-[#FAF9FF] border border-[#EAE6FD] grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="p-4 rounded-2xl bg-[#F8FDF0] border border-[#9FD842]/30 grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <label className="flex items-center gap-3 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={formData.isPopular}
                     onChange={(e) => setFormData({ ...formData, isPopular: e.target.checked })}
-                    className="w-4 h-4 rounded text-[#6257FF] focus:ring-[#6257FF] accent-[#6257FF] cursor-pointer"
+                    className="w-4 h-4 rounded text-[#709E1E] focus:ring-[#9FD842] accent-[#709E1E] cursor-pointer"
                   />
                   <div>
-                    <span className="text-xs font-bold text-[#15152A] block">Feature in Homepage Popular Carousel</span>
-                    <span className="text-[11px] text-[#8E8EA0]">Appears on the main landing page showcase</span>
+                    <span className="text-xs font-bold text-[#171717] block">Feature in Homepage Popular Grid</span>
+                    <span className="text-[11px] text-[#777777]">Shows right on the front store page</span>
                   </div>
                 </label>
 
@@ -336,11 +355,11 @@ export const AdminProductModal = ({ isOpen, onClose, product = null }) => {
                     type="checkbox"
                     checked={formData.isFeatured}
                     onChange={(e) => setFormData({ ...formData, isFeatured: e.target.checked })}
-                    className="w-4 h-4 rounded text-[#EC5AC8] focus:ring-[#EC5AC8] accent-[#EC5AC8] cursor-pointer"
+                    className="w-4 h-4 rounded text-[#709E1E] focus:ring-[#9FD842] accent-[#709E1E] cursor-pointer"
                   />
                   <div>
-                    <span className="text-xs font-bold text-[#15152A] block">Mark as Hero / Special Spotlight</span>
-                    <span className="text-[11px] text-[#8E8EA0]">Gives special glowing promotion priority</span>
+                    <span className="text-xs font-bold text-[#171717] block">Mark as Special Spotlight</span>
+                    <span className="text-[11px] text-[#777777]">Priority promotion tag</span>
                   </div>
                 </label>
               </div>
@@ -352,14 +371,14 @@ export const AdminProductModal = ({ isOpen, onClose, product = null }) => {
             <div className="space-y-5">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-[#15152A] mb-1.5 uppercase tracking-wider">
+                  <label className="block text-xs font-bold text-[#171717] mb-1.5 uppercase tracking-wider">
                     Selling Price (₹) *
                   </label>
                   <input
                     type="number"
                     value={formData.price}
                     onChange={(e) => handlePriceChange('price', e.target.value)}
-                    className="w-full px-4 py-3 rounded-2xl border border-[#EAE6FD] bg-white text-sm font-bold text-[#15152A] focus:outline-none focus:border-[#6257FF] shadow-xs"
+                    className="w-full px-4 py-3 rounded-2xl border border-black/10 bg-[#EEEEEC]/50 text-sm font-bold text-[#171717] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#9FD842] shadow-xs"
                   />
                   {errors.price && (
                     <p className="text-xs text-rose-500 font-semibold mt-1">{errors.price}</p>
@@ -367,23 +386,23 @@ export const AdminProductModal = ({ isOpen, onClose, product = null }) => {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-[#15152A] mb-1.5 uppercase tracking-wider">
+                  <label className="block text-xs font-bold text-[#171717] mb-1.5 uppercase tracking-wider">
                     Original / MRP Price (₹)
                   </label>
                   <input
                     type="number"
                     value={formData.oldPrice || ''}
                     onChange={(e) => handlePriceChange('oldPrice', e.target.value)}
-                    placeholder="e.g. 4999"
-                    className="w-full px-4 py-3 rounded-2xl border border-[#EAE6FD] bg-white text-sm text-[#15152A] focus:outline-none focus:border-[#6257FF] shadow-xs"
+                    placeholder="e.g. 1999"
+                    className="w-full px-4 py-3 rounded-2xl border border-black/10 bg-[#EEEEEC]/50 text-sm text-[#171717] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#9FD842] shadow-xs"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-[#15152A] mb-1.5 uppercase tracking-wider">
+                  <label className="block text-xs font-bold text-[#171717] mb-1.5 uppercase tracking-wider">
                     Discount (%)
                   </label>
-                  <div className="px-4 py-3 rounded-2xl bg-[#FFF0FB] border border-[#FCD6F2] text-sm font-extrabold text-[#EC5AC8] flex items-center justify-between">
+                  <div className="px-4 py-3 rounded-2xl bg-[#F3FCDA] border border-[#9FD842]/40 text-sm font-extrabold text-[#709E1E] flex items-center justify-between">
                     <span>{formData.discountPercent || 0}% OFF</span>
                     <Sparkles className="w-4 h-4" />
                   </div>
@@ -393,8 +412,8 @@ export const AdminProductModal = ({ isOpen, onClose, product = null }) => {
               {/* Rating & Reviews */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-[#15152A] mb-1.5 uppercase tracking-wider">
-                    Initial Rating (1.0 to 5.0)
+                  <label className="block text-xs font-bold text-[#171717] mb-1.5 uppercase tracking-wider">
+                    Rating (1.0 to 5.0)
                   </label>
                   <input
                     type="number"
@@ -402,27 +421,27 @@ export const AdminProductModal = ({ isOpen, onClose, product = null }) => {
                     min="1"
                     max="5"
                     value={formData.rating}
-                    onChange={(e) => setFormData({ ...formData, rating: parseFloat(e.target.value) || 5.0 })}
-                    className="w-full px-4 py-3 rounded-2xl border border-[#EAE6FD] bg-white text-sm text-[#15152A] focus:outline-none focus:border-[#6257FF]"
+                    onChange={(e) => setFormData({ ...formData, rating: parseFloat(e.target.value) || 4.9 })}
+                    className="w-full px-4 py-3 rounded-2xl border border-black/10 bg-[#EEEEEC]/50 text-sm text-[#171717] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#9FD842]"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-[#15152A] mb-1.5 uppercase tracking-wider">
+                  <label className="block text-xs font-bold text-[#171717] mb-1.5 uppercase tracking-wider">
                     Review Count
                   </label>
                   <input
                     type="number"
                     value={formData.reviews}
                     onChange={(e) => setFormData({ ...formData, reviews: parseInt(e.target.value, 10) || 0 })}
-                    className="w-full px-4 py-3 rounded-2xl border border-[#EAE6FD] bg-white text-sm text-[#15152A] focus:outline-none focus:border-[#6257FF]"
+                    className="w-full px-4 py-3 rounded-2xl border border-black/10 bg-[#EEEEEC]/50 text-sm text-[#171717] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#9FD842]"
                   />
                 </div>
               </div>
 
               {/* Badges Section */}
               <div>
-                <label className="block text-xs font-bold text-[#15152A] mb-2 uppercase tracking-wider">
+                <label className="block text-xs font-bold text-[#171717] mb-2 uppercase tracking-wider">
                   Product Ribbon Badge
                 </label>
                 <div className="flex items-center gap-2 flex-wrap mb-3">
@@ -431,9 +450,9 @@ export const AdminProductModal = ({ isOpen, onClose, product = null }) => {
                       key={bp.label}
                       type="button"
                       onClick={() => setFormData({ ...formData, badge: bp.label, badgeType: bp.type })}
-                      className={`px-3 py-1 rounded-full text-xs font-bold border transition-all ${
+                      className={`px-3 py-1 rounded-full text-xs font-bold border transition-all cursor-pointer ${
                         formData.badge === bp.label
-                          ? 'ring-2 ring-[#6257FF] bg-[#EDE9FE] text-[#6257FF] border-[#6257FF]'
+                          ? 'ring-2 ring-[#171717] bg-[#171717] text-white border-black'
                           : `${bp.color} opacity-80 hover:opacity-100`
                       }`}
                     >
@@ -447,16 +466,18 @@ export const AdminProductModal = ({ isOpen, onClose, product = null }) => {
                     type="text"
                     value={formData.badge}
                     onChange={(e) => setFormData({ ...formData, badge: e.target.value.toUpperCase() })}
-                    placeholder="Custom badge text (e.g. FLASH SALE, EXCLUSIVE)"
-                    className="flex-1 px-4 py-2.5 rounded-xl border border-[#EAE6FD] text-xs font-bold text-[#15152A]"
+                    placeholder="Custom badge text (e.g. HANDMADE, EXCLUSIVE)"
+                    className="w-full px-4 py-2.5 rounded-2xl border border-black/10 bg-[#EEEEEC]/50 text-xs font-bold text-[#171717] uppercase focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#9FD842]"
                   />
-                  <button
-                    type="button"
-                    onClick={() => setFormData({ ...formData, badge: '' })}
-                    className="px-3 py-2 rounded-xl text-xs text-rose-600 bg-rose-50 font-bold hover:bg-rose-100"
-                  >
-                    Clear Badge
-                  </button>
+                  {formData.badge && (
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, badge: '', badgeType: '' })}
+                      className="px-3 py-2 rounded-xl text-xs font-bold text-rose-500 hover:bg-rose-50 cursor-pointer"
+                    >
+                      Clear
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -467,130 +488,99 @@ export const AdminProductModal = ({ isOpen, onClose, product = null }) => {
             <div className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-[#15152A] mb-1.5 uppercase tracking-wider">
-                    Units in Stock
+                  <label className="block text-xs font-bold text-[#171717] mb-1.5 uppercase tracking-wider">
+                    Units in Stock *
                   </label>
                   <input
                     type="number"
                     min="0"
                     value={formData.stockCount}
                     onChange={(e) => handleStockCountChange(e.target.value)}
-                    className="w-full px-4 py-3 rounded-2xl border border-[#EAE6FD] bg-white text-sm font-bold text-[#15152A] focus:outline-none focus:border-[#6257FF]"
+                    className="w-full px-4 py-3 rounded-2xl border border-black/10 bg-[#EEEEEC]/50 text-sm font-bold text-[#171717] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#9FD842] shadow-xs"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-[#15152A] mb-1.5 uppercase tracking-wider">
-                    Stock Status Badge
+                  <label className="block text-xs font-bold text-[#171717] mb-1.5 uppercase tracking-wider">
+                    Stock Status Override
                   </label>
                   <select
                     value={formData.stockStatus}
                     onChange={(e) => setFormData({ ...formData, stockStatus: e.target.value })}
-                    className="w-full px-4 py-3 rounded-2xl border border-[#EAE6FD] bg-white text-sm text-[#15152A] focus:outline-none focus:border-[#6257FF] font-semibold"
+                    className="w-full px-4 py-3 rounded-2xl border border-black/10 bg-[#EEEEEC]/50 text-sm font-bold text-[#171717] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#9FD842] cursor-pointer"
                   >
                     <option value="in_stock">In Stock (Available)</option>
-                    <option value="low_stock">Low Stock (Hurry Alert)</option>
-                    <option value="out_of_stock">Out of Stock</option>
+                    <option value="low_stock">Low Stock (Show Alert)</option>
+                    <option value="out_of_stock">Out of Stock (Disabled)</option>
                   </select>
                 </div>
               </div>
 
-              {/* Quick Stepper */}
-              <div className="p-4 rounded-2xl bg-[#FAF9FF] border border-[#EAE6FD] flex items-center justify-between">
-                <div>
-                  <h4 className="text-xs font-bold text-[#15152A]">Quick Stock Adjuster</h4>
-                  <p className="text-[11px] text-[#626276]">Quickly add or remove inventory units</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => handleStockCountChange(Math.max(0, formData.stockCount - 5))}
-                    className="px-3 py-1.5 rounded-xl bg-white border border-[#EAE6FD] text-xs font-bold text-[#15152A] hover:bg-slate-50"
-                  >
-                    -5
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleStockCountChange(Math.max(0, formData.stockCount - 1))}
-                    className="px-3 py-1.5 rounded-xl bg-white border border-[#EAE6FD] text-xs font-bold text-[#15152A] hover:bg-slate-50"
-                  >
-                    -1
-                  </button>
-                  <span className="px-3 text-sm font-extrabold text-[#6257FF]">{formData.stockCount}</span>
-                  <button
-                    type="button"
-                    onClick={() => handleStockCountChange(formData.stockCount + 1)}
-                    className="px-3 py-1.5 rounded-xl bg-white border border-[#EAE6FD] text-xs font-bold text-[#15152A] hover:bg-slate-50"
-                  >
-                    +1
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleStockCountChange(formData.stockCount + 10)}
-                    className="px-3 py-1.5 rounded-xl bg-white border border-[#EAE6FD] text-xs font-bold text-[#15152A] hover:bg-slate-50"
-                  >
-                    +10
-                  </button>
-                </div>
+              <div className="p-4 rounded-2xl bg-[#EEEEEC]/40 border border-black/5 text-xs text-[#777777] leading-relaxed">
+                <span className="font-bold text-[#171717] block mb-1">ℹ️ Stock Auto-Calculations</span>
+                When stock reaches 0, the item is automatically marked as "Out of Stock" on the storefront with WhatsApp order inquiries still enabled.
               </div>
             </div>
           )}
 
-          {/* TAB 4: MEDIA & IMAGES */}
+          {/* TAB 4: MEDIA */}
           {activeTab === 'media' && (
-            <div className="space-y-4">
+            <div className="space-y-5">
               <div>
-                <label className="block text-xs font-bold text-[#15152A] mb-2 uppercase tracking-wider">
-                  Select from Pre-loaded Asset Gallery
+                <label className="block text-xs font-bold text-[#171717] mb-1.5 uppercase tracking-wider">
+                  Custom Image URL or Photo Upload
                 </label>
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3 max-h-48 overflow-y-auto p-2 border border-[#EAE6FD] rounded-2xl bg-[#FAF9FF]">
-                  {ASSET_GALLERY.map((asset) => {
-                    const isSelected = formData.image === asset.src && !formData.customImageUrl;
+                <div className="flex gap-2">
+                  <input
+                    type="url"
+                    value={formData.customImageUrl}
+                    onChange={(e) => setFormData({ ...formData, customImageUrl: e.target.value })}
+                    placeholder="https://images.unsplash.com/... or paste image URL"
+                    className="flex-1 px-4 py-2.5 rounded-2xl border border-black/10 bg-[#EEEEEC]/50 text-xs text-[#171717] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#9FD842]"
+                  />
+                  <label className="px-4 py-2.5 rounded-2xl bg-[#EEEEEC] hover:bg-[#E2E2DE] text-[#171717] text-xs font-bold flex items-center gap-1.5 cursor-pointer border border-black/10">
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>Upload</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageFileUpload}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-[#171717] mb-2 uppercase tracking-wider">
+                  Or Pick from Gallery Asset Presets
+                </label>
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2.5 max-h-56 overflow-y-auto p-1">
+                  {ASSET_GALLERY.map((item) => {
+                    const isSelected = !formData.customImageUrl && (formData.image === item.src || (formData.image?.src === item.src?.src));
                     return (
-                      <button
-                        key={asset.id}
-                        type="button"
-                        onClick={() => setFormData({ ...formData, image: asset.src, customImageUrl: '' })}
-                        className={`group relative aspect-square rounded-xl bg-white p-2 border flex items-center justify-center transition-all overflow-hidden ${
-                          isSelected
-                            ? 'ring-2 ring-[#6257FF] border-[#6257FF] shadow-sm'
-                            : 'border-[#EAE6FD] hover:border-[#8B5CF6]/50'
+                      <div
+                        key={item.id}
+                        onClick={() => setFormData({ ...formData, image: item.src, customImageUrl: '' })}
+                        className={`relative aspect-square rounded-2xl bg-[#EEEEEC] p-2 flex items-center justify-center cursor-pointer border-2 transition-all ${
+                          isSelected ? 'border-[#171717] shadow-md scale-105' : 'border-transparent hover:border-black/20'
                         }`}
                       >
-                        <img
-                          src={asset.src}
-                          alt={asset.name}
-                          className="max-h-full max-w-full object-contain"
-                        />
+                        <img src={item.src} alt={item.name} className="max-h-full max-w-full object-contain" />
                         {isSelected && (
-                          <div className="absolute inset-0 bg-[#6257FF]/20 flex items-center justify-center">
-                            <span className="w-5 h-5 rounded-full bg-[#6257FF] text-white flex items-center justify-center">
-                              <Check className="w-3 h-3" />
-                            </span>
+                          <div className="absolute top-1 right-1 w-5 h-5 rounded-full bg-[#171717] text-[#9FD842] flex items-center justify-center">
+                            <Check className="w-3 h-3 stroke-[3]" />
                           </div>
                         )}
-                      </button>
+                      </div>
                     );
                   })}
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-[#15152A] mb-1.5 uppercase tracking-wider">
-                  Or Provide Custom External Image URL (e.g. Unsplash, Cloudinary)
-                </label>
-                <input
-                  type="url"
-                  value={formData.customImageUrl}
-                  onChange={(e) => setFormData({ ...formData, customImageUrl: e.target.value })}
-                  placeholder="https://images.unsplash.com/photo-..."
-                  className="w-full px-4 py-3 rounded-2xl border border-[#EAE6FD] bg-white text-sm text-[#15152A] focus:outline-none focus:border-[#6257FF] shadow-xs"
-                />
-              </div>
-
-              {/* Live Preview */}
-              <div className="p-4 rounded-2xl bg-[#FAF9FF] border border-[#EAE6FD] flex items-center gap-4">
-                <div className="w-20 h-20 rounded-xl bg-white border border-[#EAE6FD] p-2 flex items-center justify-center overflow-hidden flex-shrink-0">
+              {/* Preview */}
+              <div className="p-4 rounded-2xl bg-[#EEEEEC]/30 border border-black/5 flex items-center gap-4">
+                <div className="w-16 h-16 rounded-2xl bg-white border border-black/10 p-2 flex items-center justify-center flex-shrink-0">
                   <img
                     src={formData.customImageUrl || formData.image}
                     alt="Preview"
@@ -598,101 +588,100 @@ export const AdminProductModal = ({ isOpen, onClose, product = null }) => {
                   />
                 </div>
                 <div>
-                  <h4 className="text-xs font-bold text-[#15152A]">Image Preview</h4>
-                  <p className="text-[11px] text-[#626276] mt-0.5">This image will be shown on product cards, catalog lists, and quick views.</p>
+                  <span className="text-xs font-bold text-[#171717] block">Active Product Image Preview</span>
+                  <span className="text-[11px] text-[#777777]">This image will be shown on catalog, cards, and modal previews.</span>
                 </div>
               </div>
             </div>
           )}
 
-          {/* TAB 5: VARIANTS & SIZES */}
+          {/* TAB 5: VARIANTS */}
           {activeTab === 'variants' && (
             <div className="space-y-5">
               <div>
-                <label className="block text-xs font-bold text-[#15152A] mb-1.5 uppercase tracking-wider">
+                <label className="block text-xs font-bold text-[#171717] mb-2 uppercase tracking-wider">
+                  Color / Polish Finishes
+                </label>
+                <div className="flex items-center gap-2 mb-3">
+                  <input
+                    type="text"
+                    value={newColorName}
+                    onChange={(e) => setNewColorName(e.target.value)}
+                    placeholder="Finish Name (e.g. Matte Rose Gold)"
+                    className="flex-1 px-4 py-2.5 rounded-2xl border border-black/10 bg-[#EEEEEC]/50 text-xs text-[#171717] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#9FD842]"
+                  />
+                  <input
+                    type="color"
+                    value={newColorHex}
+                    onChange={(e) => setNewColorHex(e.target.value)}
+                    className="w-10 h-10 rounded-xl border border-black/10 cursor-pointer p-0.5"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddColor}
+                    className="px-4 py-2.5 rounded-2xl bg-[#171717] text-white text-xs font-bold hover:bg-black cursor-pointer shadow-sm"
+                  >
+                    Add
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap">
+                  {formData.colors.map((col, idx) => (
+                    <div
+                      key={idx}
+                      className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#EEEEEC] border border-black/10 text-xs font-semibold text-[#171717]"
+                    >
+                      <span className="w-3.5 h-3.5 rounded-full border border-black/20" style={{ backgroundColor: col.hex }} />
+                      <span>{col.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveColor(idx)}
+                        className="text-rose-500 hover:text-rose-700 ml-1 cursor-pointer"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-[#171717] mb-1.5 uppercase tracking-wider">
                   Available Sizes / Dimensions (comma separated)
                 </label>
                 <input
                   type="text"
                   value={formData.sizes}
                   onChange={(e) => setFormData({ ...formData, sizes: e.target.value })}
-                  placeholder="e.g. S, M, L, XL, XXL or UK 7, UK 8, UK 9"
-                  className="w-full px-4 py-3 rounded-2xl border border-[#EAE6FD] bg-white text-sm text-[#15152A] focus:outline-none focus:border-[#6257FF]"
+                  placeholder="e.g. 2.4, 2.6, 2.8, Free Size, 18-inch"
+                  className="w-full px-4 py-3 rounded-2xl border border-black/10 bg-[#EEEEEC]/50 text-sm text-[#171717] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#9FD842] shadow-xs"
                 />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-[#15152A] mb-2 uppercase tracking-wider">
-                  Color Swatches
-                </label>
-                <div className="flex items-center gap-2 flex-wrap mb-3">
-                  {formData.colors.map((c, idx) => (
-                    <span
-                      key={idx}
-                      className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-[#EAE6FD] text-xs font-medium shadow-xs"
-                    >
-                      <span
-                        className="w-3.5 h-3.5 rounded-full border border-slate-300 shadow-xs"
-                        style={{ backgroundColor: c.hex }}
-                      />
-                      <span>{c.name}</span>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveColor(idx)}
-                        className="text-[#8E8EA0] hover:text-rose-500"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-
-                <div className="flex items-center gap-2 p-3 rounded-2xl bg-[#FAF9FF] border border-[#EAE6FD]">
-                  <input
-                    type="color"
-                    value={newColorHex}
-                    onChange={(e) => setNewColorHex(e.target.value)}
-                    className="w-9 h-9 rounded-xl border border-[#EAE6FD] p-1 cursor-pointer bg-white"
-                  />
-                  <input
-                    type="text"
-                    value={newColorName}
-                    onChange={(e) => setNewColorName(e.target.value)}
-                    placeholder="Color name (e.g. Midnight Blue)"
-                    className="flex-1 px-3 py-2 rounded-xl border border-[#EAE6FD] text-xs bg-white"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleAddColor}
-                    className="px-3.5 py-2 rounded-xl bg-[#6257FF] text-white text-xs font-bold hover:bg-[#5044ED] transition-colors"
-                  >
-                    Add Color
-                  </button>
-                </div>
               </div>
             </div>
           )}
 
         </form>
 
-        {/* Modal Footer */}
-        <div className="p-4 sm:p-6 border-t border-[#EAE6FD] bg-[#FAF9FF] flex items-center justify-between">
+        {/* Modal Footer Controls */}
+        <div className="p-6 border-t border-black/10 bg-[#EEEEEC]/40 flex items-center justify-between">
           <button
             type="button"
             onClick={onClose}
-            className="px-5 py-2.5 rounded-2xl text-xs sm:text-sm font-bold text-[#626276] hover:bg-white hover:text-[#15152A] transition-colors"
+            className="px-6 py-2.5 rounded-full bg-[#EEEEEC] hover:bg-[#E2E2DE] text-[#171717] font-bold text-xs transition-colors cursor-pointer"
           >
             Cancel
           </button>
+
           <button
             type="button"
             onClick={handleSubmit}
-            className="px-6 py-2.5 rounded-2xl gradient-btn-primary text-white text-xs sm:text-sm font-bold shadow-btn hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
+            className="px-8 py-2.5 rounded-full bg-[#171717] hover:bg-black text-white font-extrabold text-xs shadow-md active:scale-95 transition-all flex items-center gap-2 cursor-pointer"
           >
-            <Check className="w-4 h-4" />
-            <span>{isEditing ? 'Save Changes' : 'Publish Product'}</span>
+            <Check className="w-4 h-4 text-[#9FD842]" />
+            <span>{isEditing ? 'Save Product Changes' : 'Publish Product to Store'}</span>
           </button>
         </div>
+
       </motion.div>
     </div>
   );

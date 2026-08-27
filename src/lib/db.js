@@ -390,7 +390,7 @@ export const INITIAL_DB_STATE = {
     },
     {
       id: 'prod-16',
-      name: 'ShopEase Signature Gift & Festive Hamper',
+      name: 'Nakoda Signature Gift & Festive Hamper',
       category: 'accessories',
       categoryName: 'Accessories',
       price: 1999,
@@ -566,7 +566,7 @@ export const INITIAL_DB_STATE = {
       phone: '+91 98765 12345',
       category: 'General Support',
       subject: 'Inquiry regarding weekend store timings',
-      message: 'Hi ShopEase team, are your Bangalore store hours the same on Sundays as well? I would like to visit in person.',
+      message: 'Hi Nakoda team, are your Bangalore store hours the same on Sundays as well? I would like to visit in person.',
       preferredContact: 'WhatsApp',
       status: 'pending',
     },
@@ -687,6 +687,13 @@ async function ensureMongoSeeded() {
     const configCount = await StoreConfig.countDocuments();
     if (configCount === 0) {
       await StoreConfig.create(INITIAL_DB_STATE.storeConfig);
+    } else {
+      const existingConfig = await StoreConfig.findOne();
+      if (existingConfig && (!existingConfig.name || existingConfig.name === 'ShopEase')) {
+        existingConfig.name = 'Nakoda Imitation';
+        existingConfig.tagline = 'Premium Imitation Jewelry & Lifestyle Collection';
+        await existingConfig.save();
+      }
     }
 
     isSeeded = true;
@@ -1196,11 +1203,14 @@ export async function getStoreConfig() {
     const config = await StoreConfig.findOne().lean();
     if (config) {
       const { _id, __v, ...rest } = config;
+      if (!rest.name || rest.name === 'ShopEase') rest.name = 'Nakoda Imitation';
       return rest;
     }
   }
   const jdb = readJSONDB();
-  return jdb.storeConfig || INITIAL_DB_STATE.storeConfig;
+  const cfg = jdb.storeConfig || INITIAL_DB_STATE.storeConfig;
+  if (!cfg.name || cfg.name === 'ShopEase') cfg.name = 'Nakoda Imitation';
+  return cfg;
 }
 
 export async function updateStoreConfig(configData) {
@@ -1372,7 +1382,7 @@ export async function verifyAdminCredentials(email, password) {
     envAdminEmail,
     notificationEmail,
     'admin@nakodaimitation.com',
-    'admin@shopease.com',
+    'admin@nakodaimitation.com',
     'admin@nakoda.com',
     'admin@gmail.com',
     'admin',

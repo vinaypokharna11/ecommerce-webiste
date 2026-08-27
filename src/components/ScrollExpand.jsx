@@ -54,7 +54,10 @@ const ScrollExpand = ({
     // Register plugin safely
     gsap.registerPlugin(ScrollTrigger);
 
-    const ctx = gsap.context(() => {
+    const mm = gsap.matchMedia(rootRef);
+
+    // Desktop/Tablet (>= 768px): Full scroll expand/shrink animation
+    mm.add('(min-width: 768px)', () => {
       // Set initial clip-path
       if (reverse) {
         // Reverse mode: starts at 100% full screen, shrinks to startWidth/startHeight
@@ -67,7 +70,6 @@ const ScrollExpand = ({
       }
 
       const progressState = { progress: 0 };
-
       const scrollSpan = () => Math.max(300, window.innerHeight * scrollDistance);
 
       const st = ScrollTrigger.create({
@@ -131,10 +133,18 @@ const ScrollExpand = ({
       return () => {
         if (st) st.kill();
       };
-    }, rootRef);
+    });
+
+    // Mobile (< 768px): Keep full size, do NOT decrease size of hero section
+    mm.add('(max-width: 767px)', () => {
+      frame.style.clipPath = 'none';
+      if (hintRef.current) {
+        hintRef.current.style.display = 'none';
+      }
+    });
 
     return () => {
-      ctx.revert();
+      mm.revert();
     };
   }, [
     enabled,

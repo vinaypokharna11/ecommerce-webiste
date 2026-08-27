@@ -27,27 +27,27 @@ export const ASSET_GALLERY = [
 ];
 
 export const BADGE_PRESETS = [
-  { label: 'BEST SELLER', type: 'bestseller', color: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
-  { label: 'TRENDING', type: 'trending', color: 'bg-purple-50 text-purple-700 border-purple-200' },
+  { label: 'BEST SELLER', type: 'bestseller', color: 'bg-[#F3FCDA] text-[#709E1E] border-[#9FD842]/40' },
+  { label: 'TRENDING', type: 'trending', color: 'bg-amber-50 text-amber-700 border-amber-200' },
   { label: 'HOT', type: 'hot', color: 'bg-rose-50 text-rose-700 border-rose-200' },
-  { label: 'NEW', type: 'new', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-  { label: 'SALE', type: 'sale', color: 'bg-pink-50 text-pink-700 border-pink-200' },
-  { label: 'LIMITED', type: 'limited', color: 'bg-amber-50 text-amber-700 border-amber-200' },
-  { label: '25% OFF', type: 'discount', color: 'bg-pink-50 text-pink-700 border-pink-200' },
-  { label: '30% OFF', type: 'discount', color: 'bg-pink-50 text-pink-700 border-pink-200' },
-  { label: '50% OFF', type: 'discount', color: 'bg-pink-50 text-pink-700 border-pink-200' },
-  { label: 'PREMIUM', type: 'premium', color: 'bg-slate-900 text-amber-300 border-slate-700' },
-  { label: 'ECO', type: 'eco', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-  { label: 'SPECIAL', type: 'special', color: 'bg-violet-50 text-violet-700 border-violet-200' },
+  { label: 'NEW', type: 'new', color: 'bg-[#F3FCDA] text-[#709E1E] border-[#9FD842]/40' },
+  { label: 'SALE', type: 'sale', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+  { label: 'LIMITED', type: 'limited', color: 'bg-amber-50 text-amber-800 border-amber-300' },
+  { label: '25% OFF', type: 'discount', color: 'bg-[#171717] text-white border-black' },
+  { label: '30% OFF', type: 'discount', color: 'bg-[#171717] text-white border-black' },
+  { label: '50% OFF', type: 'discount', color: 'bg-[#171717] text-white border-black' },
+  { label: 'PREMIUM', type: 'premium', color: 'bg-[#171717] text-[#9FD842] border-black' },
+  { label: 'HANDMADE', type: 'handmade', color: 'bg-emerald-50 text-emerald-800 border-emerald-300' },
+  { label: 'BRIDAL', type: 'bridal', color: 'bg-rose-50 text-rose-800 border-rose-300' },
 ];
 
 export const ICON_OPTIONS = [
-  { name: 'Headphones', label: 'Audio / Tech' },
+  { name: 'Sparkles', label: 'Jewelry / Gems' },
   { name: 'Shirt', label: 'Apparel / Fashion' },
   { name: 'Footprints', label: 'Footwear / Shoes' },
   { name: 'Watch', label: 'Watches / Wearables' },
+  { name: 'Headphones', label: 'Audio / Tech' },
   { name: 'Armchair', label: 'Home / Living' },
-  { name: 'Sparkles', label: 'Beauty / Special' },
   { name: 'Gift', label: 'Gifting / Hampers' },
   { name: 'ShoppingBag', label: 'General / Retail' },
   { name: 'LayoutGrid', label: 'All / Grid' },
@@ -57,21 +57,21 @@ export const ICON_OPTIONS = [
 ];
 
 export const COLOR_PRESETS = [
-  { name: 'Electric Purple', color: '#6257FF', bg: 'bg-[#F5F3FF]', text: 'text-[#6257FF]' },
-  { name: 'Vibrant Magenta', color: '#EC5AC8', bg: 'bg-[#FFF0FB]', text: 'text-[#EC5AC8]' },
-  { name: 'Royal Violet', color: '#8B5CF6', bg: 'bg-[#F5F3FF]', text: 'text-[#8B5CF6]' },
+  { name: 'Nakoda Lime', color: '#709E1E', bg: 'bg-[#F3FCDA]', text: 'text-[#709E1E]' },
+  { name: 'Jet Charcoal', color: '#171717', bg: 'bg-[#EEEEEC]', text: 'text-[#171717]' },
   { name: 'Emerald Green', color: '#059669', bg: 'bg-[#F0FDF4]', text: 'text-[#059669]' },
-  { name: 'Ocean Cyan', color: '#0891B2', bg: 'bg-[#F0F9FF]', text: 'text-[#0891B2]' },
   { name: 'Amber Gold', color: '#D97706', bg: 'bg-[#FFFBEB]', text: 'text-[#D97706]' },
   { name: 'Rose Red', color: '#E11D48', bg: 'bg-[#FFF1F2]', text: 'text-[#E11D48]' },
+  { name: 'Ocean Cyan', color: '#0891B2', bg: 'bg-[#F0F9FF]', text: 'text-[#0891B2]' },
+  { name: 'Royal Violet', color: '#7C3AED', bg: 'bg-[#F5F3FF]', text: 'text-[#7C3AED]' },
   { name: 'Slate Dark', color: '#334155', bg: 'bg-[#F8FAFC]', text: 'text-[#334155]' },
 ];
 
 export const GRADIENT_OPTIONS = [
-  { label: 'Purple to Indigo', value: 'from-[#6257FF] to-[#4F46E5]', text: '#6257FF', bg: 'bg-[#F5F3FF]', border: 'border-[#EAE6FD]' },
-  { label: 'Pink to Berry', value: 'from-[#EC5AC8] to-[#BE185D]', text: '#EC5AC8', bg: 'bg-[#FFF0FB]', border: 'border-[#FCD6F2]' },
-  { label: 'Violet to Purple', value: 'from-[#8B5CF6] to-[#7C3AED]', text: '#8B5CF6', bg: 'bg-[#F5F3FF]', border: 'border-[#DDD6FE]' },
-  { label: 'Teal to Cyan', value: 'from-[#0891B2] to-[#0E7490]', text: '#0891B2', bg: 'bg-[#F0F9FF]', border: 'border-[#BAE6FD]' },
-  { label: 'Green to Emerald', value: 'from-[#059669] to-[#047857]', text: '#059669', bg: 'bg-[#F0FDF4]', border: 'border-[#BBF7D0]' },
-  { label: 'Amber to Bronze', value: 'from-[#D97706] to-[#B45309]', text: '#D97706', bg: 'bg-[#FFFBEB]', border: 'border-[#FDE68A]' },
+  { label: 'Nakoda Lime & Olive', value: 'from-[#171717] to-[#2B3A0D]', text: '#9FD842', bg: 'bg-[#F8FDF0]', border: 'border-[#9FD842]/30' },
+  { label: 'Gold & Amber', value: 'from-[#D97706] to-[#B45309]', text: '#D97706', bg: 'bg-[#FFFBEB]', border: 'border-[#FDE68A]' },
+  { label: 'Emerald & Mint', value: 'from-[#059669] to-[#047857]', text: '#059669', bg: 'bg-[#F0FDF4]', border: 'border-[#BBF7D0]' },
+  { label: 'Charcoal & Slate', value: 'from-[#171717] to-[#334155]', text: '#FFFFFF', bg: 'bg-[#EEEEEC]', border: 'border-black/10' },
+  { label: 'Teal & Ocean', value: 'from-[#0891B2] to-[#0E7490]', text: '#0891B2', bg: 'bg-[#F0F9FF]', border: 'border-[#BAE6FD]' },
+  { label: 'Rose & Crimson', value: 'from-[#E11D48] to-[#BE123C]', text: '#E11D48', bg: 'bg-[#FFF1F2]', border: 'border-rose-200' },
 ];

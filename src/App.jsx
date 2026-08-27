@@ -24,21 +24,9 @@ function AppContent() {
   const [activeTab, setActiveTab] = useState('home');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [quickViewProduct, setQuickViewProduct] = useState(null);
-  const [orders, setOrders] = useState(INITIAL_ORDERS);
-  
-  // Initial sample cart items
-  const [cartItems, setCartItems] = useState(() => {
-    const first = products[0] || {};
-    const third = products[2] || {};
-    return {
-      [first.id || 'prod-1']: { ...first, quantity: 1 },
-      [third.id || 'prod-3']: { ...third, quantity: 1 },
-    };
-  });
-
-  const [wishlist, setWishlist] = useState({
-    'prod-2': true,
-  });
+  const [orders, setOrders] = useState([]);
+  const [cartItems, setCartItems] = useState({});
+  const [wishlist, setWishlist] = useState({});
   const [toasts, setToasts] = useState([]);
 
   // Calculate cart counts & total amount

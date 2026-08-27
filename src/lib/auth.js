@@ -2,7 +2,7 @@ import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'shopease_super_secret_jwt_key_2026';
 
-export function signToken(payload, expiresIn = '7d') {
+export function signToken(payload, expiresIn = '30d') {
   return jwt.sign(payload, JWT_SECRET, { expiresIn });
 }
 

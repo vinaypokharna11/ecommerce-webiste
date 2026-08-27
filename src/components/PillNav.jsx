@@ -242,7 +242,7 @@ const PillNav = ({
         {/* Brand Logo Pill with Website Green theme */}
         <button
           className="pill-logo"
-          onClick={() => onItemClick && onItemClick('home', 'ShopEase Home')}
+          onClick={() => onItemClick && onItemClick('home', 'Nakoda Imitation Home')}
           aria-label="Home"
           onMouseEnter={handleLogoEnter}
           ref={logoRef}

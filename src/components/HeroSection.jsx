@@ -57,7 +57,7 @@ export const HeroSection = ({ onExploreClick }) => {
         className="w-full"
       >
         {/* Full Viewport Hero Container with DriftWall */}
-        <div className="relative w-full h-full bg-[#EEEEEC]/75 border border-black/[0.08] flex items-center justify-center overflow-hidden shadow-[0_20px_60px_-15px_rgba(0,0,0,0.08),0_4px_16px_-4px_rgba(0,0,0,0.04),inset_0_1px_1px_rgba(255,255,255,0.8)]">
+        <div className="relative w-full h-full min-h-[85svh] sm:min-h-0 bg-[#EEEEEC]/75 border border-black/10 flex items-center justify-center overflow-hidden shadow-[0_24px_70px_-15px_rgba(0,0,0,0.16),0_8px_24px_-4px_rgba(0,0,0,0.08),inset_0_0_0_1px_rgba(255,255,255,0.6)]">
           {/* Background 3D DriftWall */}
           <div className="absolute inset-0 w-full h-full pointer-events-auto">
             <DriftWall
@@ -94,7 +94,7 @@ export const HeroSection = ({ onExploreClick }) => {
           />
 
           {/* Foreground Content Card with Glassmorphism */}
-          <div className="relative z-10 max-w-2xl mx-auto px-6 py-12 text-center flex flex-col items-center justify-center pointer-events-auto">
+          <div className="relative z-10 max-w-2xl mx-auto px-4 py-10 sm:px-6 sm:py-12 text-center flex flex-col items-center justify-center pointer-events-auto">
             {/* Badge */}
             <motion.div
               initial={{ opacity: 0, y: 15 }}
@@ -160,7 +160,7 @@ export const HeroSection = ({ onExploreClick }) => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.8, delay: 0.45 }}
-              className="flex flex-wrap items-center justify-center gap-6 sm:gap-8 mt-10 pt-6 border-t border-black/5 text-xs font-semibold text-[#777777] font-sans"
+              className="flex flex-wrap items-center justify-center gap-6 sm:gap-8 mt-10 pt-6 border-t border-black/10 shadow-[0_-1px_0_0_rgba(255,255,255,0.7)] text-xs font-semibold text-[#555555] font-sans"
             >
               <div className="flex items-center gap-1.5">
                 <ShieldCheck className="w-4 h-4 text-[#171717]" />
@@ -176,6 +176,9 @@ export const HeroSection = ({ onExploreClick }) => {
               </div>
             </motion.div>
           </div>
+
+          {/* Bottom border edge shadow / divider */}
+          <div className="absolute bottom-0 inset-x-0 h-[1px] bg-black/10 shadow-[0_4px_16px_rgba(0,0,0,0.12)] pointer-events-none z-20" />
         </div>
       </ScrollExpand>
     </section>

@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -21,7 +23,7 @@ import {
   X,
   Check,
   AlertTriangle,
-  ArrowRight
+  ArrowRight,
 } from 'lucide-react';
 import { useCatalog } from '../../context/CatalogContext';
 import { ICON_OPTIONS, COLOR_PRESETS } from './adminConstants';
@@ -51,7 +53,7 @@ export const AdminCategories = ({ onNavigateToProducts }) => {
   // Form State
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
-  const [icon, setIcon] = useState('Shirt');
+  const [icon, setIcon] = useState('Sparkles');
   const [colorPreset, setColorPreset] = useState(COLOR_PRESETS[0]);
   const [description, setDescription] = useState('');
   const [errors, setErrors] = useState({});
@@ -60,7 +62,7 @@ export const AdminCategories = ({ onNavigateToProducts }) => {
     setEditingCategory(null);
     setName('');
     setSlug('');
-    setIcon('Shirt');
+    setIcon('Sparkles');
     setColorPreset(COLOR_PRESETS[0]);
     setDescription('');
     setErrors({});
@@ -71,7 +73,7 @@ export const AdminCategories = ({ onNavigateToProducts }) => {
     setEditingCategory(cat);
     setName(cat.name);
     setSlug(cat.id);
-    setIcon(cat.icon || 'LayoutGrid');
+    setIcon(cat.icon || 'Sparkles');
     const matchedColor = COLOR_PRESETS.find((c) => c.color === cat.color) || COLOR_PRESETS[0];
     setColorPreset(matchedColor);
     setDescription(cat.description || '');
@@ -129,24 +131,24 @@ export const AdminCategories = ({ onNavigateToProducts }) => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 font-sans">
       
       {/* ── Top Header ── */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-extrabold text-[#15152A] tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-[#171717] tracking-tight">
             Categories Management
           </h1>
-          <p className="text-xs sm:text-sm text-[#626276] mt-0.5">
-            Organize catalog products into visual categories, icon badges, and storefront filters
+          <p className="text-xs sm:text-sm text-[#777777] mt-0.5">
+            Organize catalog products into visual collections, icon badges, and storefront filters
           </p>
         </div>
 
         <button
           onClick={handleOpenAdd}
-          className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl gradient-btn-primary text-white font-bold text-xs sm:text-sm shadow-btn hover:scale-105 active:scale-95 transition-all"
+          className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[#171717] hover:bg-black text-white font-extrabold text-xs sm:text-sm shadow-md hover:scale-105 active:scale-95 transition-all cursor-pointer"
         >
-          <FolderPlus className="w-4 h-4" />
+          <FolderPlus className="w-4 h-4 text-[#9FD842]" />
           <span>Add New Category</span>
         </button>
       </div>
@@ -154,8 +156,8 @@ export const AdminCategories = ({ onNavigateToProducts }) => {
       {/* ── Category Cards Grid ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
         {categories.map((category) => {
-          const Icon = iconMap[category.icon] || LayoutGrid;
-          const assignedProducts = products.filter((p) => p.category === category.id);
+          const Icon = iconMap[category.icon] || Sparkles;
+          const assignedProducts = products.filter((p) => p.category === category.id || p.categoryName?.toLowerCase() === category.name?.toLowerCase());
           const itemCount = assignedProducts.length;
 
           return (
@@ -163,26 +165,26 @@ export const AdminCategories = ({ onNavigateToProducts }) => {
               key={category.id}
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-white rounded-3xl border border-[#EAE6FD] p-6 shadow-[0_4px_20px_rgba(98,87,255,0.04)] hover:shadow-[0_12px_35px_rgba(98,87,255,0.12)] transition-all flex flex-col justify-between group"
+              className="bg-white rounded-[28px] border border-black/10 p-6 shadow-[0_4px_20px_rgba(0,0,0,0.02)] hover:shadow-[0_12px_30px_rgba(0,0,0,0.06)] transition-all flex flex-col justify-between group"
             >
               <div>
                 {/* Header: Icon + Category Badge */}
                 <div className="flex items-start justify-between gap-4 mb-4">
-                  <div className={`w-14 h-14 rounded-2xl ${category.accentBg || 'bg-[#F5F3FF]'} flex items-center justify-center border border-[#EAE6FD] shadow-xs group-hover:scale-105 transition-transform`}>
-                    <Icon className={`w-7 h-7 ${category.iconColor || 'text-[#6257FF]'}`} />
+                  <div className={`w-14 h-14 rounded-2xl ${category.accentBg || 'bg-[#F8FDF0]'} flex items-center justify-center border border-black/5 shadow-xs group-hover:scale-105 transition-transform`}>
+                    <Icon className={`w-7 h-7 ${category.iconColor || 'text-[#709E1E]'}`} />
                   </div>
 
                   <div className="flex items-center gap-1.5">
                     <button
                       onClick={() => handleOpenEdit(category)}
-                      className="p-2 rounded-xl text-[#6257FF] bg-[#F5F3FF] hover:bg-[#EDE9FE] transition-colors"
+                      className="p-2 rounded-full text-[#171717] bg-[#EEEEEC] hover:bg-[#E2E2DE] transition-colors cursor-pointer"
                       title="Edit Category"
                     >
                       <Edit3 className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => setCategoryToDelete(category)}
-                      className="p-2 rounded-xl text-rose-500 bg-rose-50 hover:bg-rose-100 transition-colors"
+                      className="p-2 rounded-full text-rose-500 bg-rose-50 hover:bg-rose-100 transition-colors cursor-pointer"
                       title="Delete Category"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -191,28 +193,28 @@ export const AdminCategories = ({ onNavigateToProducts }) => {
                 </div>
 
                 {/* Title & Slug */}
-                <h3 className="text-lg font-extrabold text-[#15152A] group-hover:text-[#6257FF] transition-colors">
+                <h3 className="text-lg font-extrabold text-[#171717] group-hover:text-[#709E1E] transition-colors">
                   {category.name}
                 </h3>
-                <span className="text-[11px] font-mono text-[#8E8EA0] block mb-2">
+                <span className="text-[11px] font-mono text-[#777777] block mb-2">
                   ID: {category.id}
                 </span>
 
-                <p className="text-xs text-[#626276] line-clamp-2 mb-4 leading-relaxed">
-                  {category.description || 'General catalog category for store products.'}
+                <p className="text-xs text-[#666666] line-clamp-2 mb-4 leading-relaxed">
+                  {category.description || 'Curated jewelry and lifestyle accessories collection.'}
                 </p>
               </div>
 
               {/* Card Footer: Product Count & Filter Action */}
-              <div className="pt-4 border-t border-[#EAE6FD] flex items-center justify-between">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FAF9FF] border border-[#EAE6FD] text-xs font-bold text-[#15152A]">
-                  <Package className="w-3.5 h-3.5 text-[#6257FF]" />
+              <div className="pt-4 border-t border-black/10 flex items-center justify-between">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#EEEEEC] text-xs font-bold text-[#171717]">
+                  <Package className="w-3.5 h-3.5 text-[#709E1E]" />
                   {itemCount} Products
                 </span>
 
                 <button
                   onClick={() => onNavigateToProducts && onNavigateToProducts(category.id)}
-                  className="inline-flex items-center gap-1 text-xs font-bold text-[#6257FF] hover:text-[#4F46E5] group/btn"
+                  className="inline-flex items-center gap-1 text-xs font-bold text-[#709E1E] hover:text-[#5A8015] group/btn cursor-pointer"
                 >
                   <span>View Items</span>
                   <ArrowRight className="w-3.5 h-3.5 group-hover/btn:translate-x-1 transition-transform" />
@@ -232,31 +234,31 @@ export const AdminCategories = ({ onNavigateToProducts }) => {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsModalOpen(false)}
-              className="fixed inset-0 bg-[#15152A]/60 backdrop-blur-sm"
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm"
             />
 
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="relative w-full max-w-lg bg-white rounded-3xl border border-[#EAE6FD] shadow-2xl z-10 overflow-hidden"
+              className="relative w-full max-w-lg bg-white rounded-[32px] border border-black/10 shadow-2xl z-10 overflow-hidden"
             >
               {/* Header */}
-              <div className="p-6 border-b border-[#EAE6FD] bg-gradient-to-r from-white via-[#FAF9FF] to-[#F5F3FF] flex items-center justify-between">
+              <div className="p-6 border-b border-black/10 bg-[#F8FDF0]/50 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#6257FF] to-[#8B5CF6] flex items-center justify-center text-white shadow-md">
+                  <div className="w-10 h-10 rounded-2xl bg-[#171717] flex items-center justify-center text-[#9FD842] shadow-md">
                     <FolderPlus className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-extrabold text-[#15152A]">
+                    <h3 className="text-lg font-extrabold text-[#171717]">
                       {editingCategory ? 'Edit Category' : 'Add New Category'}
                     </h3>
-                    <p className="text-xs text-[#626276]">Configure category icon, color accents, and slug</p>
+                    <p className="text-xs text-[#777777]">Configure collection icon, color accents, and identifier</p>
                   </div>
                 </div>
                 <button
                   onClick={() => setIsModalOpen(false)}
-                  className="w-8 h-8 rounded-full bg-[#FAF9FF] text-[#626276] flex items-center justify-center hover:bg-[#F0EEFF]"
+                  className="w-8 h-8 rounded-full bg-[#EEEEEC] text-[#777777] flex items-center justify-center hover:bg-[#E2E2DE] cursor-pointer"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -265,21 +267,21 @@ export const AdminCategories = ({ onNavigateToProducts }) => {
               {/* Form */}
               <form onSubmit={handleSubmit} className="p-6 space-y-4">
                 <div>
-                  <label className="block text-xs font-bold text-[#15152A] mb-1.5 uppercase tracking-wider">
+                  <label className="block text-xs font-bold text-[#171717] mb-1.5 uppercase tracking-wider">
                     Category Name *
                   </label>
                   <input
                     type="text"
                     value={name}
                     onChange={(e) => handleNameChange(e.target.value)}
-                    placeholder="e.g. Footwear, Home Decor, Electronics"
-                    className="w-full px-4 py-3 rounded-2xl border border-[#EAE6FD] text-sm text-[#15152A] focus:outline-none focus:border-[#6257FF]"
+                    placeholder="e.g. Bridal Necklaces, Bangles, Rings"
+                    className="w-full px-4 py-3 rounded-2xl border border-black/10 text-sm text-[#171717] bg-[#EEEEEC]/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#9FD842]"
                   />
                   {errors.name && <p className="text-xs text-rose-500 font-semibold mt-1">{errors.name}</p>}
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-[#15152A] mb-1.5 uppercase tracking-wider">
+                  <label className="block text-xs font-bold text-[#171717] mb-1.5 uppercase tracking-wider">
                     Category ID / Slug *
                   </label>
                   <input
@@ -287,9 +289,9 @@ export const AdminCategories = ({ onNavigateToProducts }) => {
                     value={slug}
                     disabled={!!editingCategory}
                     onChange={(e) => setSlug(e.target.value)}
-                    placeholder="e.g. footwear"
-                    className={`w-full px-4 py-3 rounded-2xl border border-[#EAE6FD] text-sm font-mono text-[#15152A] focus:outline-none focus:border-[#6257FF] ${
-                      editingCategory ? 'bg-slate-50 opacity-70 cursor-not-allowed' : 'bg-white'
+                    placeholder="e.g. bridal-necklaces"
+                    className={`w-full px-4 py-3 rounded-2xl border border-black/10 text-sm font-mono text-[#171717] focus:outline-none focus:ring-2 focus:ring-[#9FD842] ${
+                      editingCategory ? 'bg-slate-50 opacity-70 cursor-not-allowed' : 'bg-[#EEEEEC]/50 focus:bg-white'
                     }`}
                   />
                   {errors.slug && <p className="text-xs text-rose-500 font-semibold mt-1">{errors.slug}</p>}
@@ -297,22 +299,22 @@ export const AdminCategories = ({ onNavigateToProducts }) => {
 
                 {/* Icon Selection */}
                 <div>
-                  <label className="block text-xs font-bold text-[#15152A] mb-1.5 uppercase tracking-wider">
+                  <label className="block text-xs font-bold text-[#171717] mb-1.5 uppercase tracking-wider">
                     Select Category Icon
                   </label>
-                  <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 max-h-32 overflow-y-auto p-2 rounded-2xl border border-[#EAE6FD] bg-[#FAF9FF]">
+                  <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 max-h-32 overflow-y-auto p-2 rounded-2xl border border-black/10 bg-[#EEEEEC]/40">
                     {ICON_OPTIONS.map((opt) => {
-                      const IconComp = iconMap[opt.name] || LayoutGrid;
+                      const IconComp = iconMap[opt.name] || Sparkles;
                       const isSelected = icon === opt.name;
                       return (
                         <button
                           key={opt.name}
                           type="button"
                           onClick={() => setIcon(opt.name)}
-                          className={`p-2.5 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all ${
+                          className={`p-2.5 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all cursor-pointer ${
                             isSelected
-                              ? 'bg-[#EDE9FE] border-[#6257FF] text-[#6257FF] shadow-xs'
-                              : 'bg-white border-[#EAE6FD] text-[#626276] hover:bg-slate-50'
+                              ? 'bg-[#171717] border-black text-[#9FD842] shadow-xs'
+                              : 'bg-white border-black/10 text-[#555555] hover:bg-slate-50'
                           }`}
                         >
                           <IconComp className="w-5 h-5" />
@@ -324,7 +326,7 @@ export const AdminCategories = ({ onNavigateToProducts }) => {
 
                 {/* Color Palette Selection */}
                 <div>
-                  <label className="block text-xs font-bold text-[#15152A] mb-1.5 uppercase tracking-wider">
+                  <label className="block text-xs font-bold text-[#171717] mb-1.5 uppercase tracking-wider">
                     Theme Color Accent
                   </label>
                   <div className="flex items-center gap-2 flex-wrap">
@@ -335,10 +337,10 @@ export const AdminCategories = ({ onNavigateToProducts }) => {
                           key={preset.name}
                           type="button"
                           onClick={() => setColorPreset(preset)}
-                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition-all cursor-pointer ${
                             isSelected
-                              ? 'ring-2 ring-[#6257FF] border-[#6257FF] bg-white shadow-xs'
-                              : 'border-[#EAE6FD] bg-[#FAF9FF] opacity-80 hover:opacity-100'
+                              ? 'ring-2 ring-[#171717] border-black bg-[#171717] text-white shadow-xs'
+                              : 'border-black/10 bg-[#EEEEEC] text-[#171717] opacity-80 hover:opacity-100'
                           }`}
                         >
                           <span
@@ -354,32 +356,32 @@ export const AdminCategories = ({ onNavigateToProducts }) => {
 
                 {/* Description */}
                 <div>
-                  <label className="block text-xs font-bold text-[#15152A] mb-1.5 uppercase tracking-wider">
+                  <label className="block text-xs font-bold text-[#171717] mb-1.5 uppercase tracking-wider">
                     Description
                   </label>
                   <textarea
                     rows={2}
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Short summary for this category..."
-                    className="w-full px-4 py-2.5 rounded-2xl border border-[#EAE6FD] text-xs text-[#15152A] focus:outline-none focus:border-[#6257FF] resize-none"
+                    placeholder="Short summary for this collection..."
+                    className="w-full px-4 py-2.5 rounded-2xl border border-black/10 text-xs text-[#171717] bg-[#EEEEEC]/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#9FD842] resize-none"
                   />
                 </div>
 
                 {/* Footer */}
-                <div className="pt-4 border-t border-[#EAE6FD] flex items-center justify-between">
+                <div className="pt-4 border-t border-black/10 flex items-center justify-between">
                   <button
                     type="button"
                     onClick={() => setIsModalOpen(false)}
-                    className="px-4 py-2 rounded-xl text-xs font-bold text-[#626276] hover:bg-slate-50"
+                    className="px-5 py-2.5 rounded-full text-xs font-bold text-[#777777] hover:bg-[#EEEEEC] cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-6 py-2.5 rounded-xl gradient-btn-primary text-white text-xs font-bold shadow-btn hover:scale-105 active:scale-95 transition-all flex items-center gap-1.5"
+                    className="px-6 py-2.5 rounded-full bg-[#171717] hover:bg-black text-white text-xs font-extrabold shadow-md hover:scale-105 active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer"
                   >
-                    <Check className="w-4 h-4" />
+                    <Check className="w-4 h-4 text-[#9FD842]" />
                     <span>{editingCategory ? 'Update Category' : 'Create Category'}</span>
                   </button>
                 </div>
@@ -398,33 +400,33 @@ export const AdminCategories = ({ onNavigateToProducts }) => {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setCategoryToDelete(null)}
-              className="fixed inset-0 bg-[#15152A]/60 backdrop-blur-sm"
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm"
             />
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="relative w-full max-w-md bg-white rounded-3xl p-6 border border-[#EAE6FD] shadow-2xl z-10 text-center"
+              className="relative w-full max-w-md bg-white rounded-[32px] p-6 border border-black/10 shadow-2xl z-10 text-center"
             >
-              <div className="w-14 h-14 rounded-2xl bg-rose-50 text-rose-500 flex items-center justify-center mx-auto mb-4 border border-rose-100">
+              <div className="w-14 h-14 rounded-full bg-rose-50 text-rose-500 flex items-center justify-center mx-auto mb-4 border border-rose-100">
                 <AlertTriangle className="w-7 h-7" />
               </div>
-              <h3 className="text-lg font-bold text-[#15152A] mb-1">
+              <h3 className="text-lg font-bold text-[#171717] mb-1">
                 Delete Category?
               </h3>
-              <p className="text-xs text-[#626276] max-w-xs mx-auto mb-6">
-                Are you sure you want to delete <strong className="text-[#15152A]">"{categoryToDelete.name}"</strong>? Products under this category won't be deleted, but may need to be reassigned.
+              <p className="text-xs text-[#777777] max-w-xs mx-auto mb-6">
+                Are you sure you want to delete <strong className="text-[#171717]">"{categoryToDelete.name}"</strong>? Products under this category won't be deleted, but may need to be reassigned.
               </p>
               <div className="flex items-center justify-center gap-3">
                 <button
                   onClick={() => setCategoryToDelete(null)}
-                  className="px-5 py-2.5 rounded-2xl text-xs font-bold text-[#626276] hover:bg-[#FAF9FF]"
+                  className="px-5 py-2.5 rounded-full text-xs font-bold text-[#777777] hover:bg-[#EEEEEC] cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleConfirmDelete}
-                  className="px-6 py-2.5 rounded-2xl bg-rose-600 text-white text-xs font-bold hover:bg-rose-700 shadow-md"
+                  className="px-6 py-2.5 rounded-full bg-rose-600 text-white text-xs font-bold hover:bg-rose-700 shadow-md cursor-pointer"
                 >
                   Yes, Delete Category
                 </button>
