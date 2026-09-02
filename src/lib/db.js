@@ -713,7 +713,8 @@ export async function getProducts(filters = {}) {
     if (filters.isPopular) query.isPopular = true;
     if (filters.isFeatured) query.isFeatured = true;
     if (filters.search) {
-      const regex = new RegExp(filters.search, 'i');
+      const cleanSearch = String(filters.search).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(cleanSearch, 'i');
       query.$or = [{ name: regex }, { categoryName: regex }, { tags: regex }, { id: regex }];
     }
     const products = await Product.find(query).sort({ createdAt: -1 }).lean();
@@ -1015,15 +1016,54 @@ export async function getOrders(userId = null) {
 export async function createOrder(data) {
   const id = data.id || `#SE${Math.floor(1000 + Math.random() * 9000)}`;
   const dateStr = data.date || new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+  // 1. Server-Side Price Verification & Anti-Tampering Calculation
+  const db = await connectToDatabase();
+  const allProducts = db ? await Product.find().lean() : (readJSONDB().products || []);
+
+  let calculatedAmount = 0;
+  const verifiedItems = [];
+
+  if (Array.isArray(data.items) && data.items.length > 0) {
+    for (const item of data.items) {
+      const pId = item.productId || item.id;
+      const dbProd = allProducts.find((p) => p.id === pId);
+      const safeQty = Math.max(1, parseInt(item.quantity, 10) || 1);
+      const verifiedUnitPrice = dbProd ? Number(dbProd.price) : Math.max(0, Number(item.price) || 0);
+      const itemSubtotal = verifiedUnitPrice * safeQty;
+      calculatedAmount += itemSubtotal;
+
+      verifiedItems.push({
+        ...item,
+        id: pId,
+        productId: pId,
+        name: dbProd ? dbProd.name : (item.name || 'Product Item'),
+        price: verifiedUnitPrice,
+        quantity: safeQty,
+      });
+    }
+  } else {
+    calculatedAmount = Math.max(0, Number(data.amount) || 0);
+  }
+
+  // Validate discount limits server-side
+  if (data.discountPercent && data.discountPercent > 0) {
+    const safeDiscount = Math.min(100, Math.max(0, Number(data.discountPercent)));
+    calculatedAmount = Math.round(calculatedAmount * (1 - safeDiscount / 100));
+  }
+
+  const finalAmount = calculatedAmount > 0 ? calculatedAmount : (Number(data.amount) || 0);
+
   const newOrder = {
     ...data,
     id,
     date: dateStr,
+    items: verifiedItems.length > 0 ? verifiedItems : (data.items || []),
+    amount: finalAmount,
     status: data.status || 'processing',
     statusLabel: data.status === 'delivered' ? 'Delivered' : data.status === 'shipped' ? 'Shipped' : 'Processing',
   };
 
-  const db = await connectToDatabase();
   if (db) {
     const created = await Order.create(newOrder);
     const { _id, __v, ...rest } = created.toObject();
@@ -1197,6 +1237,10 @@ export async function deleteContactMessage(id) {
 
 // ─── STORE CONFIG ────────────────────────────────────────────────────────────
 export async function getStoreConfig() {
+  const envWhatsapp = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || process.env.WHATSAPP_NUMBER;
+  const envWhatsappDisplay = process.env.NEXT_PUBLIC_WHATSAPP_DISPLAY;
+  const envWhatsappLink = process.env.NEXT_PUBLIC_WHATSAPP_LINK;
+
   const db = await connectToDatabase();
   if (db) {
     await ensureMongoSeeded();
@@ -1204,12 +1248,18 @@ export async function getStoreConfig() {
     if (config) {
       const { _id, __v, ...rest } = config;
       if (!rest.name || rest.name === 'ShopEase') rest.name = 'Nakoda Imitation';
+      if (envWhatsapp) rest.whatsappNumber = envWhatsapp;
+      if (envWhatsappDisplay) rest.whatsappDisplay = envWhatsappDisplay;
+      if (envWhatsappLink) rest.whatsappLink = envWhatsappLink;
       return rest;
     }
   }
   const jdb = readJSONDB();
-  const cfg = jdb.storeConfig || INITIAL_DB_STATE.storeConfig;
+  const cfg = { ...(jdb.storeConfig || INITIAL_DB_STATE.storeConfig) };
   if (!cfg.name || cfg.name === 'ShopEase') cfg.name = 'Nakoda Imitation';
+  if (envWhatsapp) cfg.whatsappNumber = envWhatsapp;
+  if (envWhatsappDisplay) cfg.whatsappDisplay = envWhatsappDisplay;
+  if (envWhatsappLink) cfg.whatsappLink = envWhatsappLink;
   return cfg;
 }
 
@@ -1367,59 +1417,108 @@ export async function updateCustomerProfile(id, updateData) {
   return sanitized;
 }
 
-// ─── ADMIN AUTHENTICATION (MongoDB + Environment Variables + Fallbacks) ──────────────────
+export async function deleteCustomerAccount(id) {
+  if (!id) return false;
+
+  const db = await connectToDatabase();
+  if (db) {
+    const deleted = await User.findByIdAndDelete(id);
+    if (deleted) {
+      await Order.updateMany(
+        { customerId: id },
+        {
+          $set: {
+            customerName: '[DELETED_USER]',
+            customerEmail: 'deleted_user@redacted.local',
+            customerPhone: '[REDACTED]',
+            shippingAddress: '[REDACTED_ADDRESS]',
+          },
+        }
+      );
+      return true;
+    }
+  }
+
+  const jdb = readJSONDB();
+  const index = (jdb.users || []).findIndex((u) => u._id === id || u.id === id || u.email === id);
+  if (index !== -1) {
+    jdb.users.splice(index, 1);
+    if (jdb.orders) {
+      jdb.orders = jdb.orders.map((order) => {
+        if (order.customerId === id) {
+          return {
+            ...order,
+            customerName: '[DELETED_USER]',
+            customerEmail: 'deleted_user@redacted.local',
+            customerPhone: '[REDACTED]',
+            shippingAddress: '[REDACTED_ADDRESS]',
+          };
+        }
+        return order;
+      });
+    }
+    writeJSONDB(jdb);
+    return true;
+  }
+
+  return false;
+}
+
+// ─── ADMIN AUTHENTICATION (Environment Variables + Database Users) ──────────────────
 export async function verifyAdminCredentials(email, password) {
   if (!email || !password) return null;
 
   const cleanEmail = email.toLowerCase().trim();
   const cleanPass = password.trim();
   const envAdminEmail = (process.env.ADMIN_EMAIL || '').toLowerCase().trim();
-  const envAdminPass = (process.env.ADMIN_PASSWORD || 'admin123').trim();
+  const envAdminPass = (process.env.ADMIN_PASSWORD || '').trim();
   const notificationEmail = (process.env.ADMIN_NOTIFICATION_EMAIL || '').toLowerCase().trim();
 
-  // Valid admin aliases
-  const validAdminEmails = [
-    envAdminEmail,
-    notificationEmail,
-    'admin@nakodaimitation.com',
-    'admin@nakodaimitation.com',
-    'admin@nakoda.com',
-    'admin@gmail.com',
-    'admin',
-    'nakoda',
-  ].filter(Boolean);
-
-  // 1. Check environment variables & standard admin aliases
-  if (validAdminEmails.includes(cleanEmail)) {
-    if (cleanPass === envAdminPass || cleanPass === 'admin123' || cleanPass === 'admin' || cleanPass === 'nakoda123') {
+  // 1. Check configured server environment credentials
+  if (envAdminEmail && envAdminPass) {
+    const isMatchingEmail = cleanEmail === envAdminEmail || (notificationEmail && cleanEmail === notificationEmail);
+    if (isMatchingEmail && cleanPass === envAdminPass) {
       return {
-        email: cleanEmail.includes('@') ? cleanEmail : (envAdminEmail || 'admin@nakodaimitation.com'),
+        email: envAdminEmail,
         name: 'Master Admin',
         role: 'superadmin',
       };
     }
   }
 
-  // 2. Check JSON DB fallback users if any
+  // 2. Check MongoDB database for Admin users with bcrypt hashed passwords
+  try {
+    const db = await connectToDatabase();
+    if (db) {
+      const adminUser = await User.findOne({
+        email: cleanEmail,
+        role: { $in: ['admin', 'superadmin'] },
+      });
+
+      if (adminUser && adminUser.passwordHash) {
+        const isMatch = bcrypt.compareSync(cleanPass, adminUser.passwordHash);
+        if (isMatch) {
+          const userObj = adminUser.toObject();
+          delete userObj.passwordHash;
+          delete userObj.__v;
+          return userObj;
+        }
+      }
+    }
+  } catch (err) {
+    // Database lookup error, proceed to fallback
+  }
+
+  // 3. Check local JSON DB fallback users (with bcrypt passwordHash)
   try {
     const jdb = readJSONDB();
     const jsonAdmin = (jdb.users || []).find(
-      (u) => (u.email?.toLowerCase() === cleanEmail || u.username?.toLowerCase() === cleanEmail) && u.role === 'admin'
+      (u) => (u.email?.toLowerCase() === cleanEmail || u.username?.toLowerCase() === cleanEmail) && (u.role === 'admin' || u.role === 'superadmin')
     );
-    if (jsonAdmin) {
-      if (jsonAdmin.passwordHash && bcrypt.compareSync(cleanPass, jsonAdmin.passwordHash)) {
-        return {
-          email: jsonAdmin.email,
-          name: jsonAdmin.name || 'Admin',
-          role: 'admin',
-        };
-      }
-      if (jsonAdmin.password && (jsonAdmin.password === cleanPass || jsonAdmin.password === password)) {
-        return {
-          email: jsonAdmin.email,
-          name: jsonAdmin.name || 'Admin',
-          role: 'admin',
-        };
+    if (jsonAdmin && jsonAdmin.passwordHash) {
+      if (bcrypt.compareSync(cleanPass, jsonAdmin.passwordHash)) {
+        const { passwordHash: _, ...sanitized } = jsonAdmin;
+        return sanitized;
       }
     }
   } catch (e) {}

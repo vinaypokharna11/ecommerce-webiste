@@ -24,6 +24,7 @@ import {
   loginCustomer,
   getCustomerById,
   updateCustomerProfile,
+  deleteCustomerAccount,
   verifyAdminCredentials
 } from '../src/lib/db.js';
 import { 
@@ -35,6 +36,7 @@ import {
   verifyAdminAuth, 
   verifyCustomerAuth 
 } from '../src/lib/auth.js';
+import { checkRateLimit } from '../src/lib/rateLimit.js';
 
 let passed = 0;
 let failed = 0;
@@ -139,6 +141,18 @@ async function runTests() {
     phone: '+91 99999 88888',
   });
   assert(updatedCustomer && updatedCustomer.phone === '+91 99999 88888', `Customer profile updated phone successfully`);
+
+  // Customer Data & Account Deletion (GDPR / Privacy Test)
+  const deleteTestUser = await registerCustomer({
+    name: 'Temporary User',
+    email: `temp_delete_${Date.now()}@example.com`,
+    password: 'Password123!',
+    phone: '+91 98000 00000',
+  });
+  const deleteSuccess = await deleteCustomerAccount(deleteTestUser._id || deleteTestUser.id);
+  assert(deleteSuccess === true, `Customer account & personal data deleted successfully`);
+  const postDeleteCheck = await getCustomerById(deleteTestUser._id || deleteTestUser.id);
+  assert(postDeleteCheck === null, `Deleted customer cannot be fetched (verified non-existent)`);
 
   // 4. JWT Token Generation & Verification
   console.log('\n🔐 4. Testing JWT Token Security & Role Authorization:');
@@ -245,8 +259,31 @@ async function runTests() {
   });
   assert(testContact && testContact.id.startsWith('CT-'), `Created customer contact message: ${testContact?.id}`);
 
-  // 8. Store Settings
-  console.log('\n⚙️ 8. Testing Store Config Settings:');
+  // 8. Security Logic: Price Calculation Anti-Tampering & Rate Limiting
+  console.log('\n🔒 8. Testing Complex Security Logic (Anti-Tampering & Rate Limiting):');
+  
+  // Anti-tampering price check
+  const tamperedOrder = await createOrder({
+    customerName: 'Tamper Tester',
+    customerEmail: 'tamper@example.com',
+    customerPhone: '+91 91111 22222',
+    deliveryAddress: '10 Security Lane, Bangalore',
+    items: [{ id: 'prod-1', name: 'Wireless Headphones', price: 1, quantity: 2 }], // Client claims ₹1 each
+    amount: 2, // Client claims total ₹2 instead of ₹6,998
+  });
+  assert(tamperedOrder.amount === 6998, `Server-side price verification overrode tampered client price (Computed: ₹${tamperedOrder.amount})`);
+
+  // Rate limiter check
+  const testIp = `test_ip_${Date.now()}`;
+  for (let i = 1; i <= 5; i++) {
+    const res = checkRateLimit(`login:${testIp}`, 5, 60000);
+    assert(res.isAllowed === true, `Rate limiter permitted attempt ${i}/5`);
+  }
+  const blockedAttempt = checkRateLimit(`login:${testIp}`, 5, 60000);
+  assert(blockedAttempt.isAllowed === false && blockedAttempt.retryAfterSec > 0, `Rate limiter properly BLOCKED 6th attempt (Retry after: ${blockedAttempt.retryAfterSec}s)`);
+
+  // 9. Store Settings
+  console.log('\n⚙️ 9. Testing Store Config Settings:');
   const config = await getStoreConfig();
   assert(config && (config.name === 'ShopEase' || config.name === 'Nakoda Imitation'), `Loaded store config: ${config?.name} (${config?.whatsappDisplay})`);
 

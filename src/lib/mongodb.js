@@ -29,9 +29,12 @@ export async function connectToDatabase() {
 
   if (!cached.promise) {
     cached.lastAttempt = now;
+    const isProd = process.env.NODE_ENV === 'production';
     const opts = {
       bufferCommands: false,
-      serverSelectionTimeoutMS: 800, // Fail quickly if MongoDB is offline so fallback kicks in instantly
+      serverSelectionTimeoutMS: isProd ? 5000 : 1200,
+      maxPoolSize: 10,
+      socketTimeoutMS: 45000,
     };
 
     cached.promise = mongoose

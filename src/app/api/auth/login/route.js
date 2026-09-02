@@ -1,11 +1,18 @@
 import { NextResponse } from 'next/server';
 import { loginCustomer, verifyAdminCredentials } from '@/lib/db';
 import { signToken, signAdminToken, ADMIN_COOKIE_MAX_AGE } from '@/lib/auth';
+import { checkRateLimit, getClientIp, rateLimitExceededResponse } from '@/lib/rateLimit';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(request) {
   try {
+    const ip = getClientIp(request);
+    const rateLimit = checkRateLimit(`login:${ip}`, 5, 60 * 1000);
+    if (!rateLimit.isAllowed) {
+      return rateLimitExceededResponse(rateLimit.retryAfterSec, 'Too many login attempts. Please wait a minute before trying again.');
+    }
+
     const { email, password } = await request.json();
 
     if (!email || !password) {

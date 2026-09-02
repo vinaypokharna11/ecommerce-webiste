@@ -6,6 +6,7 @@ import { ArrowUpRight, Sparkles, ShoppingBag, ShieldCheck, Truck, MessageCircle 
 import DriftWall from './DriftWall';
 import ScrollExpand from './ScrollExpand';
 import { HERO_ASSETS } from '../data/mockData';
+import { createHelpWhatsAppUrl } from '../utils/whatsapp';
 
 // Import all product visual assets for the 3D DriftWall
 import prodHeadphones from '../assets/images/prod_headphones.jpg';
@@ -145,7 +146,7 @@ export const HeroSection = ({ onExploreClick }) => {
               </button>
 
               <a
-                href="https://wa.me/919876543210?text=Hi%20Nakoda%20Imitation,%20I'd%20like%20to%20inquire%20about%20your%20collection"
+                href={createHelpWhatsAppUrl("Hi Nakoda Imitation, I'd like to inquire about your collection")}
                 target="_blank"
                 rel="noreferrer noopener"
                 className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-white/90 hover:bg-white text-[#171717] font-bold text-sm border border-black/10 shadow-sm backdrop-blur-md transition-all active:scale-95 font-sans"

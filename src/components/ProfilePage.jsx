@@ -246,8 +246,28 @@ export const ProfilePage = ({ orders = [], onExploreCatalog, onNavigate }) => {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [showAllOrders, setShowAllOrders] = useState(false);
   const [logoutConfirm, setLogoutConfirm] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [userOrders, setUserOrders] = useState(orders);
+
+  const handleDeleteAccount = async () => {
+    setIsDeleting(true);
+    try {
+      const res = await fetch('/api/auth/profile', { method: 'DELETE' });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setDeleteConfirm(false);
+        await logout();
+      } else {
+        alert(data.error || 'Failed to delete account');
+      }
+    } catch (err) {
+      alert('An error occurred while deleting your account');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   useEffect(() => {
     async function loadCustomerOrders() {
@@ -564,6 +584,61 @@ export const ProfilePage = ({ orders = [], onExploreCatalog, onNavigate }) => {
               </motion.div>
             )
           ) : null}
+
+          {/* ── Privacy & Data Deletion (GDPR/Privacy Compliant) ── */}
+          {isAuthenticated && (
+            <div className="mt-3">
+              {!deleteConfirm ? (
+                <button
+                  onClick={() => setDeleteConfirm(true)}
+                  className="w-full flex items-center gap-3 px-5 sm:px-6 py-3.5 rounded-[22px] bg-white border border-gray-100 hover:bg-gray-50 transition-all text-left group shadow-2xs"
+                >
+                  <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
+                    <Trash2 className="w-3.5 h-3.5 text-gray-500 group-hover:text-rose-600 transition-colors" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-xs font-bold text-gray-600 group-hover:text-rose-600 transition-colors block">
+                      Delete Account & Personal Data
+                    </span>
+                    <span className="text-[10px] text-gray-400 block">
+                      Permanently erase your account, addresses, and personal details
+                    </span>
+                  </div>
+                  <ChevronRight className="w-3.5 h-3.5 text-gray-300 group-hover:text-rose-400 transition-colors" />
+                </button>
+              ) : (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.97 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="w-full p-5 rounded-[24px] bg-red-50 border border-red-200 text-center"
+                >
+                  <div className="w-10 h-10 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto mb-2.5">
+                    <Trash2 className="w-5 h-5" />
+                  </div>
+                  <p className="text-sm font-extrabold text-red-800 mb-1">Permanently Delete Account?</p>
+                  <p className="text-xs text-red-600 mb-4 max-w-sm mx-auto">
+                    This action cannot be undone. All your saved profile information, addresses, and personal data will be completely erased.
+                  </p>
+                  <div className="flex gap-3 max-w-xs mx-auto">
+                    <button
+                      disabled={isDeleting}
+                      onClick={() => setDeleteConfirm(false)}
+                      className="flex-1 py-2.5 rounded-full bg-white border border-red-200 text-gray-700 font-bold text-xs hover:bg-gray-50 transition-colors"
+                    >
+                      Keep Account
+                    </button>
+                    <button
+                      disabled={isDeleting}
+                      onClick={handleDeleteAccount}
+                      className="flex-1 py-2.5 rounded-full bg-red-600 hover:bg-red-700 text-white font-bold text-xs shadow-sm transition-colors flex items-center justify-center gap-1"
+                    >
+                      {isDeleting ? 'Deleting...' : 'Yes, Delete'}
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </div>
+          )}
 
           {/* Footer note */}
           <p className="text-center text-[11px] text-[#A0A0A0] font-medium pt-5">

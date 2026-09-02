@@ -19,8 +19,9 @@ const prodAromaDiffuser = '/assets/images/prod_aroma_diffuser.jpg';
 export const STORE_CONFIG = {
   name: 'Nakoda Imitation',
   tagline: 'Premium Imitation Jewelry & Lifestyle Collection',
-  whatsappNumber: '919876543210',
-  whatsappDisplay: '+91 98765 43210',
+  whatsappNumber: process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '919876543210',
+  whatsappDisplay: process.env.NEXT_PUBLIC_WHATSAPP_DISPLAY || '+91 98765 43210',
+  whatsappLink: process.env.NEXT_PUBLIC_WHATSAPP_LINK || `https://wa.me/${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '919876543210'}`,
   address: 'Shop #14, Main Market Road, Bangalore',
   hours: 'Mon - Sun: 9:30 AM – 9:30 PM',
   currency: '₹',

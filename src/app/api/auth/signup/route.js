@@ -1,11 +1,18 @@
 import { NextResponse } from 'next/server';
 import { registerCustomer } from '@/lib/db';
 import { signToken } from '@/lib/auth';
+import { checkRateLimit, getClientIp, rateLimitExceededResponse } from '@/lib/rateLimit';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(request) {
   try {
+    const ip = getClientIp(request);
+    const rateLimit = checkRateLimit(`signup:${ip}`, 5, 15 * 60 * 1000); // Max 5 signups per 15 mins per IP
+    if (!rateLimit.isAllowed) {
+      return rateLimitExceededResponse(rateLimit.retryAfterSec, 'Too many registration attempts. Please wait before creating another account.');
+    }
+
     const body = await request.json();
     const { name, email, password, phone, address, city, pincode } = body;
 

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getContactMessages, createContactMessage, updateContactStatus, deleteContactMessage, getStoreConfig } from '@/lib/db';
 import { sendContactConfirmationEmail, sendAdminContactNotification } from '@/lib/email';
 import { verifyAdminAuth, unauthorizedResponse } from '@/lib/auth';
+import { checkRateLimit, getClientIp, rateLimitExceededResponse } from '@/lib/rateLimit';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,6 +22,12 @@ export async function GET(request) {
 
 export async function POST(request) {
   try {
+    const ip = getClientIp(request);
+    const rateLimit = checkRateLimit(`contact:${ip}`, 5, 10 * 60 * 1000);
+    if (!rateLimit.isAllowed) {
+      return rateLimitExceededResponse(rateLimit.retryAfterSec, 'Too many messages sent. Please wait a few minutes before submitting another message.');
+    }
+
     const body = await request.json();
 
     if (!body.name || !body.email || !body.message) {

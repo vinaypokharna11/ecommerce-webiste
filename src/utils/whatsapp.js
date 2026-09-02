@@ -1,9 +1,50 @@
 import { STORE_CONFIG } from '../data/mockData';
 
-export const createProductWhatsAppUrl = (product, selectedVariant = null, selectedColor = null) => {
-  const number = STORE_CONFIG.whatsappNumber;
-  let text = `Hi ${STORE_CONFIG.name}! 👋\n\nI am interested in buying *${product.name}* from your online catalog.\n`;
-  text += `• *Price:* ${STORE_CONFIG.currency}${product.price.toLocaleString()}\n`;
+/**
+ * Returns the configured WhatsApp number from environment variables or store config.
+ */
+export const getWhatsAppNumber = (overrideNumber = null) => {
+  return (
+    overrideNumber ||
+    process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ||
+    STORE_CONFIG.whatsappNumber ||
+    '919876543210'
+  ).replace(/[^0-9]/g, '');
+};
+
+/**
+ * Returns the configured WhatsApp base URL from environment variables or defaults to wa.me.
+ */
+export const getWhatsAppBaseUrl = (overrideNumber = null) => {
+  const number = getWhatsAppNumber(overrideNumber);
+  const envLink = process.env.NEXT_PUBLIC_WHATSAPP_LINK;
+  
+  if (envLink && envLink.trim()) {
+    // If env link already contains query params or protocol, ensure valid base
+    const cleanLink = envLink.trim().replace(/\/$/, '');
+    if (cleanLink.includes('wa.me') || cleanLink.includes('whatsapp.com')) {
+      return cleanLink;
+    }
+  }
+
+  return `https://wa.me/${number}`;
+};
+
+/**
+ * Builds a direct WhatsApp chat URL with prefilled text message.
+ */
+export const buildWhatsAppUrl = (text, overrideNumber = null) => {
+  const baseUrl = getWhatsAppBaseUrl(overrideNumber);
+  const delimiter = baseUrl.includes('?') ? '&' : '?';
+  return `${baseUrl}${delimiter}text=${encodeURIComponent(text)}`;
+};
+
+export const createProductWhatsAppUrl = (product, selectedVariant = null, selectedColor = null, overrideNumber = null) => {
+  const storeName = STORE_CONFIG.name || 'Nakoda Imitation';
+  const currency = STORE_CONFIG.currency || '₹';
+  
+  let text = `Hi ${storeName}! 👋\n\nI am interested in buying *${product.name}* from your online catalog.\n`;
+  text += `• *Price:* ${currency}${Number(product.price || 0).toLocaleString()}\n`;
   
   if (selectedVariant) {
     text += `• *Selected Size/Variant:* ${selectedVariant}\n`;
@@ -14,34 +55,36 @@ export const createProductWhatsAppUrl = (product, selectedVariant = null, select
   
   text += `\nCould you please let me know if this is currently available in the shop? Thank you!`;
   
-  return `https://wa.me/${number}?text=${encodeURIComponent(text)}`;
+  return buildWhatsAppUrl(text, overrideNumber);
 };
 
-export const createCartWhatsAppUrl = (cartItems, totalAmount) => {
-  const number = STORE_CONFIG.whatsappNumber;
-  let text = `🛍️ *NEW ORDER INQUIRY — ${STORE_CONFIG.name}*\n\n`;
+export const createCartWhatsAppUrl = (cartItems, totalAmount, overrideNumber = null) => {
+  const storeName = STORE_CONFIG.name || 'Nakoda Imitation';
+  const currency = STORE_CONFIG.currency || '₹';
+
+  let text = `🛍️ *NEW ORDER INQUIRY — ${storeName}*\n\n`;
   text += `Hi, I would like to place an order for the following items:\n\n`;
 
   cartItems.forEach((item, index) => {
-    const itemTotal = item.price * item.quantity;
+    const itemTotal = Number(item.price || 0) * Number(item.quantity || 1);
     text += `${index + 1}. *${item.name}*\n`;
     text += `   Quantity: ${item.quantity}\n`;
     if (item.selectedSize) text += `   Size: ${item.selectedSize}\n`;
     if (item.selectedColor) text += `   Color: ${item.selectedColor}\n`;
-    text += `   Price: ${STORE_CONFIG.currency}${item.price.toLocaleString()} × ${item.quantity} = ${STORE_CONFIG.currency}${itemTotal.toLocaleString()}\n\n`;
+    text += `   Price: ${currency}${Number(item.price || 0).toLocaleString()} × ${item.quantity} = ${currency}${itemTotal.toLocaleString()}\n\n`;
   });
 
   text += `────────────────────\n`;
-  text += `*💰 TOTAL ORDER VALUE: ${STORE_CONFIG.currency}${totalAmount.toLocaleString()}*\n\n`;
+  text += `*💰 TOTAL ORDER VALUE: ${currency}${Number(totalAmount || 0).toLocaleString()}*\n\n`;
   text += `Please let me know the payment and delivery/pickup options. Thank you!`;
 
-  return `https://wa.me/${number}?text=${encodeURIComponent(text)}`;
+  return buildWhatsAppUrl(text, overrideNumber);
 };
 
-export const createHelpWhatsAppUrl = (customMsg = null) => {
-  const number = STORE_CONFIG.whatsappNumber;
-  const text = customMsg || `Hi ${STORE_CONFIG.name}! I need some assistance with the products in your online catalog.`;
-  return `https://wa.me/${number}?text=${encodeURIComponent(text)}`;
+export const createHelpWhatsAppUrl = (customMsg = null, overrideNumber = null) => {
+  const storeName = STORE_CONFIG.name || 'Nakoda Imitation';
+  const text = customMsg || `Hi ${storeName}! I need some assistance with the products in your online catalog.`;
+  return buildWhatsAppUrl(text, overrideNumber);
 };
 
 export const createInquiryWhatsAppUrl = ({
@@ -52,9 +95,9 @@ export const createInquiryWhatsAppUrl = ({
   requiredDate = '',
   customerName = '',
   notes = '',
-}) => {
-  const number = STORE_CONFIG.whatsappNumber;
-  let text = `✨ *NEW INQUIRY — ${STORE_CONFIG.name}*\n\n`;
+}, overrideNumber = null) => {
+  const storeName = STORE_CONFIG.name || 'Nakoda Imitation';
+  let text = `✨ *NEW INQUIRY — ${storeName}*\n\n`;
   text += `Hi, I would like to inquire about the following:\n\n`;
   text += `• *Inquiry Type:* ${inquiryType}\n`;
   if (productName) text += `• *Product/Item:* ${productName}\n`;
@@ -65,7 +108,7 @@ export const createInquiryWhatsAppUrl = ({
   if (notes) text += `\n*Details / Requirements:*\n${notes}\n`;
   text += `\nPlease let me know pricing, availability, and lead time. Thank you!`;
 
-  return `https://wa.me/${number}?text=${encodeURIComponent(text)}`;
+  return buildWhatsAppUrl(text, overrideNumber);
 };
 
 export const createContactWhatsAppUrl = ({
@@ -73,15 +116,14 @@ export const createContactWhatsAppUrl = ({
   category = 'General Support',
   subject = '',
   message = '',
-}) => {
-  const number = STORE_CONFIG.whatsappNumber;
-  let text = `💬 *CONTACT MESSAGE — ${STORE_CONFIG.name}*\n\n`;
+}, overrideNumber = null) => {
+  const storeName = STORE_CONFIG.name || 'Nakoda Imitation';
+  let text = `💬 *CONTACT MESSAGE — ${storeName}*\n\n`;
   if (name) text += `• *From:* ${name}\n`;
   text += `• *Topic:* ${category}\n`;
   if (subject) text += `• *Subject:* ${subject}\n`;
   if (message) text += `\n*Message:*\n${message}\n`;
   text += `\nLooking forward to hearing from you. Thanks!`;
 
-  return `https://wa.me/${number}?text=${encodeURIComponent(text)}`;
+  return buildWhatsAppUrl(text, overrideNumber);
 };
-

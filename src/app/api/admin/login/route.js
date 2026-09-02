@@ -1,9 +1,18 @@
 import { NextResponse } from 'next/server';
 import { verifyAdminCredentials } from '@/lib/db';
 import { signAdminToken, ADMIN_COOKIE_MAX_AGE } from '@/lib/auth';
+import { checkRateLimit, getClientIp, rateLimitExceededResponse } from '@/lib/rateLimit';
+
+export const dynamic = 'force-dynamic';
 
 export async function POST(request) {
   try {
+    const ip = getClientIp(request);
+    const rateLimit = checkRateLimit(`admin_login:${ip}`, 5, 60 * 1000);
+    if (!rateLimit.isAllowed) {
+      return rateLimitExceededResponse(rateLimit.retryAfterSec, 'Too many admin login attempts. Please wait before retrying.');
+    }
+
     const { email, password } = await request.json();
 
     if (!email || !password) {
