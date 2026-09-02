@@ -308,6 +308,8 @@ function StorefrontContent() {
     } else if (lower.includes('return') || lower.includes('shipping')) {
       setActiveTab('contact');
       window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (lower.includes('admin')) {
+      router.push('/admin/login');
     } else if (lower.includes('privacy') || lower.includes('terms') || lower.includes('cookie')) {
       setActiveTab('profile');
       window.scrollTo({ top: 0, behavior: 'smooth' });

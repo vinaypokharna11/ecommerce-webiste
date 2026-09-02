@@ -51,8 +51,8 @@ export const ContactInquirePage = ({
     return {
       isOpen,
       text: isOpen ? 'Open Now • Closes at 9:30 PM' : 'Closed Now • Opens at 9:30 AM',
-      color: isOpen ? 'bg-emerald-500' : 'bg-amber-500',
-      badgeBg: isOpen ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200',
+      color: isOpen ? 'bg-[#9FD842]' : 'bg-amber-500',
+      badgeBg: isOpen ? 'bg-[#9FD842]/15 text-[#3E5C0F] border-[#9FD842]/40' : 'bg-amber-50 text-amber-800 border-amber-200',
     };
   }, []);
 
@@ -71,7 +71,7 @@ export const ContactInquirePage = ({
     category: CONTACT_TOPICS[0],
     subject: '',
     message: '',
-    preferredContact: 'WhatsApp',
+    preferredContact: 'Email',
   });
   const [contactSubmitting, setContactSubmitting] = useState(false);
   const [contactSubmittedTicket, setContactSubmittedTicket] = useState(null);
@@ -162,7 +162,7 @@ export const ContactInquirePage = ({
           category: CONTACT_TOPICS[0],
           subject: '',
           message: '',
-          preferredContact: 'WhatsApp',
+          preferredContact: 'Email',
         });
       } else {
         throw new Error(data.error || 'Failed to submit contact message.');
@@ -246,17 +246,6 @@ export const ContactInquirePage = ({
     window.open(waUrl, '_blank');
   };
 
-  // ─── Quick WhatsApp Contact Handler ───
-  const handleLaunchWhatsAppContact = () => {
-    const waUrl = createContactWhatsAppUrl({
-      name: contactForm.name,
-      category: contactForm.category,
-      subject: contactForm.subject,
-      message: contactForm.message,
-    });
-    window.open(waUrl, '_blank');
-  };
-
   return (
     <div className="min-h-screen pt-24 pb-20 px-4 sm:px-8 lg:px-12 xl:px-16 w-full max-w-[1720px] mx-auto font-sans">
       
@@ -264,37 +253,37 @@ export const ContactInquirePage = ({
       <div className="text-center max-w-3xl mx-auto mb-10">
         
         {/* Live Status Pill & Fast Response Badge */}
-        <div className="inline-flex items-center gap-3 p-1.5 pr-4 rounded-full bg-white/80 border border-[#EAE6FD] shadow-xs backdrop-blur-md mb-5 flex-wrap justify-center">
+        <div className="inline-flex items-center gap-3 p-1.5 pr-4 rounded-full bg-white border border-[#E5E5E0] shadow-xs backdrop-blur-md mb-5 flex-wrap justify-center">
           <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${storeStatus.badgeBg}`}>
             <span className={`w-2 h-2 rounded-full ${storeStatus.color} animate-pulse`} />
             <span>{storeStatus.text}</span>
           </div>
 
-          <div className="flex items-center gap-1.5 text-xs font-semibold text-[#626276]">
-            <Zap className="w-3.5 h-3.5 text-[#EC5AC8]" />
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-[#525252]">
+            <Zap className="w-3.5 h-3.5 text-[#7FA628]" />
             <span>Avg. Response: &lt; 15 mins</span>
           </div>
         </div>
 
-        <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-[#15152A] mb-4">
+        <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-[#171717] mb-4">
           We're here to help you{' '}
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#6257FF] via-[#8B5CF6] to-[#EC5AC8]">
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#171717] via-[#5F8C1D] to-[#9FD842]">
             every step of the way
           </span>
         </h1>
 
-        <p className="text-base sm:text-lg text-[#626276] leading-relaxed">
-          Need quick support, a custom product quotation, or want to place a bulk order? Choose a tab below to connect directly with our friendly support & sales team.
+        <p className="text-base sm:text-lg text-[#525252] leading-relaxed">
+          Need quick support, a custom jewelry quotation, or want to place a volume order? Choose a tab below to connect directly with our support & sales desk.
         </p>
 
         {/* Dual Mode Switcher Tabs */}
-        <div className="mt-8 inline-flex p-1.5 bg-[#F5F3FF] rounded-2xl border border-[#EAE6FD] shadow-inner max-w-md w-full">
+        <div className="mt-8 inline-flex p-1.5 bg-white rounded-full border border-[#E5E5E0] shadow-sm max-w-md w-full">
           <button
             onClick={() => setActiveMode('contact')}
-            className={`flex-1 py-3 px-4 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all duration-300 ${
+            className={`flex-1 py-3 px-5 rounded-full text-sm font-extrabold flex items-center justify-center gap-2 transition-all duration-300 ${
               activeMode === 'contact'
-                ? 'bg-white text-[#6257FF] shadow-md shadow-[#6257FF]/10 scale-[1.02]'
-                : 'text-[#626276] hover:text-[#15152A] hover:bg-white/40'
+                ? 'bg-[#9FD842] text-[#171717] shadow-md shadow-[#9FD842]/30 scale-[1.02]'
+                : 'text-[#525252] hover:text-[#171717] hover:bg-[#9FD842]/10'
             }`}
           >
             <Mail className="w-4 h-4" />
@@ -303,142 +292,15 @@ export const ContactInquirePage = ({
 
           <button
             onClick={() => setActiveMode('inquire')}
-            className={`flex-1 py-3 px-4 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all duration-300 ${
+            className={`flex-1 py-3 px-5 rounded-full text-sm font-extrabold flex items-center justify-center gap-2 transition-all duration-300 ${
               activeMode === 'inquire'
-                ? 'bg-gradient-to-r from-[#6257FF] to-[#EC5AC8] text-white shadow-md shadow-[#6257FF]/20 scale-[1.02]'
-                : 'text-[#626276] hover:text-[#15152A] hover:bg-white/40'
+                ? 'bg-[#9FD842] text-[#171717] shadow-md shadow-[#9FD842]/30 scale-[1.02]'
+                : 'text-[#525252] hover:text-[#171717] hover:bg-[#9FD842]/10'
             }`}
           >
             <Sparkles className="w-4 h-4" />
             <span>Product & Bulk Inquire</span>
           </button>
-        </div>
-
-      </div>
-
-      {/* ── Fast Contact Channel Cards Bar ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-12">
-        
-        {/* WhatsApp Direct */}
-        <div className="p-5 rounded-3xl bg-white border border-[#EAE6FD] shadow-[0_4px_20px_rgba(98,87,255,0.04)] hover:shadow-[0_12px_30px_rgba(37,211,102,0.12)] hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between group">
-          <div className="flex items-start justify-between mb-4">
-            <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 group-hover:scale-110 transition-transform">
-              <MessageCircle className="w-6 h-6 fill-emerald-600/20" />
-            </div>
-            <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-1 rounded-md bg-emerald-100 text-emerald-800">
-              Fastest
-            </span>
-          </div>
-          <div>
-            <h3 className="text-base font-bold text-[#15152A] mb-1">WhatsApp Live Chat</h3>
-            <p className="text-xs text-[#626276] leading-relaxed mb-4">
-              Instant live assistance, product recommendations & order updates.
-            </p>
-          </div>
-          <a
-            href={createHelpWhatsAppUrl()}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all active:scale-95"
-          >
-            <span>Chat on WhatsApp</span>
-            <ExternalLink className="w-3.5 h-3.5" />
-          </a>
-        </div>
-
-        {/* Direct Phone Call */}
-        <div className="p-5 rounded-3xl bg-white border border-[#EAE6FD] shadow-[0_4px_20px_rgba(98,87,255,0.04)] hover:shadow-[0_12px_30px_rgba(98,87,255,0.12)] hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between group">
-          <div className="flex items-start justify-between mb-4">
-            <div className="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-[#6257FF] group-hover:scale-110 transition-transform">
-              <Phone className="w-6 h-6" />
-            </div>
-            <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-1 rounded-md bg-indigo-50 text-[#6257FF]">
-              9:30 AM - 9:30 PM
-            </span>
-          </div>
-          <div>
-            <h3 className="text-base font-bold text-[#15152A] mb-1">Call Store Support</h3>
-            <p className="text-xs text-[#626276] leading-relaxed mb-4 font-mono font-medium">
-              {STORE_CONFIG.whatsappDisplay}
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <a
-              href={`tel:${STORE_CONFIG.whatsappNumber}`}
-              className="flex-1 py-2.5 rounded-xl bg-[#6257FF] hover:bg-[#4F46E5] text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all active:scale-95"
-            >
-              <Phone className="w-3.5 h-3.5" />
-              <span>Call Now</span>
-            </a>
-            <button
-              onClick={() => handleCopy(STORE_CONFIG.whatsappDisplay, 'Phone Number')}
-              className="p-2.5 rounded-xl bg-[#F5F3FF] hover:bg-[#EDE9FE] text-[#6257FF] border border-[#EAE6FD] transition-colors"
-              title="Copy Phone Number"
-            >
-              {copiedField === 'Phone Number' ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
-            </button>
-          </div>
-        </div>
-
-        {/* Email Support */}
-        <div className="p-5 rounded-3xl bg-white border border-[#EAE6FD] shadow-[0_4px_20px_rgba(98,87,255,0.04)] hover:shadow-[0_12px_30px_rgba(236,90,200,0.12)] hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between group">
-          <div className="flex items-start justify-between mb-4">
-            <div className="w-12 h-12 rounded-2xl bg-pink-50 border border-pink-100 flex items-center justify-center text-[#EC5AC8] group-hover:scale-110 transition-transform">
-              <Mail className="w-6 h-6" />
-            </div>
-            <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-1 rounded-md bg-pink-50 text-[#EC5AC8]">
-              Official
-            </span>
-          </div>
-          <div>
-            <h3 className="text-base font-bold text-[#15152A] mb-1">Email Inquiries</h3>
-            <p className="text-xs text-[#626276] leading-relaxed mb-4 font-mono font-medium truncate">
-              support@nakodaimitation.com
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <a
-              href="mailto:support@nakodaimitation.com"
-              className="flex-1 py-2.5 rounded-xl bg-[#EC5AC8] hover:bg-[#D946EF] text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all active:scale-95"
-            >
-              <Mail className="w-3.5 h-3.5" />
-              <span>Email Us</span>
-            </a>
-            <button
-              onClick={() => handleCopy('support@nakodaimitation.com', 'Email Address')}
-              className="p-2.5 rounded-xl bg-[#FFF0FB] hover:bg-[#FCD6F2] text-[#EC5AC8] border border-[#FCD6F2] transition-colors"
-              title="Copy Email Address"
-            >
-              {copiedField === 'Email Address' ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
-            </button>
-          </div>
-        </div>
-
-        {/* Physical Store Location */}
-        <div className="p-5 rounded-3xl bg-white border border-[#EAE6FD] shadow-[0_4px_20px_rgba(98,87,255,0.04)] hover:shadow-[0_12px_30px_rgba(139,92,246,0.12)] hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between group">
-          <div className="flex items-start justify-between mb-4">
-            <div className="w-12 h-12 rounded-2xl bg-purple-50 border border-purple-100 flex items-center justify-center text-[#8B5CF6] group-hover:scale-110 transition-transform">
-              <MapPin className="w-6 h-6" />
-            </div>
-            <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-1 rounded-md bg-purple-50 text-[#8B5CF6]">
-              Store Visit
-            </span>
-          </div>
-          <div>
-            <h3 className="text-base font-bold text-[#15152A] mb-1">Bangalore Retail Store</h3>
-            <p className="text-xs text-[#626276] leading-relaxed mb-4 line-clamp-2">
-              {STORE_CONFIG.address}
-            </p>
-          </div>
-          <a
-            href={STORE_LOCATION_DETAILS.googleMapsUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-full py-2.5 rounded-xl bg-gradient-to-r from-[#8B5CF6] to-[#6257FF] hover:opacity-95 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all active:scale-95"
-          >
-            <span>Get Directions</span>
-            <ExternalLink className="w-3.5 h-3.5" />
-          </a>
         </div>
 
       </div>
@@ -454,216 +316,275 @@ export const ContactInquirePage = ({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -15 }}
             transition={{ duration: 0.3 }}
-            className="max-w-3xl mx-auto mb-16"
+            className="grid grid-cols-1 lg:grid-cols-12 gap-8 max-w-6xl mx-auto mb-16 items-stretch"
           >
             
-            {/* Contact Form */}
-            <div className="bg-white rounded-3xl border border-[#EAE6FD] p-6 sm:p-8 shadow-[0_10px_35px_rgba(98,87,255,0.06)] relative overflow-hidden">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 rounded-2xl bg-[#F5F3FF] border border-[#EAE6FD] flex items-center justify-center text-[#6257FF]">
-                  <Mail className="w-5 h-5" />
+            {/* Left Column: Contact Form */}
+            <div className="lg:col-span-7 bg-white rounded-3xl border border-[#E5E5E0] p-6 sm:p-8 shadow-[0_8px_24px_-4px_rgba(0,0,0,0.04)] relative overflow-hidden flex flex-col justify-between">
+              <div>
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-10 h-10 rounded-2xl bg-[#9FD842]/15 border border-[#9FD842]/30 flex items-center justify-center text-[#3E5C0F]">
+                    <Mail className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-[#171717]">Send a Message</h2>
+                    <p className="text-xs text-[#737373]">We respond within 2-4 business hours</p>
+                  </div>
                 </div>
-                <div>
-                  <h2 className="text-xl font-bold text-[#15152A]">Send a Message</h2>
-                  <p className="text-xs text-[#8E8EA0]">We respond within 2-4 business hours</p>
-                </div>
-              </div>
 
-              {contactSubmittedTicket ? (
-                <motion.div
-                  initial={{ scale: 0.9, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  className="p-8 rounded-3xl bg-gradient-to-br from-purple-50 via-white to-pink-50 border border-purple-200 text-center"
-                >
-                  <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto mb-4 shadow-sm">
-                    <CheckCircle2 className="w-8 h-8" />
-                  </div>
-                  <h3 className="text-xl font-extrabold text-[#15152A] mb-2">Message Sent Successfully!</h3>
-                  <p className="text-sm text-[#626276] leading-relaxed max-w-md mx-auto mb-6">
-                    Thank you, <strong>{contactSubmittedTicket.name}</strong>. Your ticket has been logged and assigned to our customer support desk.
-                  </p>
+                {contactSubmittedTicket ? (
+                  <motion.div
+                    initial={{ scale: 0.9, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    className="p-8 rounded-3xl bg-[#9FD842]/10 border border-[#9FD842]/40 text-center"
+                  >
+                    <div className="w-16 h-16 rounded-full bg-[#9FD842]/20 text-[#3E5C0F] flex items-center justify-center mx-auto mb-4 shadow-xs">
+                      <CheckCircle2 className="w-8 h-8" />
+                    </div>
+                    <h3 className="text-xl font-extrabold text-[#171717] mb-2">Message Sent Directly to Email!</h3>
+                    <p className="text-sm text-[#525252] leading-relaxed max-w-md mx-auto mb-6">
+                      Thank you, <strong>{contactSubmittedTicket.name}</strong>. Your message has been dispatched directly to our support team via email, and a confirmation receipt was sent to <strong>{contactSubmittedTicket.email}</strong>.
+                    </p>
 
-                  <div className="inline-flex items-center gap-3 px-4 py-2.5 rounded-2xl bg-white border border-[#EAE6FD] shadow-xs mb-6">
-                    <span className="text-xs text-[#8E8EA0] font-semibold">Reference Ticket:</span>
-                    <span className="text-sm font-extrabold text-[#6257FF] font-mono">{contactSubmittedTicket.id}</span>
-                    <button
-                      onClick={() => handleCopy(contactSubmittedTicket.id, 'Ticket ID')}
-                      className="p-1 text-[#8E8EA0] hover:text-[#6257FF]"
-                      title="Copy Ticket ID"
-                    >
-                      {copiedField === 'Ticket ID' ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-                    </button>
-                  </div>
+                    <div className="inline-flex items-center gap-3 px-4 py-2.5 rounded-2xl bg-white border border-[#9FD842]/40 shadow-xs mb-6">
+                      <span className="text-xs text-[#737373] font-semibold">Reference Ticket:</span>
+                      <span className="text-sm font-extrabold text-[#3E5C0F] font-mono">{contactSubmittedTicket.id}</span>
+                      <button
+                        onClick={() => handleCopy(contactSubmittedTicket.id, 'Ticket ID')}
+                        className="p-1 text-[#737373] hover:text-[#3E5C0F]"
+                        title="Copy Ticket ID"
+                      >
+                        {copiedField === 'Ticket ID' ? <Check className="w-3.5 h-3.5 text-[#3E5C0F]" /> : <Copy className="w-3.5 h-3.5" />}
+                      </button>
+                    </div>
 
-                  <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-                    <a
-                      href={`https://wa.me/${storeConfig.whatsappNumber}?text=Hi!%20I%20have%20submitted%20support%20ticket%20${contactSubmittedTicket.id}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all"
-                    >
-                      <MessageCircle className="w-4 h-4" />
-                      <span>Follow Up on WhatsApp</span>
-                    </a>
-                    <button
-                      onClick={() => setContactSubmittedTicket(null)}
-                      className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-white hover:bg-[#FAF9FF] text-[#15152A] border border-[#EAE6FD] font-bold text-xs transition-colors"
-                    >
-                      Send Another Message
-                    </button>
-                  </div>
-                </motion.div>
-              ) : (
-                <form onSubmit={handleSubmitContact} className="space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="flex justify-center">
+                      <button
+                        onClick={() => setContactSubmittedTicket(null)}
+                        className="neu-btn-dark py-3.5 px-8 text-sm"
+                      >
+                        Send Another Message
+                      </button>
+                    </div>
+                  </motion.div>
+                ) : (
+                  <form onSubmit={handleSubmitContact} className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-[#171717] mb-1.5">
+                          Your Full Name <span className="text-[#6A941C]">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="e.g. Rahul Sharma"
+                          value={contactForm.name}
+                          onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
+                          className="w-full px-4 py-3 rounded-2xl bg-[#F8F9FA] border border-[#E5E5E0] text-sm text-[#171717] focus:bg-white focus:border-[#9FD842] focus:outline-none focus:ring-2 focus:ring-[#9FD842]/30 transition-all placeholder:text-[#9CA3AF]"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-[#171717] mb-1.5">
+                          Email Address <span className="text-[#6A941C]">*</span>
+                        </label>
+                        <input
+                          type="email"
+                          required
+                          placeholder="e.g. rahul@example.com"
+                          value={contactForm.email}
+                          onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
+                          className="w-full px-4 py-3 rounded-2xl bg-[#F8F9FA] border border-[#E5E5E0] text-sm text-[#171717] focus:bg-white focus:border-[#9FD842] focus:outline-none focus:ring-2 focus:ring-[#9FD842]/30 transition-all placeholder:text-[#9CA3AF]"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-[#171717] mb-1.5">
+                          Phone Number
+                        </label>
+                        <input
+                          type="tel"
+                          placeholder="e.g. +91 98765 43210"
+                          value={contactForm.phone}
+                          onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })}
+                          className="w-full px-4 py-3 rounded-2xl bg-[#F8F9FA] border border-[#E5E5E0] text-sm text-[#171717] focus:bg-white focus:border-[#9FD842] focus:outline-none focus:ring-2 focus:ring-[#9FD842]/30 transition-all placeholder:text-[#9CA3AF]"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-[#171717] mb-1.5">
+                          Inquiry Topic <span className="text-[#6A941C]">*</span>
+                        </label>
+                        <select
+                          value={contactForm.category}
+                          onChange={(e) => setContactForm({ ...contactForm, category: e.target.value })}
+                          className="w-full px-4 py-3 rounded-2xl bg-[#F8F9FA] border border-[#E5E5E0] text-sm text-[#171717] focus:bg-white focus:border-[#9FD842] focus:outline-none focus:ring-2 focus:ring-[#9FD842]/30 transition-all font-medium cursor-pointer"
+                        >
+                          {CONTACT_TOPICS.map((topic) => (
+                            <option key={topic} value={topic}>
+                              {topic}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
                     <div>
-                      <label className="block text-xs font-bold text-[#15152A] mb-1.5">
-                        Your Full Name <span className="text-[#EC5AC8]">*</span>
+                      <label className="block text-xs font-bold text-[#171717] mb-1.5">
+                        Subject <span className="text-[#6A941C]">*</span>
                       </label>
                       <input
                         type="text"
                         required
-                        placeholder="e.g. Rahul Sharma"
-                        value={contactForm.name}
-                        onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
-                        className="w-full px-4 py-3 rounded-2xl bg-[#FAF9FF] border border-[#EAE6FD] text-sm text-[#15152A] focus:bg-white focus:border-[#6257FF] focus:outline-none focus:ring-2 focus:ring-[#6257FF]/10 transition-all placeholder:text-[#A0A0B2]"
+                        placeholder="Brief summary of your question"
+                        value={contactForm.subject}
+                        onChange={(e) => setContactForm({ ...contactForm, subject: e.target.value })}
+                        className="w-full px-4 py-3 rounded-2xl bg-[#F8F9FA] border border-[#E5E5E0] text-sm text-[#171717] focus:bg-white focus:border-[#9FD842] focus:outline-none focus:ring-2 focus:ring-[#9FD842]/30 transition-all placeholder:text-[#9CA3AF]"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-[#15152A] mb-1.5">
-                        Email Address <span className="text-[#EC5AC8]">*</span>
-                      </label>
-                      <input
-                        type="email"
-                        required
-                        placeholder="e.g. rahul@example.com"
-                        value={contactForm.email}
-                        onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
-                        className="w-full px-4 py-3 rounded-2xl bg-[#FAF9FF] border border-[#EAE6FD] text-sm text-[#15152A] focus:bg-white focus:border-[#6257FF] focus:outline-none focus:ring-2 focus:ring-[#6257FF]/10 transition-all placeholder:text-[#A0A0B2]"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-bold text-[#15152A] mb-1.5">
-                        Phone / WhatsApp (Optional)
-                      </label>
-                      <input
-                        type="tel"
-                        placeholder="+91 98765 43210"
-                        value={contactForm.phone}
-                        onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })}
-                        className="w-full px-4 py-3 rounded-2xl bg-[#FAF9FF] border border-[#EAE6FD] text-sm text-[#15152A] focus:bg-white focus:border-[#6257FF] focus:outline-none focus:ring-2 focus:ring-[#6257FF]/10 transition-all placeholder:text-[#A0A0B2]"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-[#15152A] mb-1.5">
-                        Topic / Category
-                      </label>
-                      <select
-                        value={contactForm.category}
-                        onChange={(e) => setContactForm({ ...contactForm, category: e.target.value })}
-                        className="w-full px-4 py-3 rounded-2xl bg-[#FAF9FF] border border-[#EAE6FD] text-sm text-[#15152A] focus:bg-white focus:border-[#6257FF] focus:outline-none focus:ring-2 focus:ring-[#6257FF]/10 transition-all cursor-pointer"
-                      >
-                        {CONTACT_TOPICS.map((topic) => (
-                          <option key={topic} value={topic}>
-                            {topic}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-[#15152A] mb-1.5">
-                      Subject Line (Optional)
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Brief summary of your question or issue"
-                      value={contactForm.subject}
-                      onChange={(e) => setContactForm({ ...contactForm, subject: e.target.value })}
-                      className="w-full px-4 py-3 rounded-2xl bg-[#FAF9FF] border border-[#EAE6FD] text-sm text-[#15152A] focus:bg-white focus:border-[#6257FF] focus:outline-none focus:ring-2 focus:ring-[#6257FF]/10 transition-all placeholder:text-[#A0A0B2]"
-                    />
-                  </div>
-
-                  <div>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <label className="text-xs font-bold text-[#15152A]">
-                        Your Message <span className="text-[#EC5AC8]">*</span>
-                      </label>
-                      <span className="text-[11px] text-[#8E8EA0]">{contactForm.message.length} / 1000</span>
-                    </div>
-                    <textarea
-                      required
-                      rows={4}
-                      maxLength={1000}
-                      placeholder="Please describe your question or issue with as much detail as possible..."
-                      value={contactForm.message}
-                      onChange={(e) => setContactForm({ ...contactForm, message: e.target.value })}
-                      className="w-full px-4 py-3 rounded-2xl bg-[#FAF9FF] border border-[#EAE6FD] text-sm text-[#15152A] focus:bg-white focus:border-[#6257FF] focus:outline-none focus:ring-2 focus:ring-[#6257FF]/10 transition-all placeholder:text-[#A0A0B2] resize-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-[#15152A] mb-2">
-                      Preferred Reply Channel
-                    </label>
-                    <div className="flex items-center gap-3">
-                      {['WhatsApp', 'Email', 'Phone Call'].map((mode) => (
-                        <label
-                          key={mode}
-                          className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl border text-xs font-bold cursor-pointer transition-all ${
-                            contactForm.preferredContact === mode
-                              ? 'bg-[#EDE9FE] text-[#6257FF] border-[#6257FF]'
-                              : 'bg-[#FAF9FF] text-[#626276] border-[#EAE6FD] hover:bg-white'
-                          }`}
-                        >
-                          <input
-                            type="radio"
-                            name="preferredContact"
-                            value={mode}
-                            checked={contactForm.preferredContact === mode}
-                            onChange={(e) => setContactForm({ ...contactForm, preferredContact: e.target.value })}
-                            className="hidden"
-                          />
-                          <span>{mode}</span>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="text-xs font-bold text-[#171717]">
+                          Your Message <span className="text-[#6A941C]">*</span>
                         </label>
-                      ))}
+                        <span className="text-[11px] text-[#737373]">{contactForm.message.length} / 1000</span>
+                      </div>
+                      <textarea
+                        required
+                        rows={4}
+                        maxLength={1000}
+                        placeholder="Please describe your question or issue with as much detail as possible..."
+                        value={contactForm.message}
+                        onChange={(e) => setContactForm({ ...contactForm, message: e.target.value })}
+                        className="w-full px-4 py-3 rounded-2xl bg-[#F8F9FA] border border-[#E5E5E0] text-sm text-[#171717] focus:bg-white focus:border-[#9FD842] focus:outline-none focus:ring-2 focus:ring-[#9FD842]/30 transition-all placeholder:text-[#9CA3AF] resize-none"
+                      />
                     </div>
-                  </div>
 
-                  <div className="pt-2 flex flex-col sm:flex-row items-center gap-3">
-                    <button
-                      type="submit"
-                      disabled={contactSubmitting}
-                      className="w-full sm:flex-1 py-3.5 px-6 rounded-full bg-[#171717] hover:bg-black text-white font-extrabold text-sm flex items-center justify-center gap-2 shadow-lg active:scale-98 transition-all disabled:opacity-50"
-                    >
-                      {contactSubmitting ? (
-                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      ) : (
-                        <>
-                          <Send className="w-4 h-4" />
-                          <span>Submit Support Message</span>
-                        </>
-                      )}
-                    </button>
+                    <div className="pt-2">
+                      <button
+                        type="submit"
+                        disabled={contactSubmitting}
+                        className="w-full py-4 px-6 rounded-full bg-[#171717] hover:bg-black text-white font-extrabold text-sm flex items-center justify-center gap-2 shadow-lg active:scale-98 transition-all disabled:opacity-50 cursor-pointer group"
+                      >
+                        {contactSubmitting ? (
+                          <div className="w-5 h-5 border-2 border-[#9FD842] border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <>
+                            <Send className="w-4 h-4 text-[#9FD842] group-hover:translate-x-0.5 transition-transform" />
+                            <span>Submit Support Message</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </div>
+            </div>
 
+            {/* Right Column: Direct Store & Contact Details + Full Height Embedded Map */}
+            <div className="lg:col-span-5 flex flex-col h-full">
+              <div className="bg-white rounded-3xl border border-[#E5E5E0] p-6 sm:p-7 shadow-[0_8px_24px_-4px_rgba(0,0,0,0.04)] flex flex-col flex-1 h-full">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-base font-extrabold text-[#171717]">Direct Contact Details</h3>
+                  <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full border ${storeStatus.badgeBg}`}>
+                    {storeStatus.text}
+                  </span>
+                </div>
+
+                <div className="space-y-3 mb-4">
+                  {/* Direct Email */}
+                  <div className="p-3.5 rounded-2xl bg-[#F8F9FA] border border-[#E5E5E0] flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-9 h-9 rounded-xl bg-[#9FD842]/15 text-[#3E5C0F] flex items-center justify-center shrink-0">
+                        <Mail className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-bold text-[#737373] uppercase tracking-wider">Email Us Directly</p>
+                        <a href={`mailto:${storeConfig.email || 'vinaypokharna36@gmail.com'}`} className="text-xs sm:text-sm font-extrabold text-[#171717] hover:text-[#5F8C1D] truncate block">
+                          {storeConfig.email || 'vinaypokharna36@gmail.com'}
+                        </a>
+                      </div>
+                    </div>
                     <button
                       type="button"
-                      onClick={handleLaunchWhatsAppContact}
-                      className="w-full sm:w-auto py-3.5 px-5 rounded-2xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-xs flex items-center justify-center gap-2 border border-emerald-200 transition-colors"
-                      title="Send as WhatsApp message instead"
+                      onClick={() => handleCopy(storeConfig.email || 'vinaypokharna36@gmail.com', 'Email Address')}
+                      className="p-2 rounded-xl bg-white hover:bg-[#9FD842]/15 text-[#3E5C0F] border border-[#E5E5E0] shrink-0 transition-colors"
+                      title="Copy Email"
                     >
-                      <MessageCircle className="w-4 h-4 text-emerald-600" />
-                      <span>Send on WhatsApp</span>
+                      {copiedField === 'Email Address' ? <Check className="w-4 h-4 text-[#3E5C0F]" /> : <Copy className="w-4 h-4" />}
                     </button>
                   </div>
-                </form>
-              )}
+
+                  {/* Direct Phone Call */}
+                  <div className="p-3.5 rounded-2xl bg-[#F8F9FA] border border-[#E5E5E0] flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-9 h-9 rounded-xl bg-[#9FD842]/15 text-[#3E5C0F] flex items-center justify-center shrink-0">
+                        <Phone className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-bold text-[#737373] uppercase tracking-wider">Store Call Desk</p>
+                        <a href={`tel:${storeConfig.whatsappNumber || '9879451341'}`} className="text-xs sm:text-sm font-extrabold text-[#171717] hover:text-[#5F8C1D] truncate block">
+                          {storeConfig.whatsappDisplay || '+91 98794 51341'}
+                        </a>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleCopy(storeConfig.whatsappDisplay || '+91 98794 51341', 'Phone Number')}
+                      className="p-2 rounded-xl bg-white hover:bg-[#9FD842]/15 text-[#3E5C0F] border border-[#E5E5E0] shrink-0 transition-colors"
+                      title="Copy Phone Number"
+                    >
+                      {copiedField === 'Phone Number' ? <Check className="w-4 h-4 text-[#3E5C0F]" /> : <Copy className="w-4 h-4" />}
+                    </button>
+                  </div>
+
+                  {/* Retail Store Address */}
+                  <div className="p-3.5 rounded-2xl bg-[#F8F9FA] border border-[#E5E5E0]">
+                    <div className="flex items-start gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-[#9FD842]/15 text-[#3E5C0F] flex items-center justify-center shrink-0 mt-0.5">
+                        <MapPin className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-bold text-[#737373] uppercase tracking-wider">Store Visit</p>
+                        <p className="text-xs sm:text-sm font-extrabold text-[#171717] mt-0.5 leading-snug">
+                          {storeConfig.address || 'Shop #14, Main Market Road, Bangalore'}
+                        </p>
+                        <p className="text-[11px] text-[#737373] mt-0.5 flex items-center gap-1.5">
+                          <Clock className="w-3 h-3 text-[#5F8C1D]" />
+                          <span>{storeConfig.hours || 'Mon - Sun: 9:30 AM – 9:30 PM'}</span>
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Interactive Embedded Google Map (Fills entire remaining length) */}
+                <div className="flex-1 min-h-[240px] w-full rounded-2xl overflow-hidden border border-[#E5E5E0] relative shadow-inner bg-[#F8F9FA] group">
+                  <iframe
+                    title="Store Location Google Map"
+                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3887.9854452140884!2d77.6384!3d12.9719!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3bae1681a8b9f36f%3A0x6b1f2b6e70a0e0a!2sIndiranagar%2C%20Bengaluru%2C%20Karnataka!5e0!3m2!1sen!2sin!4v1680000000000!5m2!1sen!2sin"
+                    className="w-full h-full min-h-[240px] border-0"
+                    loading="lazy"
+                    allowFullScreen
+                    referrerPolicy="no-referrer-when-downgrade"
+                  />
+                  <div className="absolute bottom-3 right-3 pointer-events-auto">
+                    <a
+                      href={STORE_LOCATION_DETAILS.googleMapsUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3.5 py-2 rounded-xl bg-white/95 backdrop-blur-md hover:bg-white text-[#171717] font-extrabold text-xs flex items-center gap-1.5 shadow-md border border-[#E5E5E0] transition-all hover:scale-105 active:scale-95"
+                    >
+                      <MapPin className="w-3.5 h-3.5 text-[#5F8C1D]" />
+                      <span>Open Full Map</span>
+                      <ExternalLink className="w-3 h-3 text-[#737373]" />
+                    </a>
+                  </div>
+                </div>
+              </div>
             </div>
 
           </motion.div>
@@ -681,15 +602,15 @@ export const ContactInquirePage = ({
           >
             
             {/* Purpose-Built Inquiry Form */}
-            <div className="bg-white rounded-3xl border border-[#EAE6FD] p-6 sm:p-8 shadow-[0_10px_35px_rgba(98,87,255,0.06)]">
+            <div className="bg-white rounded-3xl border border-[#E5E5E0] p-6 sm:p-8 shadow-[0_8px_24px_-4px_rgba(0,0,0,0.04)]">
               
               <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 rounded-2xl bg-[#FFF0FB] border border-[#FCD6F2] flex items-center justify-center text-[#EC5AC8]">
+                <div className="w-10 h-10 rounded-2xl bg-[#9FD842]/15 border border-[#9FD842]/30 flex items-center justify-center text-[#3E5C0F]">
                   <Sparkles className="w-5 h-5" />
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-[#15152A]">Product & Bulk Order Inquiry</h2>
-                  <p className="text-xs text-[#8E8EA0]">Custom quotes, corporate hampers, volume orders & special sourcing</p>
+                  <h2 className="text-xl font-bold text-[#171717]">Product & Bulk Order Inquiry</h2>
+                  <p className="text-xs text-[#737373]">Custom quotes, volume orders, wedding favors & specialized sourcing</p>
                 </div>
               </div>
 
@@ -697,39 +618,39 @@ export const ContactInquirePage = ({
                 <motion.div
                   initial={{ scale: 0.9, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
-                  className="p-8 rounded-3xl bg-gradient-to-br from-pink-50 via-white to-purple-50 border border-pink-200 text-center"
+                  className="p-8 rounded-3xl bg-[#9FD842]/10 border border-[#9FD842]/40 text-center"
                 >
-                  <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto mb-4 shadow-sm">
+                  <div className="w-16 h-16 rounded-full bg-[#9FD842]/20 text-[#3E5C0F] flex items-center justify-center mx-auto mb-4 shadow-xs">
                     <CheckCircle2 className="w-8 h-8" />
                   </div>
-                  <h3 className="text-xl font-extrabold text-[#15152A] mb-2">Inquiry Registered Successfully!</h3>
-                  <p className="text-sm text-[#626276] leading-relaxed max-w-md mx-auto mb-6">
+                  <h3 className="text-xl font-extrabold text-[#171717] mb-2">Inquiry Registered Successfully!</h3>
+                  <p className="text-sm text-[#525252] leading-relaxed max-w-md mx-auto mb-6">
                     Thank you, <strong>{inquirySubmittedTicket.customerName}</strong>. Our commercial desk is preparing a quotation for <strong>{inquirySubmittedTicket.productName || inquirySubmittedTicket.inquiryType}</strong>.
                   </p>
 
-                  <div className="inline-flex items-center gap-3 px-4 py-2.5 rounded-2xl bg-white border border-[#EAE6FD] shadow-xs mb-6">
-                    <span className="text-xs text-[#8E8EA0] font-semibold">Inquiry Ticket ID:</span>
-                    <span className="text-sm font-extrabold text-[#EC5AC8] font-mono">{inquirySubmittedTicket.id}</span>
+                  <div className="inline-flex items-center gap-3 px-4 py-2.5 rounded-2xl bg-white border border-[#9FD842]/40 shadow-xs mb-6">
+                    <span className="text-xs text-[#737373] font-semibold">Inquiry Ticket ID:</span>
+                    <span className="text-sm font-extrabold text-[#3E5C0F] font-mono">{inquirySubmittedTicket.id}</span>
                     <button
                       onClick={() => handleCopy(inquirySubmittedTicket.id, 'Inquiry ID')}
-                      className="p-1 text-[#8E8EA0] hover:text-[#EC5AC8]"
+                      className="p-1 text-[#737373] hover:text-[#3E5C0F]"
                       title="Copy Inquiry ID"
                     >
-                      {copiedField === 'Inquiry ID' ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                      {copiedField === 'Inquiry ID' ? <Check className="w-3.5 h-3.5 text-[#3E5C0F]" /> : <Copy className="w-3.5 h-3.5" />}
                     </button>
                   </div>
 
                   <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
                     <button
                       onClick={handleLaunchWhatsAppInquiry}
-                      className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all"
+                      className="neu-btn-accent py-3.5 px-6 text-sm flex items-center justify-center gap-2"
                     >
                       <MessageCircle className="w-4 h-4" />
                       <span>Chat on WhatsApp with Sales Desk</span>
                     </button>
                     <button
                       onClick={() => setInquirySubmittedTicket(null)}
-                      className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-white hover:bg-[#FAF9FF] text-[#15152A] border border-[#EAE6FD] font-bold text-xs transition-colors"
+                      className="neu-btn-dark py-3.5 px-6 text-sm"
                     >
                       Submit Another Inquiry
                     </button>
@@ -740,8 +661,8 @@ export const ContactInquirePage = ({
                   
                   {/* Step 1: Select Inquiry Nature */}
                   <div>
-                    <label className="block text-xs font-bold text-[#15152A] mb-2">
-                      1. Inquiry Purpose / Category <span className="text-[#EC5AC8]">*</span>
+                    <label className="block text-xs font-bold text-[#171717] mb-2">
+                      1. Inquiry Purpose / Category <span className="text-[#6A941C]">*</span>
                     </label>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                       {INQUIRY_TYPES.map((t) => {
@@ -753,14 +674,14 @@ export const ContactInquirePage = ({
                             onClick={() => setInquiryForm({ ...inquiryForm, inquiryType: t.label })}
                             className={`p-3 rounded-2xl border text-left transition-all ${
                               isSelected
-                                ? 'bg-gradient-to-r from-[#6257FF]/10 to-[#EC5AC8]/10 border-[#6257FF] ring-2 ring-[#6257FF]/20'
-                                : 'bg-[#FAF9FF] border-[#EAE6FD] hover:bg-white'
+                                ? 'bg-[#9FD842]/15 border-[#9FD842] ring-2 ring-[#9FD842]/30'
+                                : 'bg-[#F8F9FA] border-[#E5E5E0] hover:bg-white'
                             }`}
                           >
-                            <span className={`text-xs font-extrabold block ${isSelected ? 'text-[#6257FF]' : 'text-[#15152A]'}`}>
+                            <span className={`text-xs font-extrabold block ${isSelected ? 'text-[#2D4507]' : 'text-[#171717]'}`}>
                               {t.label}
                             </span>
-                            <span className="text-[11px] text-[#8E8EA0] block mt-0.5">
+                            <span className="text-[11px] text-[#737373] block mt-0.5">
                               {t.description}
                             </span>
                           </button>
@@ -772,13 +693,13 @@ export const ContactInquirePage = ({
                   {/* Step 2: Referenced Jewelry Piece */}
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <label className="text-xs font-bold text-[#15152A]">
-                        2. Referenced Jewelry Piece <span className="text-[#EC5AC8]">*</span>
+                      <label className="text-xs font-bold text-[#171717]">
+                        2. Referenced Jewelry Piece <span className="text-[#6A941C]">*</span>
                       </label>
                       <button
                         type="button"
                         onClick={() => setInquiryForm({ ...inquiryForm, isCustomProduct: !inquiryForm.isCustomProduct })}
-                        className="text-[11px] font-bold text-[#6257FF] hover:underline"
+                        className="text-[11px] font-bold text-[#5F8C1D] hover:underline"
                       >
                         {inquiryForm.isCustomProduct ? '← Select from Catalog' : '+ Request Unlisted / Custom Design'}
                       </button>
@@ -792,9 +713,9 @@ export const ContactInquirePage = ({
                           placeholder="Describe item (e.g., Custom Temple Bridal Choker Set in 100g weight)"
                           value={inquiryForm.customProductName}
                           onChange={(e) => setInquiryForm({ ...inquiryForm, customProductName: e.target.value })}
-                          className="w-full px-4 py-3 rounded-2xl bg-[#FAF9FF] border border-[#EAE6FD] text-sm text-[#15152A] focus:bg-white focus:border-[#6257FF] focus:outline-none focus:ring-2 focus:ring-[#6257FF]/10"
+                          className="w-full px-4 py-3 rounded-2xl bg-[#F8F9FA] border border-[#E5E5E0] text-sm text-[#171717] focus:bg-white focus:border-[#9FD842] focus:outline-none focus:ring-2 focus:ring-[#9FD842]/30"
                         />
-                        <p className="text-[11px] text-[#8E8EA0] mt-1">Our sourcing partners can fulfill specialized orders.</p>
+                        <p className="text-[11px] text-[#737373] mt-1">Our sourcing team can fulfill specialized requests.</p>
                       </div>
                     ) : (
                       <div className="space-y-2">
@@ -808,7 +729,7 @@ export const ContactInquirePage = ({
                               productName: p ? p.name : '',
                             });
                           }}
-                          className="w-full px-4 py-3 rounded-2xl bg-[#FAF9FF] border border-[#EAE6FD] text-sm text-[#15152A] focus:bg-white focus:border-[#6257FF] focus:outline-none focus:ring-2 focus:ring-[#6257FF]/10 cursor-pointer font-medium"
+                          className="w-full px-4 py-3 rounded-2xl bg-[#F8F9FA] border border-[#E5E5E0] text-sm text-[#171717] focus:bg-white focus:border-[#9FD842] focus:outline-none focus:ring-2 focus:ring-[#9FD842]/30 cursor-pointer font-medium"
                         >
                           {products.map((prod) => (
                             <option key={prod.id} value={prod.id}>
@@ -823,8 +744,8 @@ export const ContactInquirePage = ({
                   {/* Step 3: Quantity & Target Budget */}
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
-                      <label className="block text-xs font-bold text-[#15152A] mb-1.5">
-                        Estimated Quantity <span className="text-[#EC5AC8]">*</span>
+                      <label className="block text-xs font-bold text-[#171717] mb-1.5">
+                        Estimated Quantity <span className="text-[#6A941C]">*</span>
                       </label>
                       <input
                         type="text"
@@ -832,12 +753,12 @@ export const ContactInquirePage = ({
                         placeholder="e.g. 25 units"
                         value={inquiryForm.quantity}
                         onChange={(e) => setInquiryForm({ ...inquiryForm, quantity: e.target.value })}
-                        className="w-full px-4 py-3 rounded-2xl bg-[#FAF9FF] border border-[#EAE6FD] text-sm text-[#15152A] focus:bg-white focus:border-[#6257FF] focus:outline-none focus:ring-2 focus:ring-[#6257FF]/10 font-medium"
+                        className="w-full px-4 py-3 rounded-2xl bg-[#F8F9FA] border border-[#E5E5E0] text-sm text-[#171717] focus:bg-white focus:border-[#9FD842] focus:outline-none focus:ring-2 focus:ring-[#9FD842]/30 font-medium"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-[#15152A] mb-1.5">
+                      <label className="block text-xs font-bold text-[#171717] mb-1.5">
                         Target Budget (Optional)
                       </label>
                       <input
@@ -845,19 +766,19 @@ export const ContactInquirePage = ({
                         placeholder="e.g. ₹50,000"
                         value={inquiryForm.targetBudget}
                         onChange={(e) => setInquiryForm({ ...inquiryForm, targetBudget: e.target.value })}
-                        className="w-full px-4 py-3 rounded-2xl bg-[#FAF9FF] border border-[#EAE6FD] text-sm text-[#15152A] focus:bg-white focus:border-[#6257FF] focus:outline-none focus:ring-2 focus:ring-[#6257FF]/10"
+                        className="w-full px-4 py-3 rounded-2xl bg-[#F8F9FA] border border-[#E5E5E0] text-sm text-[#171717] focus:bg-white focus:border-[#9FD842] focus:outline-none focus:ring-2 focus:ring-[#9FD842]/30"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-[#15152A] mb-1.5">
+                      <label className="block text-xs font-bold text-[#171717] mb-1.5">
                         Needed By / Deadline
                       </label>
                       <input
                         type="date"
                         value={inquiryForm.requiredDate}
                         onChange={(e) => setInquiryForm({ ...inquiryForm, requiredDate: e.target.value })}
-                        className="w-full px-4 py-3 rounded-2xl bg-[#FAF9FF] border border-[#EAE6FD] text-sm text-[#15152A] focus:bg-white focus:border-[#6257FF] focus:outline-none focus:ring-2 focus:ring-[#6257FF]/10 cursor-pointer"
+                        className="w-full px-4 py-3 rounded-2xl bg-[#F8F9FA] border border-[#E5E5E0] text-sm text-[#171717] focus:bg-white focus:border-[#9FD842] focus:outline-none focus:ring-2 focus:ring-[#9FD842]/30 cursor-pointer"
                       />
                     </div>
                   </div>
@@ -865,8 +786,8 @@ export const ContactInquirePage = ({
                   {/* Step 4: Contact & Company Details */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-bold text-[#15152A] mb-1.5">
-                        Your Name <span className="text-[#EC5AC8]">*</span>
+                      <label className="block text-xs font-bold text-[#171717] mb-1.5">
+                        Your Name <span className="text-[#6A941C]">*</span>
                       </label>
                       <input
                         type="text"
@@ -874,12 +795,12 @@ export const ContactInquirePage = ({
                         placeholder="Contact Person Name"
                         value={inquiryForm.customerName}
                         onChange={(e) => setInquiryForm({ ...inquiryForm, customerName: e.target.value })}
-                        className="w-full px-4 py-3 rounded-2xl bg-[#FAF9FF] border border-[#EAE6FD] text-sm text-[#15152A] focus:bg-white focus:border-[#6257FF] focus:outline-none focus:ring-2 focus:ring-[#6257FF]/10"
+                        className="w-full px-4 py-3 rounded-2xl bg-[#F8F9FA] border border-[#E5E5E0] text-sm text-[#171717] focus:bg-white focus:border-[#9FD842] focus:outline-none focus:ring-2 focus:ring-[#9FD842]/30"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-[#15152A] mb-1.5">
+                      <label className="block text-xs font-bold text-[#171717] mb-1.5">
                         Company / Business Name (Optional)
                       </label>
                       <input
@@ -887,15 +808,15 @@ export const ContactInquirePage = ({
                         placeholder="Organization or Event Name"
                         value={inquiryForm.companyName}
                         onChange={(e) => setInquiryForm({ ...inquiryForm, companyName: e.target.value })}
-                        className="w-full px-4 py-3 rounded-2xl bg-[#FAF9FF] border border-[#EAE6FD] text-sm text-[#15152A] focus:bg-white focus:border-[#6257FF] focus:outline-none focus:ring-2 focus:ring-[#6257FF]/10"
+                        className="w-full px-4 py-3 rounded-2xl bg-[#F8F9FA] border border-[#E5E5E0] text-sm text-[#171717] focus:bg-white focus:border-[#9FD842] focus:outline-none focus:ring-2 focus:ring-[#9FD842]/30"
                       />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-bold text-[#15152A] mb-1.5">
-                        Email Address <span className="text-[#EC5AC8]">*</span>
+                      <label className="block text-xs font-bold text-[#171717] mb-1.5">
+                        Email Address <span className="text-[#6A941C]">*</span>
                       </label>
                       <input
                         type="email"
@@ -903,12 +824,12 @@ export const ContactInquirePage = ({
                         placeholder="official@company.com"
                         value={inquiryForm.customerEmail}
                         onChange={(e) => setInquiryForm({ ...inquiryForm, customerEmail: e.target.value })}
-                        className="w-full px-4 py-3 rounded-2xl bg-[#FAF9FF] border border-[#EAE6FD] text-sm text-[#15152A] focus:bg-white focus:border-[#6257FF] focus:outline-none focus:ring-2 focus:ring-[#6257FF]/10"
+                        className="w-full px-4 py-3 rounded-2xl bg-[#F8F9FA] border border-[#E5E5E0] text-sm text-[#171717] focus:bg-white focus:border-[#9FD842] focus:outline-none focus:ring-2 focus:ring-[#9FD842]/30"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-[#15152A] mb-1.5">
+                      <label className="block text-xs font-bold text-[#171717] mb-1.5">
                         Phone / WhatsApp Number
                       </label>
                       <input
@@ -916,21 +837,21 @@ export const ContactInquirePage = ({
                         placeholder="+91 98765 43210"
                         value={inquiryForm.customerPhone}
                         onChange={(e) => setInquiryForm({ ...inquiryForm, customerPhone: e.target.value })}
-                        className="w-full px-4 py-3 rounded-2xl bg-[#FAF9FF] border border-[#EAE6FD] text-sm text-[#15152A] focus:bg-white focus:border-[#6257FF] focus:outline-none focus:ring-2 focus:ring-[#6257FF]/10"
+                        className="w-full px-4 py-3 rounded-2xl bg-[#F8F9FA] border border-[#E5E5E0] text-sm text-[#171717] focus:bg-white focus:border-[#9FD842] focus:outline-none focus:ring-2 focus:ring-[#9FD842]/30"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-[#15152A] mb-1.5">
+                    <label className="block text-xs font-bold text-[#171717] mb-1.5">
                       Specific Requirements / Customization Notes
                     </label>
                     <textarea
                       rows={3}
-                      placeholder="e.g. Need logo printing on packaging, delivery to 2 locations in Bangalore, specific color variants..."
+                      placeholder="e.g. Need customized box packaging, delivery to Bangalore, specific polish finishes..."
                       value={inquiryForm.notes}
                       onChange={(e) => setInquiryForm({ ...inquiryForm, notes: e.target.value })}
-                      className="w-full px-4 py-3 rounded-2xl bg-[#FAF9FF] border border-[#EAE6FD] text-sm text-[#15152A] focus:bg-white focus:border-[#6257FF] focus:outline-none focus:ring-2 focus:ring-[#6257FF]/10 resize-none placeholder:text-[#A0A0B2]"
+                      className="w-full px-4 py-3 rounded-2xl bg-[#F8F9FA] border border-[#E5E5E0] text-sm text-[#171717] focus:bg-white focus:border-[#9FD842] focus:outline-none focus:ring-2 focus:ring-[#9FD842]/30 resize-none placeholder:text-[#9CA3AF]"
                     />
                   </div>
 
@@ -938,13 +859,13 @@ export const ContactInquirePage = ({
                     <button
                       type="submit"
                       disabled={inquirySubmitting}
-                      className="w-full sm:flex-1 py-3.5 px-6 rounded-2xl bg-gradient-to-r from-[#6257FF] to-[#EC5AC8] text-white font-bold text-sm flex items-center justify-center gap-2 shadow-btn hover:scale-[1.01] active:scale-98 transition-all disabled:opacity-50"
+                      className="neu-btn-accent w-full sm:flex-1 py-4 px-6 text-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                     >
                       {inquirySubmitting ? (
-                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        <div className="w-5 h-5 border-2 border-[#171717] border-t-transparent rounded-full animate-spin" />
                       ) : (
                         <>
-                          <Sparkles className="w-4 h-4" />
+                          <Sparkles className="w-4 h-4 text-[#171717]" />
                           <span>Request Official Quotation</span>
                         </>
                       )}
@@ -953,11 +874,11 @@ export const ContactInquirePage = ({
                     <button
                       type="button"
                       onClick={handleLaunchWhatsAppInquiry}
-                      className="w-full sm:w-auto py-3.5 px-5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all active:scale-95"
+                      className="neu-btn-dark w-full sm:w-auto py-4 px-6 text-xs flex items-center justify-center gap-2"
                       title="Send this inquiry directly via WhatsApp"
                     >
-                      <MessageCircle className="w-4 h-4" />
-                      <span>⚡ Instant WhatsApp Inquire</span>
+                      <MessageCircle className="w-4 h-4 text-[#9FD842]" />
+                      <span>Instant WhatsApp Inquire</span>
                     </button>
                   </div>
                 </form>
@@ -971,29 +892,29 @@ export const ContactInquirePage = ({
       </AnimatePresence>
 
       {/* ── Interactive FAQ Accordion Section ── */}
-      <section className="bg-white rounded-3xl border border-[#EAE6FD] p-6 sm:p-10 shadow-[0_10px_35px_rgba(98,87,255,0.04)] mb-12">
+      <section className="bg-white rounded-3xl border border-[#E5E5E0] p-6 sm:p-10 shadow-[0_8px_24px_-4px_rgba(0,0,0,0.04)] mb-12">
         <div className="text-center max-w-2xl mx-auto mb-8">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#F5F3FF] text-[#6257FF] text-xs font-bold mb-3">
-            <HelpCircle className="w-3.5 h-3.5" />
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#9FD842]/15 text-[#3E5C0F] border border-[#9FD842]/30 text-xs font-extrabold mb-3">
+            <HelpCircle className="w-3.5 h-3.5 text-[#5F8C1D]" />
             <span>Got Questions? We Have Answers</span>
           </div>
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-[#15152A] tracking-tight mb-2">
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-[#171717] tracking-tight mb-2">
             Frequently Asked Questions
           </h2>
-          <p className="text-xs sm:text-sm text-[#626276]">
-            Find quick answers regarding our products, WhatsApp ordering, bulk inquiry discounts, and delivery.
+          <p className="text-xs sm:text-sm text-[#525252]">
+            Find quick answers regarding our jewelry products, WhatsApp ordering, custom sourcing, and shipping.
           </p>
 
           {/* FAQ Search Bar */}
           <div className="mt-5 relative max-w-md mx-auto">
             <input
               type="text"
-              placeholder="Search questions (e.g. returns, delivery, bulk)..."
+              placeholder="Search questions (e.g. shipping, jewelry care, returns)..."
               value={faqSearch}
               onChange={(e) => setFaqSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-[#FAF9FF] border border-[#EAE6FD] text-xs sm:text-sm focus:bg-white focus:border-[#6257FF] focus:outline-none focus:ring-2 focus:ring-[#6257FF]/10 transition-all placeholder:text-[#A0A0B2]"
+              className="w-full pl-10 pr-4 py-2.5 rounded-full bg-[#F8F9FA] border border-[#E5E5E0] text-xs sm:text-sm focus:bg-white focus:border-[#9FD842] focus:outline-none focus:ring-2 focus:ring-[#9FD842]/30 transition-all placeholder:text-[#9CA3AF]"
             />
-            <HelpCircle className="w-4 h-4 text-[#8E8EA0] absolute left-3.5 top-3" />
+            <HelpCircle className="w-4 h-4 text-[#9CA3AF] absolute left-3.5 top-3" />
           </div>
 
           {/* FAQ Category Pills */}
@@ -1002,10 +923,10 @@ export const ContactInquirePage = ({
               <button
                 key={cat}
                 onClick={() => setFaqCategory(cat)}
-                className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${
+                className={`px-3.5 py-1.5 rounded-full text-xs font-extrabold transition-all ${
                   faqCategory === cat
-                    ? 'bg-[#6257FF] text-white shadow-xs'
-                    : 'bg-[#FAF9FF] text-[#626276] hover:bg-[#F5F3FF] border border-[#EAE6FD]'
+                    ? 'active-nav-pill'
+                    : 'bg-[#F8F9FA] text-[#525252] hover:bg-[#9FD842]/15 border border-[#E5E5E0]'
                 }`}
               >
                 {cat}
@@ -1024,19 +945,19 @@ export const ContactInquirePage = ({
                   key={idx}
                   className={`rounded-2xl border transition-all overflow-hidden ${
                     isOpen
-                      ? 'bg-gradient-to-r from-[#FAF9FF] to-white border-[#6257FF]/30 shadow-xs'
-                      : 'bg-[#FAF9FF]/60 border-[#EAE6FD] hover:bg-[#FAF9FF]'
+                      ? 'bg-[#9FD842]/10 border-[#9FD842]/50 shadow-xs'
+                      : 'bg-[#F8F9FA]/70 border-[#E5E5E0] hover:bg-[#F8F9FA]'
                   }`}
                 >
                   <button
                     onClick={() => setOpenFaqIndex(isOpen ? -1 : idx)}
                     className="w-full p-4 sm:p-5 flex items-center justify-between text-left gap-4"
                   >
-                    <span className="text-xs sm:text-sm font-extrabold text-[#15152A]">
+                    <span className="text-xs sm:text-sm font-extrabold text-[#171717]">
                       {faq.question}
                     </span>
                     <ChevronDown
-                      className={`w-4 h-4 text-[#6257FF] transition-transform duration-300 flex-shrink-0 ${
+                      className={`w-4 h-4 text-[#5F8C1D] transition-transform duration-300 flex-shrink-0 ${
                         isOpen ? 'rotate-180' : ''
                       }`}
                     />
@@ -1050,7 +971,7 @@ export const ContactInquirePage = ({
                         exit={{ height: 0, opacity: 0 }}
                         transition={{ duration: 0.25 }}
                       >
-                        <div className="px-4 sm:px-5 pb-4 sm:pb-5 pt-0 text-xs sm:text-sm text-[#626276] leading-relaxed border-t border-[#EAE6FD]/60 mt-1">
+                        <div className="px-4 sm:px-5 pb-4 sm:pb-5 pt-0 text-xs sm:text-sm text-[#525252] leading-relaxed border-t border-[#9FD842]/30 mt-1">
                           {faq.answer}
                         </div>
                       </motion.div>
@@ -1060,7 +981,7 @@ export const ContactInquirePage = ({
               );
             })
           ) : (
-            <div className="text-center py-8 text-xs text-[#8E8EA0]">
+            <div className="text-center py-8 text-xs text-[#9CA3AF]">
               No FAQs matched your search term "{faqSearch}". You can ask us directly using the contact form above!
             </div>
           )}

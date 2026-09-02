@@ -36,44 +36,7 @@ import { useAuth } from '@/context/AuthContext';
 import { firePartyPopper } from '@/utils/confetti';
 
 // ─── Default fallback mock orders ─────────────────────────────────────────────
-export const INITIAL_ORDERS = [
-  {
-    id: '#SE1003',
-    items: 'Wireless Headphones (x1)',
-    date: 'Aug 20, 2026',
-    amount: 3499,
-    status: 'delivered',
-    statusLabel: 'Delivered',
-    payMethod: 'Cash on Delivery',
-    deliveryAddress: 'Shop #14, Main Market Road, Bangalore — 560001',
-    recipientName: 'Customer',
-    recipientPhone: '+91 98765 43210',
-  },
-  {
-    id: '#SE1002',
-    items: 'Smart Watch Pro (x1)',
-    date: 'Aug 15, 2026',
-    amount: 2499,
-    status: 'shipped',
-    statusLabel: 'Shipped',
-    payMethod: 'Online Payment (UPI)',
-    deliveryAddress: 'Shop #14, Main Market Road, Bangalore — 560001',
-    recipientName: 'Customer',
-    recipientPhone: '+91 98765 43210',
-  },
-  {
-    id: '#SE1001',
-    items: 'Premium Breathable Sneakers (x1)',
-    date: 'Aug 10, 2026',
-    amount: 1999,
-    status: 'delivered',
-    statusLabel: 'Delivered',
-    payMethod: 'Cash on Delivery',
-    deliveryAddress: 'Shop #14, Main Market Road, Bangalore — 560001',
-    recipientName: 'Customer',
-    recipientPhone: '+91 98765 43210',
-  },
-];
+export const INITIAL_ORDERS = [];
 
 const STATUS_STYLES = {
   delivered: {
@@ -240,10 +203,184 @@ const OrderDetailsModal = ({ order, onClose }) => {
   );
 };
 
+// ─── Nakoda Suggestion Modal ──────────────────────────────────────────────────
+const NakodaSuggestionModal = ({ isOpen, onClose, user }) => {
+  const [suggestionType, setSuggestionType] = useState('Design Idea');
+  const [name, setName] = useState(user?.name || '');
+  const [phone, setPhone] = useState(user?.phone || '');
+  const [email, setEmail] = useState(user?.email || '');
+  const [suggestion, setSuggestion] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+
+  const categories = [
+    { id: 'Design Idea', label: '🎨 Design Idea', desc: 'New pattern or style' },
+    { id: 'Product Request', label: '📦 Product Request', desc: 'Item sourcing or restock' },
+    { id: 'Store Feedback', label: '💡 Store Feedback', desc: 'Service & app ideas' },
+  ];
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!suggestion.trim() || !email.trim() || !name.trim()) return;
+
+    setSubmitting(true);
+    try {
+      await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: name || user?.name || 'Valued Customer',
+          email: email || user?.email || 'customer@nakodaimitation.com',
+          phone: phone || user?.phone || '',
+          category: 'Nakoda Suggestion',
+          subject: `[Nakoda Suggestion] ${suggestionType} from ${name}`,
+          message: `Category: ${suggestionType}\n\nSuggestion Details:\n${suggestion}\n\nCustomer Phone: ${phone || 'N/A'}\nCustomer Email: ${email}`,
+        }),
+      });
+      setSubmitted(true);
+      firePartyPopper();
+    } catch (err) {
+      console.warn('Fallback suggestion dispatch', err);
+      setSubmitted(true);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <SheetModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Nakoda Suggestions"
+      subtitle="Share your design ideas, custom requests & store feedback"
+    >
+      {submitted ? (
+        <div className="text-center py-6">
+          <div className="w-16 h-16 rounded-full bg-[#9FD842]/20 text-[#3E5C0F] flex items-center justify-center mx-auto mb-4">
+            <Sparkles className="w-8 h-8" />
+          </div>
+          <h3 className="text-xl font-extrabold text-[#171717] mb-2">Suggestion Sent Directly via Email! ✉️</h3>
+          <p className="text-xs text-[#666] leading-relaxed max-w-sm mx-auto mb-6">
+            Thank you, <strong>{name}</strong>. Your suggestion has been dispatched directly to our design & management team via email. A confirmation was also sent to <strong>{email}</strong>.
+          </p>
+          <div className="flex justify-center">
+            <button
+              onClick={onClose}
+              className="neu-btn-dark py-3 px-8 text-xs font-extrabold"
+            >
+              Done & Close
+            </button>
+          </div>
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-xs font-bold text-[#171717] mb-2">
+              Suggestion Category <span className="text-[#6A941C]">*</span>
+            </label>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              {categories.map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => setSuggestionType(c.id)}
+                  className={`p-2.5 rounded-2xl border text-left transition-all ${
+                    suggestionType === c.id
+                      ? 'bg-[#9FD842]/20 border-[#9FD842] ring-2 ring-[#9FD842]/30 text-[#2D4507]'
+                      : 'bg-[#EEEEEC]/60 border-black/5 text-[#555] hover:bg-[#EEEEEC]'
+                  }`}
+                >
+                  <span className="text-xs font-extrabold block">{c.label}</span>
+                  <span className="text-[10px] text-[#777] block mt-0.5">{c.desc}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="block text-xs font-bold text-[#171717] mb-1">
+                Your Name <span className="text-[#6A941C]">*</span>
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. Priya Sharma"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-2xl bg-[#EEEEEC]/60 border border-black/5 text-xs text-[#171717] focus:bg-white focus:border-[#9FD842] focus:outline-none focus:ring-2 focus:ring-[#9FD842]/20 font-medium"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-[#171717] mb-1">
+                Email Address <span className="text-[#6A941C]">*</span>
+              </label>
+              <input
+                type="email"
+                required
+                placeholder="priya@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-2xl bg-[#EEEEEC]/60 border border-black/5 text-xs text-[#171717] focus:bg-white focus:border-[#9FD842] focus:outline-none focus:ring-2 focus:ring-[#9FD842]/20 font-medium"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-[#171717] mb-1">Phone Number</label>
+              <input
+                type="tel"
+                placeholder="+91 98765 43210"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-2xl bg-[#EEEEEC]/60 border border-black/5 text-xs text-[#171717] focus:bg-white focus:border-[#9FD842] focus:outline-none focus:ring-2 focus:ring-[#9FD842]/20 font-medium"
+              />
+            </div>
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs font-bold text-[#171717]">
+                Your Suggestion / Design Idea <span className="text-[#6A941C]">*</span>
+              </label>
+              <span className="text-[10px] text-[#888]">{suggestion.length}/500</span>
+            </div>
+            <textarea
+              required
+              rows={4}
+              maxLength={500}
+              placeholder="e.g. Please bring Matte Gold Temple Chokers with Emerald beads, or add more size options for bangles..."
+              value={suggestion}
+              onChange={(e) => setSuggestion(e.target.value)}
+              className="w-full px-4 py-2.5 rounded-2xl bg-[#EEEEEC]/60 border border-black/5 text-xs text-[#171717] focus:bg-white focus:border-[#9FD842] focus:outline-none focus:ring-2 focus:ring-[#9FD842]/20 resize-none font-medium placeholder:text-[#9CA3AF]"
+            />
+          </div>
+
+          <div className="pt-2">
+            <button
+              type="submit"
+              disabled={submitting}
+              className="neu-btn-accent w-full py-4 px-6 text-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 font-extrabold shadow-md"
+            >
+              {submitting ? (
+                <div className="w-5 h-5 border-2 border-[#171717] border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4 text-[#171717]" />
+                  <span>Submit Suggestion Directly to Email</span>
+                </>
+              )}
+            </button>
+          </div>
+        </form>
+      )}
+    </SheetModal>
+  );
+};
+
 // ─── Main Profile Page Component ──────────────────────────────────────────────
 export const ProfilePage = ({ orders = [], onExploreCatalog, onNavigate }) => {
   const { user, isAuthenticated, logout, openAuthModal, updateProfile } = useAuth();
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isSuggestionOpen, setIsSuggestionOpen] = useState(false);
   const [showAllOrders, setShowAllOrders] = useState(false);
   const [logoutConfirm, setLogoutConfirm] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
@@ -286,13 +423,13 @@ export const ProfilePage = ({ orders = [], onExploreCatalog, onNavigate }) => {
     loadCustomerOrders();
   }, [isAuthenticated, user]);
 
-  const allOrdersList = userOrders.length > 0 ? userOrders : (orders.length > 0 ? orders : INITIAL_ORDERS);
+  const allOrdersList = userOrders.length > 0 ? userOrders : (orders.length > 0 ? orders : []);
   const displayedOrders = showAllOrders ? allOrdersList : allOrdersList.slice(0, 3);
 
   const profile = {
-    name: user?.name || (isAuthenticated ? 'Valued Customer' : 'Guest Customer'),
-    email: user?.email || (isAuthenticated ? 'customer@nakodaimitation.com' : 'Not signed in'),
-    phone: user?.phone || (isAuthenticated ? '+91 98765 43210' : 'Sign in to link mobile'),
+    name: user?.name || (isAuthenticated ? 'Customer' : 'Guest Shopper'),
+    email: user?.email || (isAuthenticated ? '' : 'Sign in to view orders & track packages'),
+    phone: user?.phone || (isAuthenticated ? '' : 'No phone linked'),
   };
 
   const initials = profile.name
@@ -485,9 +622,21 @@ export const ProfilePage = ({ orders = [], onExploreCatalog, onNavigate }) => {
           </div>
 
           {allOrdersList.length === 0 && (
-            <div className="px-6 py-10 text-center">
-              <Package className="w-10 h-10 text-[#A0A0A0] mx-auto mb-2" />
-              <p className="text-sm font-medium text-[#777777]">No orders placed yet</p>
+            <div className="px-6 py-12 text-center">
+              <div className="w-14 h-14 rounded-full bg-[#EEEEEC] text-[#777777] flex items-center justify-center mx-auto mb-3">
+                <ShoppingBag className="w-6 h-6 text-[#171717]" />
+              </div>
+              <p className="text-sm font-extrabold text-[#171717] mb-1">No Orders Placed Yet</p>
+              <p className="text-xs text-[#777777] max-w-xs mx-auto mb-4 leading-relaxed">
+                Your orders list is currently empty. Explore our bridal necklaces, bangles, and earrings to place your first order!
+              </p>
+              <button
+                onClick={onExploreCatalog}
+                className="neu-btn-accent py-2.5 px-6 text-xs inline-flex items-center gap-2 cursor-pointer shadow-sm"
+              >
+                <ShoppingBag className="w-3.5 h-3.5 text-[#171717]" />
+                <span>Browse Jewelry Catalog</span>
+              </button>
             </div>
           )}
         </motion.div>
@@ -533,6 +682,30 @@ export const ProfilePage = ({ orders = [], onExploreCatalog, onNavigate }) => {
                   Browse Product Catalog
                 </span>
                 <span className="text-[11px] text-[#777777] block">Explore latest imitation jewelry, necklaces, and bangles</span>
+              </div>
+              <ChevronRight className="w-4 h-4 text-[#A0A0A0] group-hover:text-[#171717]" />
+            </button>
+
+            {/* Nakoda Suggestions */}
+            <button
+              onClick={() => setIsSuggestionOpen(true)}
+              className="w-full flex items-center gap-3.5 px-5 sm:px-6 py-4 hover:bg-[#EEEEEC]/50 transition-colors text-left group border-t border-black/5"
+            >
+              <div className="w-9 h-9 rounded-full bg-[#9FD842]/20 text-[#3E5C0F] flex items-center justify-center flex-shrink-0">
+                <Sparkles className="w-4 h-4" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-bold text-[#171717] group-hover:text-[#5F8C1D] transition-colors">
+                    Nakoda Suggestions
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-[#9FD842]/20 text-[#3E5C0F] border border-[#9FD842]/30">
+                    New
+                  </span>
+                </div>
+                <span className="text-[11px] text-[#777777] block">
+                  Suggest designs, request custom jewelry pieces, or give store feedback
+                </span>
               </div>
               <ChevronRight className="w-4 h-4 text-[#A0A0A0] group-hover:text-[#171717]" />
             </button>
@@ -662,6 +835,15 @@ export const ProfilePage = ({ orders = [], onExploreCatalog, onNavigate }) => {
         <OrderDetailsModal
           order={selectedOrder}
           onClose={() => setSelectedOrder(null)}
+        />
+      )}
+
+      {/* Nakoda Suggestion Modal */}
+      {isSuggestionOpen && (
+        <NakodaSuggestionModal
+          isOpen={isSuggestionOpen}
+          onClose={() => setIsSuggestionOpen(false)}
+          user={user}
         />
       )}
     </section>

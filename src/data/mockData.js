@@ -528,22 +528,22 @@ export const POPULAR_PRODUCTS = CATALOG_PRODUCTS.slice(0, 4);
 
 export const FOOTER_LINKS = {
   shop: [
-    { label: 'All Products', href: '#' },
-    { label: 'New Arrivals', href: '#' },
-    { label: 'Best Sellers', href: '#' },
-    { label: 'Special Offers', href: '#' },
+    { label: 'All Products', href: '/?tab=catalog' },
+    { label: 'New Arrivals', href: '/?tab=catalog&filter=new' },
+    { label: 'Best Sellers', href: '/?tab=catalog&filter=bestseller' },
+    { label: 'Special Offers & Deals', href: '/?tab=offers' },
   ],
   support: [
-    { label: 'Contact Us', href: '#' },
-    { label: 'Product Inquiry', href: '#' },
-    { label: 'Order on WhatsApp', href: '#' },
-    { label: 'Help & FAQs', href: '#' },
+    { label: 'Contact Us', href: '/contact' },
+    { label: 'Product & Bulk Inquiry', href: '/contact?tab=inquire' },
+    { label: 'Order on WhatsApp', href: 'https://wa.me/9879451341', isExternal: true },
+    { label: 'Help & FAQs', href: '/contact' },
   ],
   company: [
-    { label: 'Store Location & Visit', href: '#' },
-    { label: 'Bulk & Corporate Orders', href: '#' },
-    { label: 'Privacy Policy', href: '#' },
-    { label: 'Terms of Service', href: '#' },
+    { label: 'Store Location & Map', href: '/contact' },
+    { label: 'My Account & Orders', href: '/?tab=profile' },
+    { label: 'Shopping Cart', href: '/?tab=cart' },
+    { label: 'Bulk & Corporate Orders', href: '/contact?tab=inquire' },
   ],
 };
 

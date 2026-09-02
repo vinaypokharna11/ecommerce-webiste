@@ -44,30 +44,35 @@ export default function ContactClient() {
     router.push(id === 'home' ? '/' : `/?tab=${id}`);
   };
 
-  const handleFooterLinkClick = (label) => {
+  const handleFooterLinkClick = (label, href) => {
     const lower = label.toLowerCase();
+    if (href && href.startsWith('http')) {
+      window.open(href, '_blank');
+      return;
+    }
     if (lower.includes('inquire') || lower.includes('bulk')) {
       router.push('/contact?tab=inquire');
-    } else if (lower.includes('catalog') || lower.includes('product') || lower.includes('shop') || lower.includes('men') || lower.includes('women')) {
+    } else if (lower.includes('contact') || lower.includes('faq')) {
+      router.push('/contact');
+    } else if (lower.includes('catalog') || lower.includes('product') || lower.includes('shop') || lower.includes('new') || lower.includes('best')) {
       router.push('/?tab=catalog');
     } else if (lower.includes('offer') || lower.includes('deal')) {
       router.push('/?tab=offers');
     } else if (lower.includes('cart') || lower.includes('bag')) {
       router.push('/?tab=cart');
-    } else if (lower.includes('profile') || lower.includes('account')) {
+    } else if (lower.includes('admin')) {
+      router.push('/admin/login');
+    } else if (lower.includes('profile') || lower.includes('account') || lower.includes('order')) {
       router.push('/?tab=profile');
     } else if (lower.includes('whatsapp')) {
       window.open(createHelpWhatsAppUrl(storeConfig.whatsappNumber), '_blank');
     } else {
-      router.push('/');
+      router.push(href || '/');
     }
   };
 
   return (
-    <div className="relative min-h-screen bg-[#FAF9FF] text-[#15152A] flex flex-col font-sans overflow-x-hidden selection:bg-[#6257FF] selection:text-white">
-      {/* Ambient background glows */}
-      <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[600px] ambient-glow-lavender rounded-full blur-[140px] pointer-events-none -z-20 opacity-70" />
-      <div className="fixed top-[400px] -right-40 w-[600px] h-[600px] ambient-glow-pink rounded-full blur-[140px] pointer-events-none -z-20 opacity-50" />
+    <div className="relative min-h-screen bg-[#F5F5F3] text-[#171717] flex flex-col font-sans overflow-x-hidden selection:bg-[#9FD842] selection:text-[#171717]">
 
       <Navbar activeTab="contact" onNavClick={handleNavClick} />
 
