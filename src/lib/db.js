@@ -716,7 +716,7 @@ export async function getProducts(filters = {}) {
       const regex = new RegExp(filters.search, 'i');
       query.$or = [{ name: regex }, { categoryName: regex }, { tags: regex }, { id: regex }];
     }
-    const products = await Product.find(query).lean();
+    const products = await Product.find(query).sort({ createdAt: -1 }).lean();
     return products.map(({ _id, __v, ...p }) => p);
   }
 

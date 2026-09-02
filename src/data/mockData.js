@@ -1,20 +1,20 @@
-import heroShoppingBag from '../assets/images/hero_shopping_bag.jpg';
-import pinkHeadphones from '../assets/images/pink_headphones.jpg';
-import heroSmartwatch from '../assets/images/hero_smartwatch.jpg';
-import heroPlant from '../assets/images/hero_plant.jpg';
-import prodHeadphones from '../assets/images/prod_headphones.jpg';
-import prodSmartwatch from '../assets/images/prod_smartwatch.jpg';
-import prodSneakers from '../assets/images/prod_sneakers.jpg';
-import prodBackpack from '../assets/images/prod_backpack.jpg';
-import promoGiftbox from '../assets/images/promo_giftbox.jpg';
-import catLinenShirt from '../assets/images/cat_linen_shirt.jpg';
-import catSunglasses from '../assets/images/cat_sunglasses.jpg';
-import catSpeaker from '../assets/images/cat_speaker.jpg';
-import prodCottonTee from '../assets/images/prod_cotton_tee.jpg';
-import prodDenimJacket from '../assets/images/prod_denim_jacket.jpg';
-import prodLeatherLoafers from '../assets/images/prod_leather_loafers.jpg';
-import prodLeatherWallet from '../assets/images/prod_leather_wallet.jpg';
-import prodAromaDiffuser from '../assets/images/prod_aroma_diffuser.jpg';
+const heroShoppingBag = '/assets/images/hero_shopping_bag.jpg';
+const pinkHeadphones = '/assets/images/pink_headphones.jpg';
+const heroSmartwatch = '/assets/images/hero_smartwatch.jpg';
+const heroPlant = '/assets/images/hero_plant.jpg';
+const prodHeadphones = '/assets/images/prod_headphones.jpg';
+const prodSmartwatch = '/assets/images/prod_smartwatch.jpg';
+const prodSneakers = '/assets/images/prod_sneakers.jpg';
+const prodBackpack = '/assets/images/prod_backpack.jpg';
+const promoGiftbox = '/assets/images/promo_giftbox.jpg';
+const catLinenShirt = '/assets/images/cat_linen_shirt.jpg';
+const catSunglasses = '/assets/images/cat_sunglasses.jpg';
+const catSpeaker = '/assets/images/cat_speaker.jpg';
+const prodCottonTee = '/assets/images/prod_cotton_tee.jpg';
+const prodDenimJacket = '/assets/images/prod_denim_jacket.jpg';
+const prodLeatherLoafers = '/assets/images/prod_leather_loafers.jpg';
+const prodLeatherWallet = '/assets/images/prod_leather_wallet.jpg';
+const prodAromaDiffuser = '/assets/images/prod_aroma_diffuser.jpg';
 
 export const STORE_CONFIG = {
   name: 'Nakoda Imitation',

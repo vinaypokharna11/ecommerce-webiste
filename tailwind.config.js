@@ -78,7 +78,7 @@ export default {
   daisyui: {
     themes: [
       {
-        shopeaseTheme: {
+        nakodaTheme: {
           "primary": "#9FD842",
           "primary-content": "#171717",
           "secondary": "#171717",

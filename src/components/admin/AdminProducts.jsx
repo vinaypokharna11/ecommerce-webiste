@@ -504,11 +504,11 @@ export const AdminProducts = ({ onPreviewStore }) => {
                 className="group relative bg-white rounded-[28px] border border-black/10 p-4 shadow-[0_4px_20px_rgba(0,0,0,0.02)] hover:shadow-[0_12px_30px_rgba(0,0,0,0.06)] transition-all flex flex-col justify-between"
               >
                 {/* Image Container */}
-                <div className="relative aspect-square w-full rounded-2xl bg-[#EEEEEC] p-4 flex items-center justify-center mb-3 overflow-hidden">
+                <div className="relative aspect-square w-full rounded-2xl bg-transparent mb-3 overflow-hidden flex items-center justify-center">
                   <img
                     src={product.image}
                     alt={product.name}
-                    className="max-h-full max-w-full object-contain drop-shadow-sm group-hover:scale-105 transition-transform"
+                    className="w-full h-full object-cover rounded-2xl group-hover:scale-105 transition-transform"
                   />
                   
                   {/* Badges */}

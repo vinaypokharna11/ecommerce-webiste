@@ -44,7 +44,9 @@ export const AdminInquiries = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('shopease_admin_token') : null;
+      const token = typeof window !== 'undefined' 
+        ? (localStorage.getItem('nakoda_admin_token') || localStorage.getItem('shopease_admin_token')) 
+        : null;
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
       const [inqRes, contRes] = await Promise.all([
@@ -145,7 +147,7 @@ export const AdminInquiries = () => {
         prev.map((i) => (i.id === id ? { ...i, status: newStatus } : i))
       );
       try {
-        const token = localStorage.getItem('shopease_admin_token');
+        const token = localStorage.getItem('nakoda_admin_token') || localStorage.getItem('shopease_admin_token');
         await fetch('/api/inquiries', {
           method: 'PUT',
           headers: {
@@ -171,7 +173,7 @@ export const AdminInquiries = () => {
       if (itemType === 'inquiry') {
         setInquiries((prev) => prev.filter((i) => i.id !== id));
         try {
-          const token = localStorage.getItem('shopease_admin_token');
+          const token = localStorage.getItem('nakoda_admin_token') || localStorage.getItem('shopease_admin_token');
           await fetch(`/api/inquiries?id=${id}`, {
             method: 'DELETE',
             headers: token ? { Authorization: `Bearer ${token}` } : {},

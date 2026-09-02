@@ -52,10 +52,10 @@ export const AuthProvider = ({ children }) => {
     if (res.ok && data.success) {
       if (data.isAdmin || data.role === 'admin' || data.role === 'superadmin') {
         if (data.token) {
+          localStorage.setItem('nakoda_admin_token', data.token);
           localStorage.setItem('shopease_admin_token', data.token);
         }
         setIsAuthModalOpen(false);
-        window.location.href = '/admin';
         return { success: true, isAdmin: true, redirectTo: '/admin', user: data.user };
       }
 

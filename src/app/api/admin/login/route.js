@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { verifyAdminCredentials } from '@/lib/db';
-import { signToken } from '@/lib/auth';
+import { signAdminToken, ADMIN_COOKIE_MAX_AGE } from '@/lib/auth';
 
 export async function POST(request) {
   try {
@@ -21,8 +21,8 @@ export async function POST(request) {
       );
     }
 
-    // Sign JWT token
-    const token = signToken({
+    // Sign JWT token with 12 hours expiration
+    const token = signAdminToken({
       email: user.email,
       name: user.name,
       role: user.role,
@@ -34,12 +34,12 @@ export async function POST(request) {
       token,
     });
 
-    // Set secure cookie
+    // Set secure cookie expiring in 12 hours
     response.cookies.set('admin_token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 30, // 30 days
+      maxAge: ADMIN_COOKIE_MAX_AGE, // 12 hours (43,200 seconds)
       path: '/',
     });
 

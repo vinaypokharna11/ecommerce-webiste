@@ -64,8 +64,8 @@ export function LoginContent({ defaultTab = 'login' }) {
           setSuccessMessage('Admin credentials verified! Redirecting to Admin Portal...');
           firePartyPopper();
           setTimeout(() => {
-            window.location.href = '/admin';
-          }, 400);
+            router.push('/admin');
+          }, 300);
         } else {
           setSuccessMessage('Welcome back! Logging you in...');
           firePartyPopper();
@@ -126,15 +126,6 @@ export function LoginContent({ defaultTab = 'login' }) {
     }
   };
 
-  // 1-Click Fill Helper for Admin
-  const handleFillAdmin = () => {
-    setActiveTab('login');
-    setLoginEmail('admin@nakodaimitation.com');
-    setLoginPassword('admin123');
-    setError('');
-    setSuccessMessage('Admin credentials populated. Click Sign In to open Admin Portal!');
-  };
-
   return (
     <div className="min-h-screen bg-[#F5F5F3] text-[#171717] flex flex-col justify-between relative overflow-hidden font-sans selection:bg-[#9FD842] selection:text-[#171717]">
       {/* Ambient Glows */}
@@ -156,7 +147,6 @@ export function LoginContent({ defaultTab = 'login' }) {
           loginPassword={loginPassword}
           setLoginPassword={setLoginPassword}
           handleLogin={handleLogin}
-          handleFillAdmin={handleFillAdmin}
           signupName={signupName}
           setSignupName={setSignupName}
           signupEmail={signupEmail}

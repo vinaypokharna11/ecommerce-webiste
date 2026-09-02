@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Mail, Lock, Eye, EyeOff, ArrowRight, KeyRound } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react';
 
 export function LoginForm({
   email,
@@ -12,7 +12,6 @@ export function LoginForm({
   setShowPassword,
   isLoading,
   onSubmit,
-  onFillAdmin,
 }) {
   return (
     <form onSubmit={onSubmit} className="space-y-4">
@@ -26,7 +25,7 @@ export function LoginForm({
             type="text"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com or admin@nakodaimitation.com"
+            placeholder="you@example.com"
             autoComplete="username"
             required
             className="w-full pl-11 pr-4 py-3 rounded-2xl border border-black/10 bg-[#EEEEEC] text-sm text-[#171717] placeholder-[#A0A0A0] focus:outline-none focus:ring-2 focus:ring-[#9FD842] focus:bg-white transition-all font-medium"
@@ -74,21 +73,6 @@ export function LoginForm({
           </>
         )}
       </button>
-
-      {/* Admin Quick Fill Pill */}
-      {onFillAdmin && (
-        <div className="pt-2 border-t border-black/5 flex items-center justify-between text-xs text-[#777777]">
-          <span>Are you the store admin?</span>
-          <button
-            type="button"
-            onClick={onFillAdmin}
-            className="font-bold text-[#709E1E] hover:underline cursor-pointer inline-flex items-center gap-1"
-          >
-            <KeyRound className="w-3.5 h-3.5" />
-            <span>Admin Fill</span>
-          </button>
-        </div>
-      )}
     </form>
   );
 }

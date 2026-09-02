@@ -131,25 +131,25 @@ export const QuickViewModal = ({
               </div>
             </div>
 
-            {/* Product Image Gallery in #EEEEEC container with dot pagination */}
-            <div className="relative w-full aspect-square rounded-[28px] bg-[#EEEEEC] p-6 flex flex-col items-center justify-between overflow-hidden mb-4">
-              <div className="w-full flex-1 relative flex items-center justify-center">
+            {/* Product Image Gallery with full size image and no grey background */}
+            <div className="relative w-full aspect-square rounded-[28px] overflow-hidden mb-4 bg-transparent flex flex-col items-center justify-between">
+              <div className="w-full h-full relative flex items-center justify-center">
                 {product.image && (
                   <Image
                     src={product.image}
                     alt={product.name}
                     fill
-                    className="object-contain p-2 rounded-[20px] transition-transform duration-500 hover:scale-105"
-                    sizes="(max-width: 768px) 90vw, 400px"
+                    className="object-cover rounded-[28px] transition-transform duration-500 hover:scale-105"
+                    sizes="(max-width: 768px) 90vw, 500px"
                   />
                 )}
               </div>
 
               {/* Dot Pagination */}
-              <div className="flex items-center gap-1.5 pt-2 z-10">
-                <span className="w-2 h-2 rounded-full bg-[#D1D5DB]" />
-                <span className="w-6 h-2 rounded-full bg-[#171717]" />
-                <span className="w-2 h-2 rounded-full bg-[#D1D5DB]" />
+              <div className="absolute bottom-3 inset-x-0 flex items-center justify-center gap-1.5 z-10">
+                <span className="w-2 h-2 rounded-full bg-white/70 shadow-sm" />
+                <span className="w-6 h-2 rounded-full bg-[#171717] shadow-sm" />
+                <span className="w-2 h-2 rounded-full bg-white/70 shadow-sm" />
               </div>
             </div>
 

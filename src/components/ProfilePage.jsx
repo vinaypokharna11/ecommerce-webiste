@@ -20,7 +20,6 @@ import {
   ShoppingBag,
   Star,
   Bell,
-  Shield,
   ChevronDown,
   MessageCircle,
   ArrowRight,
@@ -500,23 +499,6 @@ export const ProfilePage = ({ orders = [], onExploreCatalog, onNavigate }) => {
               </div>
               <ChevronRight className="w-4 h-4 text-[#A0A0A0] group-hover:text-[#171717]" />
             </button>
-
-            {/* Admin Dashboard Quick Link */}
-            <a
-              href="/admin"
-              className="w-full flex items-center gap-3.5 px-5 sm:px-6 py-4 hover:bg-[#F8FDF0] transition-colors text-left group border-t border-black/5"
-            >
-              <div className="w-9 h-9 rounded-full bg-[#171717] text-[#9FD842] flex items-center justify-center flex-shrink-0">
-                <Shield className="w-4 h-4" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <span className="text-sm font-bold text-[#171717] group-hover:text-[#709E1E] transition-colors">
-                  Admin Dashboard
-                </span>
-                <span className="text-[11px] text-[#777777] block">Manage store products, inventory, inquiries & settings</span>
-              </div>
-              <ChevronRight className="w-4 h-4 text-[#A0A0A0] group-hover:text-[#171717]" />
-            </a>
 
             {/* Catalog Explore */}
             <button

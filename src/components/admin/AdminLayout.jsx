@@ -25,6 +25,7 @@ import {
   UserCheck,
   MessageSquare,
   Eye,
+  Clock,
 } from 'lucide-react';
 import { useCatalog } from '../../context/CatalogContext';
 import { AdminDashboard } from './AdminDashboard';
@@ -87,10 +88,17 @@ export const AdminLayout = ({ onExitAdmin, onLogout, adminUser }) => {
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-base font-extrabold tracking-tight text-[#171717] block leading-tight">
-                  {storeConfig?.name && storeConfig.name !== 'ShopEase' ? storeConfig.name : 'Nakoda Imitation'}
+                  {storeConfig?.name || 'Nakoda Imitation'}
                 </span>
                 <span className="px-2 py-0.5 rounded-full bg-[#F3FCDA] border border-[#9FD842]/30 text-[#709E1E] font-extrabold text-[10px] uppercase tracking-wider">
                   Admin
+                </span>
+                <span 
+                  className="hidden md:inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#EEEEEC] border border-black/5 text-[#555555] font-semibold text-[10px]"
+                  title="Your administrator session automatically expires after 12 hours of inactivity"
+                >
+                  <Clock className="w-2.5 h-2.5 text-[#709E1E]" />
+                  <span>12h Session</span>
                 </span>
               </div>
               <span className="text-[11px] text-[#777777] block font-medium">
@@ -238,7 +246,7 @@ export const AdminLayout = ({ onExitAdmin, onLogout, adminUser }) => {
                         <ShoppingBag className="w-4 h-4" />
                       </div>
                       <span className="font-extrabold text-sm text-[#171717]">
-                        {storeConfig?.name && storeConfig.name !== 'ShopEase' ? storeConfig.name : 'Nakoda Imitation'} Admin
+                        {storeConfig?.name || 'Nakoda Imitation'} Admin
                       </span>
                     </div>
                     <button

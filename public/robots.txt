@@ -6,4 +6,4 @@ Disallow: /admin
 Disallow: /api/
 
 # Sitemap
-Sitemap: https://shopease.in/sitemap.xml
+Sitemap: https://nakodaimitation.com/sitemap.xml

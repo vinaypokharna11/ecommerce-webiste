@@ -13,15 +13,14 @@ import {
   ShieldCheck,
   AlertCircle,
   ArrowLeft,
-  KeyRound,
   CheckCircle2,
 } from 'lucide-react';
 import Link from 'next/link';
 
 export default function AdminLoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState('admin@nakodaimitation.com');
-  const [password, setPassword] = useState('admin123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
@@ -31,7 +30,7 @@ export default function AdminLoginPage() {
   useEffect(() => {
     async function checkExistingAuth() {
       try {
-        const token = localStorage.getItem('shopease_admin_token');
+        const token = localStorage.getItem('nakoda_admin_token') || localStorage.getItem('shopease_admin_token');
         if (!token) {
           setIsCheckingAuth(false);
           return;
@@ -45,8 +44,15 @@ export default function AdminLoginPage() {
         if (res.ok && data.authenticated) {
           router.replace('/admin');
           return;
+        } else {
+          // Clean expired or invalid tokens
+          localStorage.removeItem('nakoda_admin_token');
+          localStorage.removeItem('shopease_admin_token');
         }
-      } catch (e) {}
+      } catch (e) {
+        localStorage.removeItem('nakoda_admin_token');
+        localStorage.removeItem('shopease_admin_token');
+      }
       setIsCheckingAuth(false);
     }
 
@@ -74,6 +80,7 @@ export default function AdminLoginPage() {
 
       if (res.ok && data.success) {
         if (data.token) {
+          localStorage.setItem('nakoda_admin_token', data.token);
           localStorage.setItem('shopease_admin_token', data.token);
         }
         router.push('/admin');
@@ -95,12 +102,6 @@ export default function AdminLoginPage() {
       </div>
     );
   }
-
-  const handleAutofill = (demoEmail, demoPass) => {
-    setEmail(demoEmail);
-    setPassword(demoPass);
-    setError('');
-  };
 
   return (
     <div className="min-h-screen bg-[#F5F5F3] text-[#171717] flex flex-col justify-between relative overflow-hidden font-sans selection:bg-[#9FD842] selection:text-[#171717]">
@@ -148,26 +149,8 @@ export default function AdminLoginPage() {
               Admin Login
             </h1>
             <p className="text-xs text-[#777777] mt-1">
-              Sign in to manage jewelry catalog, customer orders, and wholesale inquiries
+              Sign in to manage jewelry catalog, customer orders, and inquiries
             </p>
-          </div>
-
-          {/* Quick Credential Hint / 1-Click Autofill */}
-          <div className="mb-5 p-3.5 rounded-2xl bg-[#F8FDF0] border border-[#9FD842]/30 text-xs flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2 text-left">
-              <KeyRound className="w-4 h-4 text-[#709E1E] flex-shrink-0" />
-              <div>
-                <p className="text-[11px] font-bold text-[#171717]">Default Credentials:</p>
-                <p className="text-[10px] text-[#777777] font-mono">admin@nakodaimitation.com • admin123</p>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => handleAutofill('admin@nakodaimitation.com', 'admin123')}
-              className="px-2.5 py-1 rounded-full bg-[#9FD842] hover:bg-[#8EC731] text-[#171717] font-extrabold text-[10px] uppercase tracking-wider active:scale-95 transition-all cursor-pointer shadow-xs"
-            >
-              Fill
-            </button>
           </div>
 
           {/* Error Banner */}
@@ -191,10 +174,10 @@ export default function AdminLoginPage() {
               <div className="relative">
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#777777]" />
                 <input
-                  type="text"
+                  type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="admin@nakodaimitation.com"
+                  placeholder="admin@example.com"
                   autoComplete="username"
                   required
                   className="w-full pl-11 pr-4 py-3 rounded-2xl border border-black/10 bg-[#EEEEEC] text-sm text-[#171717] placeholder-[#A0A0A0] focus:outline-none focus:ring-2 focus:ring-[#9FD842] focus:bg-white transition-all font-medium"

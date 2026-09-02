@@ -110,8 +110,8 @@ export const CatalogPage = ({
       if (sortBy === 'price-high') return b.price - a.price;
       if (sortBy === 'rating') return b.rating - a.rating;
       if (sortBy === 'discount') return (b.discountPercent || 0) - (a.discountPercent || 0);
-      if (sortBy === 'newest') return b.id.localeCompare(a.id);
-      return (b.isPopular ? 1 : 0) - (a.isPopular ? 1 : 0) || b.rating - a.rating;
+      if (sortBy === 'newest') return (b.createdAt || b.id || '').localeCompare(a.createdAt || a.id || '');
+      return 0;
     });
   }, [products, searchQuery, filters, sortBy]);
 

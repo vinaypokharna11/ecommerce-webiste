@@ -31,13 +31,13 @@ export const ProductCard = ({
       }`}
       onClick={() => onQuickView(product)}
     >
-      {/* Top Image Container with #EEEEEC background */}
-      <div className="relative aspect-square w-full rounded-[22px] bg-[#EEEEEC] p-3 flex items-center justify-center overflow-hidden mb-3">
+      {/* Top Image Container - Full Size Edge-to-Edge with no grey container */}
+      <div className="relative aspect-square w-full rounded-[22px] overflow-hidden mb-3 bg-transparent flex items-center justify-center">
         
         {/* Optional Badge */}
         {product.badge && (
           <div className="absolute top-2.5 left-2.5 z-10">
-            <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wide bg-white/90 text-[#171717] shadow-sm border border-black/5">
+            <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-extrabold tracking-wide bg-white/95 backdrop-blur-md text-[#171717] shadow-sm border border-black/5">
               {product.badge}
             </span>
           </div>
@@ -49,7 +49,7 @@ export const ProductCard = ({
             e.stopPropagation();
             onToggleFavorite(product);
           }}
-          className="absolute top-2.5 right-2.5 z-10 w-8 h-8 rounded-full bg-white/90 backdrop-blur-md border border-white/80 flex items-center justify-center shadow-sm hover:scale-110 active:scale-90 transition-all duration-200 cursor-pointer"
+          className="absolute top-2.5 right-2.5 z-10 w-8 h-8 rounded-full bg-white/95 backdrop-blur-md border border-white/80 flex items-center justify-center shadow-sm hover:scale-110 active:scale-90 transition-all duration-200 cursor-pointer"
           aria-label={isFavorite ? 'Remove from wishlist' : 'Save to wishlist'}
         >
           <Heart 
@@ -62,17 +62,15 @@ export const ProductCard = ({
         </button>
 
         {/* Product Image with smooth hover scale */}
-        <div className="relative w-full h-full flex items-center justify-center p-1">
-          {product.image && (
-            <Image
-              src={product.image}
-              alt={product.name}
-              fill
-              className="object-contain p-2 rounded-[18px] transition-transform duration-500 group-hover:scale-105"
-              sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
-            />
-          )}
-        </div>
+        {product.image && (
+          <Image
+            src={product.image}
+            alt={product.name}
+            fill
+            className="object-cover rounded-[22px] transition-transform duration-500 group-hover:scale-108"
+            sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+          />
+        )}
 
         {/* Out of Stock Overlay */}
         {isOutOfStock && (

@@ -99,9 +99,6 @@ export const Footer = ({ onLinkClick }) => {
           <div className="flex items-center gap-4">
             <button onClick={() => onLinkClick('Privacy Policy')} className="hover:text-[#A0A0A0] cursor-pointer">Privacy Policy</button>
             <button onClick={() => onLinkClick('Terms of Service')} className="hover:text-[#A0A0A0] cursor-pointer">Terms of Service</button>
-            <a href="/admin" className="text-[#9FD842]/80 hover:text-[#9FD842] font-semibold transition-colors flex items-center gap-1">
-              <span>Admin Portal</span>
-            </a>
           </div>
         </div>
 

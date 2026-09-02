@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { loginCustomer, verifyAdminCredentials } from '@/lib/db';
-import { signToken } from '@/lib/auth';
+import { signToken, signAdminToken, ADMIN_COOKIE_MAX_AGE } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,7 +18,7 @@ export async function POST(request) {
     // 1. Check if this is an administrator
     const adminUser = await verifyAdminCredentials(email, password);
     if (adminUser) {
-      const adminToken = signToken({
+      const adminToken = signAdminToken({
         email: adminUser.email,
         name: adminUser.name,
         role: adminUser.role || 'admin',
@@ -38,7 +38,7 @@ export async function POST(request) {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
-        maxAge: 60 * 60 * 24 * 30, // 30 days
+        maxAge: ADMIN_COOKIE_MAX_AGE, // 12 hours (43,200 seconds)
         path: '/',
       });
 

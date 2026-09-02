@@ -8,7 +8,7 @@ import {
   Sparkles, 
   ShoppingCart, 
   User, 
-  ShoppingBag,
+  ShoppingBag, 
   PhoneCall
 } from 'lucide-react';
 

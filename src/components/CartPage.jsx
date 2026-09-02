@@ -747,13 +747,13 @@ export const CartPage = ({
                 className="bg-white rounded-[24px] border border-black/5 p-3 sm:p-4 shadow-neu-card hover:shadow-neu-card-hover transition-all duration-300 flex flex-col justify-between group cursor-pointer"
               >
                 <div>
-                  <div className="relative w-full aspect-square rounded-[20px] bg-[#EEEEEC] p-2 flex items-center justify-center overflow-hidden mb-2.5">
+                  <div className="relative w-full aspect-square rounded-[20px] overflow-hidden mb-2.5 bg-transparent flex items-center justify-center">
                     <Image
                       src={imgSrc}
                       alt={prod.name}
                       fill
                       sizes="(max-width: 768px) 50vw, 25vw"
-                      className="object-contain p-2 group-hover:scale-105 transition-transform duration-300"
+                      className="object-cover rounded-[20px] group-hover:scale-108 transition-transform duration-300"
                     />
                     
                     {/* Badge */}

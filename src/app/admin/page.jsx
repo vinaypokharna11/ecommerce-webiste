@@ -11,34 +11,58 @@ export default function AdminPage() {
   const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState(null); // null = checking, true, false
   const [adminUser, setAdminUser] = useState(null);
+  const [isSessionExpired, setIsSessionExpired] = useState(false);
 
   useEffect(() => {
-    async function checkAuth() {
+    let isMounted = true;
+
+    async function checkAuth(isPeriodic = false) {
       try {
-        const token = localStorage.getItem('shopease_admin_token');
+        const token = localStorage.getItem('nakoda_admin_token') || localStorage.getItem('shopease_admin_token');
         const res = await fetch('/api/admin/auth', {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
         const data = await res.json();
 
-        if (res.ok && data.authenticated) {
-          setIsAuthenticated(true);
-          setAdminUser(data.user);
-        } else {
-          setIsAuthenticated(false);
+        if (isMounted) {
+          if (res.ok && data.authenticated) {
+            setIsAuthenticated(true);
+            setAdminUser(data.user);
+          } else {
+            // Token expired or invalid
+            localStorage.removeItem('nakoda_admin_token');
+            localStorage.removeItem('shopease_admin_token');
+            if (isPeriodic || isAuthenticated === true) {
+              setIsSessionExpired(true);
+            }
+            setIsAuthenticated(false);
+          }
         }
       } catch (err) {
-        setIsAuthenticated(false);
+        if (isMounted) {
+          setIsAuthenticated(false);
+        }
       }
     }
 
-    checkAuth();
-  }, []);
+    checkAuth(false);
+
+    // Periodic heartbeat every 3 minutes to auto-detect 12-hour expiration
+    const interval = setInterval(() => {
+      checkAuth(true);
+    }, 3 * 60 * 1000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [isAuthenticated]);
 
   const handleLogout = async () => {
     try {
       await fetch('/api/admin/logout', { method: 'POST' });
     } catch (e) {}
+    localStorage.removeItem('nakoda_admin_token');
     localStorage.removeItem('shopease_admin_token');
     router.push('/admin/login');
   };
@@ -69,14 +93,25 @@ export default function AdminPage() {
             <Lock className="w-7 h-7" />
           </div>
           
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#F3FCDA] border border-[#9FD842]/30 text-xs font-extrabold text-[#709E1E]">
-            <ShieldCheck className="w-3.5 h-3.5" />
-            <span>Administrator Access Required</span>
-          </div>
+          {isSessionExpired ? (
+            <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-amber-50 border border-amber-300 text-xs font-extrabold text-amber-700">
+              <ShieldCheck className="w-3.5 h-3.5 text-amber-600" />
+              <span>Session Expired (12-Hour Limit Reached)</span>
+            </div>
+          ) : (
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#F3FCDA] border border-[#9FD842]/30 text-xs font-extrabold text-[#709E1E]">
+              <ShieldCheck className="w-3.5 h-3.5" />
+              <span>Administrator Access Required</span>
+            </div>
+          )}
 
-          <h2 className="text-2xl font-extrabold text-[#171717] tracking-tight">Admin Portal</h2>
+          <h2 className="text-2xl font-extrabold text-[#171717] tracking-tight">
+            {isSessionExpired ? 'Session Expired' : 'Admin Portal'}
+          </h2>
           <p className="text-xs text-[#777777] leading-relaxed">
-            Please authenticate to access the Nakoda Imitation store catalog controls, inventory, and inquiries panel.
+            {isSessionExpired 
+              ? 'Your secure 12-hour administrator session has ended. Please sign in again to continue managing Nakoda Imitation.'
+              : 'Please authenticate to access the Nakoda Imitation store catalog controls, inventory, and inquiries panel.'}
           </p>
 
           <div className="pt-2 flex flex-col gap-2.5">

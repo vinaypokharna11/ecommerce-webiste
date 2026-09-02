@@ -2,7 +2,6 @@ import './globals.css';
 import { CatalogProvider } from '@/context/CatalogContext';
 import { AuthProvider } from '@/context/AuthContext';
 import { AuthModal } from '@/components/AuthModal';
-import { AdminQuickBar } from '@/components/AdminQuickBar';
 
 export const metadata = {
   title: {
@@ -53,7 +52,6 @@ export default function RootLayout({ children }) {
       <body className="bg-[#F5F5F3] text-[#171717] font-sans antialiased selection:bg-[#9FD842] selection:text-[#171717]">
         <AuthProvider>
           <CatalogProvider>
-            <AdminQuickBar />
             {children}
             <AuthModal />
           </CatalogProvider>

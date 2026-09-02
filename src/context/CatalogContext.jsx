@@ -270,6 +270,17 @@ export const CatalogProvider = ({ children }) => {
     syncWithServer();
   }, []);
 
+  // Helper to construct authorization headers for admin REST APIs
+  const getAuthHeaders = () => {
+    const token = typeof window !== 'undefined' 
+      ? (localStorage.getItem('nakoda_admin_token') || localStorage.getItem('shopease_admin_token')) 
+      : null;
+    return {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
+  };
+
   // Activity Logger
   const logActivity = useCallback((title, type = 'info', icon = 'Check') => {
     const newAct = {
@@ -284,7 +295,7 @@ export const CatalogProvider = ({ children }) => {
   }, []);
 
   // ─────────────────── Product Actions ───────────────────
-  const addProduct = useCallback((productData) => {
+  const addProduct = useCallback(async (productData) => {
     const id = productData.id || `prod-${Date.now()}`;
     const newProduct = {
       ...productData,
@@ -307,12 +318,29 @@ export const CatalogProvider = ({ children }) => {
         : [],
     };
 
-    setProducts((prev) => [newProduct, ...prev]);
+    // 1. Optimistic state update (shows on home page and catalog immediately)
+    setProducts((prev) => [newProduct, ...prev.filter((p) => p.id !== newProduct.id)]);
     logActivity(`Added new product "${newProduct.name}"`, 'product', 'Plus');
+
+    // 2. Persist to MongoDB Server
+    try {
+      const res = await fetch('/api/products', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(newProduct),
+      });
+      const data = await res.json();
+      if (data.success && data.product) {
+        setProducts((prev) => [data.product, ...prev.filter((p) => p.id !== newProduct.id && p.id !== data.product.id)]);
+      }
+    } catch (e) {
+      console.warn('Product save to DB failed', e);
+    }
+
     return newProduct;
   }, [logActivity]);
 
-  const updateProduct = useCallback((id, updatedFields) => {
+  const updateProduct = useCallback(async (id, updatedFields) => {
     setProducts((prev) =>
       prev.map((p) => {
         if (p.id === id) {
@@ -333,9 +361,19 @@ export const CatalogProvider = ({ children }) => {
       })
     );
     logActivity(`Updated product "${updatedFields.name || id}"`, 'product', 'Edit3');
+
+    try {
+      await fetch(`/api/products/${id}`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(updatedFields),
+      });
+    } catch (e) {
+      console.warn('Product update to DB failed', e);
+    }
   }, [logActivity]);
 
-  const deleteProduct = useCallback((id) => {
+  const deleteProduct = useCallback(async (id) => {
     let deletedName = id;
     setProducts((prev) => {
       const target = prev.find((p) => p.id === id);
@@ -343,9 +381,18 @@ export const CatalogProvider = ({ children }) => {
       return prev.filter((p) => p.id !== id);
     });
     logActivity(`Deleted product "${deletedName}"`, 'delete', 'Trash2');
+
+    try {
+      await fetch(`/api/products/${id}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+      });
+    } catch (e) {
+      console.warn('Product delete to DB failed', e);
+    }
   }, [logActivity]);
 
-  const duplicateProduct = useCallback((id) => {
+  const duplicateProduct = useCallback(async (id) => {
     const source = products.find((p) => p.id === id);
     if (!source) return;
     const duplicated = {
@@ -357,41 +404,69 @@ export const CatalogProvider = ({ children }) => {
     };
     setProducts((prev) => [duplicated, ...prev]);
     logActivity(`Duplicated product "${source.name}"`, 'product', 'Copy');
+
+    try {
+      await fetch('/api/products', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(duplicated),
+      });
+    } catch (e) {}
+
     return duplicated;
   }, [products, logActivity]);
 
-  const togglePopular = useCallback((id) => {
+  const togglePopular = useCallback(async (id) => {
+    let nextVal = false;
     setProducts((prev) =>
       prev.map((p) => {
         if (p.id === id) {
-          const nextVal = !p.isPopular;
+          nextVal = !p.isPopular;
           logActivity(`${nextVal ? 'Featured' : 'Unfeatured'} "${p.name}" on Homepage`, 'feature', 'Star');
           return { ...p, isPopular: nextVal };
         }
         return p;
       })
     );
+
+    try {
+      await fetch(`/api/products/${id}`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ isPopular: nextVal }),
+      });
+    } catch (e) {}
   }, [logActivity]);
 
-  const toggleFeatured = useCallback((id) => {
+  const toggleFeatured = useCallback(async (id) => {
+    let nextVal = false;
     setProducts((prev) =>
       prev.map((p) => {
         if (p.id === id) {
-          const nextVal = !p.isFeatured;
+          nextVal = !p.isFeatured;
           logActivity(`${nextVal ? 'Marked' : 'Unmarked'} "${p.name}" as Featured`, 'feature', 'Sparkles');
           return { ...p, isFeatured: nextVal };
         }
         return p;
       })
     );
+
+    try {
+      await fetch(`/api/products/${id}`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ isFeatured: nextVal }),
+      });
+    } catch (e) {}
   }, [logActivity]);
 
-  const updateProductStock = useCallback((id, countOrDelta, isDelta = false) => {
+  const updateProductStock = useCallback(async (id, countOrDelta, isDelta = false) => {
+    let newCount = 0;
     setProducts((prev) =>
       prev.map((p) => {
         if (p.id === id) {
           const current = p.stockCount || 0;
-          const newCount = Math.max(0, isDelta ? current + countOrDelta : countOrDelta);
+          newCount = Math.max(0, isDelta ? current + countOrDelta : countOrDelta);
           let status = 'in_stock';
           if (newCount === 0) status = 'out_of_stock';
           else if (newCount < 5) status = 'low_stock';
@@ -401,10 +476,18 @@ export const CatalogProvider = ({ children }) => {
       })
     );
     logActivity(`Adjusted stock for product #${id}`, 'inventory', 'Package');
+
+    try {
+      await fetch(`/api/products/${id}`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ stockCount: newCount }),
+      });
+    } catch (e) {}
   }, [logActivity]);
 
   // Bulk Product Actions
-  const bulkUpdateCategory = useCallback((productIds, newCategory, newCategoryName) => {
+  const bulkUpdateCategory = useCallback(async (productIds, newCategory, newCategoryName) => {
     setProducts((prev) =>
       prev.map((p) =>
         productIds.includes(p.id)
@@ -413,9 +496,21 @@ export const CatalogProvider = ({ children }) => {
       )
     );
     logActivity(`Bulk moved ${productIds.length} products to "${newCategoryName || newCategory}"`, 'bulk', 'Layers');
+
+    try {
+      await Promise.allSettled(
+        productIds.map((id) =>
+          fetch(`/api/products/${id}`, {
+            method: 'PUT',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ category: newCategory, categoryName: newCategoryName || newCategory }),
+          })
+        )
+      );
+    } catch (e) {}
   }, [logActivity]);
 
-  const bulkApplyDiscount = useCallback((productIds, discountPercent) => {
+  const bulkApplyDiscount = useCallback(async (productIds, discountPercent) => {
     setProducts((prev) =>
       prev.map((p) => {
         if (productIds.includes(p.id)) {
@@ -434,14 +529,46 @@ export const CatalogProvider = ({ children }) => {
       })
     );
     logActivity(`Applied ${discountPercent}% discount to ${productIds.length} products`, 'offer', 'Tag');
-  }, [logActivity]);
 
-  const bulkDeleteProducts = useCallback((productIds) => {
+    try {
+      await Promise.allSettled(
+        productIds.map((id) => {
+          const p = products.find((x) => x.id === id);
+          const basePrice = p?.oldPrice || p?.price || 1000;
+          const newPrice = Math.round(basePrice * (1 - discountPercent / 100));
+          return fetch(`/api/products/${id}`, {
+            method: 'PUT',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({
+              oldPrice: basePrice,
+              price: newPrice,
+              discountPercent,
+              badge: `${discountPercent}% OFF`,
+              badgeType: 'discount',
+            }),
+          });
+        })
+      );
+    } catch (e) {}
+  }, [products, logActivity]);
+
+  const bulkDeleteProducts = useCallback(async (productIds) => {
     setProducts((prev) => prev.filter((p) => !productIds.includes(p.id)));
     logActivity(`Bulk deleted ${productIds.length} products`, 'delete', 'Trash2');
+
+    try {
+      await Promise.allSettled(
+        productIds.map((id) =>
+          fetch(`/api/products/${id}`, {
+            method: 'DELETE',
+            headers: getAuthHeaders(),
+          })
+        )
+      );
+    } catch (e) {}
   }, [logActivity]);
 
-  const bulkUpdateStockStatus = useCallback((productIds, stockStatus, stockCount = 10) => {
+  const bulkUpdateStockStatus = useCallback(async (productIds, stockStatus, stockCount = 10) => {
     setProducts((prev) =>
       prev.map((p) =>
         productIds.includes(p.id)
@@ -450,10 +577,25 @@ export const CatalogProvider = ({ children }) => {
       )
     );
     logActivity(`Bulk updated stock for ${productIds.length} products to ${stockStatus}`, 'inventory', 'Package');
+
+    try {
+      await Promise.allSettled(
+        productIds.map((id) =>
+          fetch(`/api/products/${id}`, {
+            method: 'PUT',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({
+              stockStatus,
+              stockCount: stockStatus === 'out_of_stock' ? 0 : stockCount,
+            }),
+          })
+        )
+      );
+    } catch (e) {}
   }, [logActivity]);
 
   // ─────────────────── Category Actions ───────────────────
-  const addCategory = useCallback((categoryData) => {
+  const addCategory = useCallback(async (categoryData) => {
     const id = categoryData.id || categoryData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
     const newCat = {
       ...categoryData,
@@ -464,16 +606,27 @@ export const CatalogProvider = ({ children }) => {
       icon: categoryData.icon || 'LayoutGrid',
       itemCount: '0 Items',
     };
-    setCategories((prev) => [...prev, newCat]);
+    setCategories((prev) => [...prev.filter((c) => c.id !== newCat.id), newCat]);
     logActivity(`Created category "${newCat.name}"`, 'category', 'FolderPlus');
+
+    try {
+      const res = await fetch('/api/categories', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(newCat),
+      });
+      const data = await res.json();
+      if (data.success && data.category) {
+        setCategories((prev) => [...prev.filter((c) => c.id !== newCat.id && c.id !== data.category.id), data.category]);
+      }
+    } catch (e) {}
     return newCat;
   }, [logActivity]);
 
-  const updateCategory = useCallback((id, updatedFields) => {
+  const updateCategory = useCallback(async (id, updatedFields) => {
     setCategories((prev) =>
       prev.map((c) => (c.id === id ? { ...c, ...updatedFields } : c))
     );
-    // Also sync categoryName in products if name changed
     if (updatedFields.name) {
       setProducts((prev) =>
         prev.map((p) =>
@@ -482,9 +635,17 @@ export const CatalogProvider = ({ children }) => {
       );
     }
     logActivity(`Updated category "${updatedFields.name || id}"`, 'category', 'Edit3');
+
+    try {
+      await fetch(`/api/categories/${id}`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(updatedFields),
+      });
+    } catch (e) {}
   }, [logActivity]);
 
-  const deleteCategory = useCallback((id) => {
+  const deleteCategory = useCallback(async (id) => {
     let catName = id;
     setCategories((prev) => {
       const target = prev.find((c) => c.id === id);
@@ -492,10 +653,17 @@ export const CatalogProvider = ({ children }) => {
       return prev.filter((c) => c.id !== id);
     });
     logActivity(`Deleted category "${catName}"`, 'delete', 'Trash2');
+
+    try {
+      await fetch(`/api/categories/${id}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+      });
+    } catch (e) {}
   }, [logActivity]);
 
   // ─────────────────── Offers Actions ───────────────────
-  const addOffer = useCallback((offerData) => {
+  const addOffer = useCallback(async (offerData) => {
     const id = offerData.id || `offer-${Date.now()}`;
     const newOffer = {
       ...offerData,
@@ -510,19 +678,39 @@ export const CatalogProvider = ({ children }) => {
       badgeColor: offerData.badgeColor || 'bg-[#EDE9FE] text-[#6257FF]',
       icon: offerData.icon || '🎁',
     };
-    setOffers((prev) => [newOffer, ...prev]);
+    setOffers((prev) => [newOffer, ...prev.filter((o) => o.id !== newOffer.id)]);
     logActivity(`Created promo offer "${newOffer.code}" (${newOffer.title})`, 'offer', 'Tag');
+
+    try {
+      const res = await fetch('/api/offers', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(newOffer),
+      });
+      const data = await res.json();
+      if (data.success && data.offer) {
+        setOffers((prev) => [data.offer, ...prev.filter((o) => o.id !== newOffer.id && o.id !== data.offer.id)]);
+      }
+    } catch (e) {}
     return newOffer;
   }, [logActivity]);
 
-  const updateOffer = useCallback((id, updatedFields) => {
+  const updateOffer = useCallback(async (id, updatedFields) => {
     setOffers((prev) =>
       prev.map((o) => (o.id === id ? { ...o, ...updatedFields } : o))
     );
     logActivity(`Updated offer "${updatedFields.code || id}"`, 'offer', 'Edit3');
+
+    try {
+      await fetch(`/api/offers/${id}`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(updatedFields),
+      });
+    } catch (e) {}
   }, [logActivity]);
 
-  const deleteOffer = useCallback((id) => {
+  const deleteOffer = useCallback(async (id) => {
     let codeName = id;
     setOffers((prev) => {
       const target = prev.find((o) => o.id === id);
@@ -530,25 +718,49 @@ export const CatalogProvider = ({ children }) => {
       return prev.filter((o) => o.id !== id);
     });
     logActivity(`Deleted offer "${codeName}"`, 'delete', 'Trash2');
+
+    try {
+      await fetch(`/api/offers/${id}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+      });
+    } catch (e) {}
   }, [logActivity]);
 
-  const toggleOfferActive = useCallback((id) => {
+  const toggleOfferActive = useCallback(async (id) => {
+    let nextVal = false;
     setOffers((prev) =>
       prev.map((o) => {
         if (o.id === id) {
-          const next = !o.isActive;
-          logActivity(`${next ? 'Activated' : 'Paused'} offer "${o.code}"`, 'offer', 'ToggleRight');
-          return { ...o, isActive: next };
+          nextVal = !o.isActive;
+          logActivity(`${nextVal ? 'Activated' : 'Paused'} offer "${o.code}"`, 'offer', 'ToggleRight');
+          return { ...o, isActive: nextVal };
         }
         return o;
       })
     );
+
+    try {
+      await fetch(`/api/offers/${id}`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ isActive: nextVal }),
+      });
+    } catch (e) {}
   }, [logActivity]);
 
   // ─────────────────── Store Settings & Reset ───────────────────
-  const updateStoreConfig = useCallback((newConfig) => {
+  const updateStoreConfig = useCallback(async (newConfig) => {
     setStoreConfig((prev) => ({ ...prev, ...newConfig }));
     logActivity('Updated store contact & configuration', 'settings', 'Settings');
+
+    try {
+      await fetch('/api/settings', {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(newConfig),
+      });
+    } catch (e) {}
   }, [logActivity]);
 
   const resetToDefaults = useCallback(() => {
@@ -579,7 +791,7 @@ export const CatalogProvider = ({ children }) => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `shopease-catalog-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    link.download = `nakoda-imitation-catalog-backup-${new Date().toISOString().slice(0, 10)}.json`;
     link.click();
     URL.revokeObjectURL(url);
     logActivity('Exported store catalog backup JSON', 'system', 'Download');

@@ -25,15 +25,15 @@ export const PopularProducts = ({
 
   // Filter products based on selected home category
   const displayProducts = useMemo(() => {
-    const allProducts = (products && products.length > 0) ? products : (homePopularProducts || []);
+    const allProducts = products || [];
     if (!selectedCategory || selectedCategory === 'all') {
-      return allProducts.slice(0, 12);
+      return allProducts;
     }
     const filtered = allProducts.filter(
       (p) => p.category === selectedCategory || p.categoryName?.toLowerCase() === selectedCategory.toLowerCase()
     );
-    return filtered.length > 0 ? filtered : allProducts.slice(0, 12);
-  }, [selectedCategory, homePopularProducts, products]);
+    return filtered.length > 0 ? filtered : allProducts;
+  }, [selectedCategory, products]);
 
   return (
     <section className="py-6 sm:py-10" aria-label="Products">

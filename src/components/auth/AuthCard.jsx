@@ -19,7 +19,6 @@ export function AuthCard({
   loginPassword,
   setLoginPassword,
   handleLogin,
-  handleFillAdmin,
   // Signup props
   signupName,
   setSignupName,
@@ -52,7 +51,7 @@ export function AuthCard({
         </h1>
         <p className="text-xs text-[#777777] mt-1">
           {activeTab === 'login'
-            ? 'Sign in to access your orders, saved items, or admin dashboard'
+            ? 'Sign in to access your orders, saved items, and account details'
             : 'Sign up for the first time to track orders & access exclusive prices'}
         </p>
       </div>
@@ -74,7 +73,6 @@ export function AuthCard({
           setShowPassword={setShowPassword}
           isLoading={isLoading}
           onSubmit={handleLogin}
-          onFillAdmin={handleFillAdmin}
         />
       )}
 

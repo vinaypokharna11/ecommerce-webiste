@@ -17,9 +17,12 @@ import {
   Palette,
   AlertCircle,
   Upload,
+  Crop,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { ASSET_GALLERY, BADGE_PRESETS } from './adminConstants';
 import { useCatalog } from '../../context/CatalogContext';
+import { ImageCropperModal } from './ImageCropperModal';
 
 const DEFAULT_FORM_STATE = {
   name: '',
@@ -54,6 +57,10 @@ export const AdminProductModal = ({ isOpen, onClose, product = null }) => {
   const [newColorName, setNewColorName] = useState('');
   const [newColorHex, setNewColorHex] = useState('#9FD842');
   const [errors, setErrors] = useState({});
+
+  // Image Cropper & Editor State
+  const [isCropperOpen, setIsCropperOpen] = useState(false);
+  const [imageToCrop, setImageToCrop] = useState('');
 
   const isEditing = !!product;
 
@@ -142,6 +149,9 @@ export const AdminProductModal = ({ isOpen, onClose, product = null }) => {
       const reader = new FileReader();
       reader.onload = (loadEvt) => {
         const base64 = loadEvt.target.result;
+        // Auto-open cropper modal so the admin can frame & adjust immediately
+        setImageToCrop(base64);
+        setIsCropperOpen(true);
         setFormData((prev) => ({
           ...prev,
           image: base64,
@@ -150,6 +160,25 @@ export const AdminProductModal = ({ isOpen, onClose, product = null }) => {
       };
       reader.readAsDataURL(file);
     }
+    // Clear input so user can re-select same file if needed
+    e.target.value = '';
+  };
+
+  const handleOpenCropper = () => {
+    const currentImg = formData.customImageUrl?.trim() || formData.image;
+    if (currentImg) {
+      setImageToCrop(currentImg);
+      setIsCropperOpen(true);
+    }
+  };
+
+  const handleApplyCroppedImage = (croppedBase64) => {
+    setFormData((prev) => ({
+      ...prev,
+      image: croppedBase64,
+      customImageUrl: '',
+    }));
+    setIsCropperOpen(false);
   };
 
   const validate = () => {
@@ -530,15 +559,15 @@ export const AdminProductModal = ({ isOpen, onClose, product = null }) => {
                 <label className="block text-xs font-bold text-[#171717] mb-1.5 uppercase tracking-wider">
                   Custom Image URL or Photo Upload
                 </label>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap sm:flex-nowrap gap-2">
                   <input
                     type="url"
                     value={formData.customImageUrl}
                     onChange={(e) => setFormData({ ...formData, customImageUrl: e.target.value })}
                     placeholder="https://images.unsplash.com/... or paste image URL"
-                    className="flex-1 px-4 py-2.5 rounded-2xl border border-black/10 bg-[#EEEEEC]/50 text-xs text-[#171717] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#9FD842]"
+                    className="flex-1 min-w-[200px] px-4 py-2.5 rounded-2xl border border-black/10 bg-[#EEEEEC]/50 text-xs text-[#171717] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#9FD842]"
                   />
-                  <label className="px-4 py-2.5 rounded-2xl bg-[#EEEEEC] hover:bg-[#E2E2DE] text-[#171717] text-xs font-bold flex items-center gap-1.5 cursor-pointer border border-black/10">
+                  <label className="px-4 py-2.5 rounded-2xl bg-[#EEEEEC] hover:bg-[#E2E2DE] text-[#171717] text-xs font-bold flex items-center gap-1.5 cursor-pointer border border-black/10 transition-colors shadow-xs">
                     <Upload className="w-3.5 h-3.5" />
                     <span>Upload</span>
                     <input
@@ -548,6 +577,15 @@ export const AdminProductModal = ({ isOpen, onClose, product = null }) => {
                       className="hidden"
                     />
                   </label>
+                  <button
+                    type="button"
+                    onClick={handleOpenCropper}
+                    className="px-4 py-2.5 rounded-2xl bg-[#171717] hover:bg-black text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm transition-all active:scale-95"
+                    title="Open Crop & Photo Studio"
+                  >
+                    <Crop className="w-3.5 h-3.5 text-[#9FD842]" />
+                    <span>Crop / Edit</span>
+                  </button>
                 </div>
               </div>
 
@@ -578,19 +616,37 @@ export const AdminProductModal = ({ isOpen, onClose, product = null }) => {
                 </div>
               </div>
 
-              {/* Preview */}
-              <div className="p-4 rounded-2xl bg-[#EEEEEC]/30 border border-black/5 flex items-center gap-4">
-                <div className="w-16 h-16 rounded-2xl bg-white border border-black/10 p-2 flex items-center justify-center flex-shrink-0">
-                  <img
-                    src={formData.customImageUrl || formData.image}
-                    alt="Preview"
-                    className="max-h-full max-w-full object-contain"
-                  />
+              {/* Preview & Studio Edit Action */}
+              <div className="p-4 rounded-2xl bg-[#EEEEEC]/30 border border-black/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="relative w-16 h-16 rounded-2xl bg-white border border-black/10 p-2 flex items-center justify-center flex-shrink-0 shadow-xs group">
+                    <img
+                      src={formData.customImageUrl || formData.image}
+                      alt="Preview"
+                      className="max-h-full max-w-full object-contain rounded-lg"
+                    />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-[#171717] block">Active Product Image</span>
+                      <span className="px-2 py-0.5 rounded-full bg-[#F3FCDA] border border-[#9FD842]/30 text-[#709E1E] text-[10px] font-extrabold">
+                        Ready
+                      </span>
+                    </div>
+                    <span className="text-[11px] text-[#777777] block mt-0.5">
+                      Displayed on catalog cards, quick view, and detail pages.
+                    </span>
+                  </div>
                 </div>
-                <div>
-                  <span className="text-xs font-bold text-[#171717] block">Active Product Image Preview</span>
-                  <span className="text-[11px] text-[#777777]">This image will be shown on catalog, cards, and modal previews.</span>
-                </div>
+
+                <button
+                  type="button"
+                  onClick={handleOpenCropper}
+                  className="px-4 py-2.5 rounded-2xl bg-[#171717] hover:bg-black text-white text-xs font-bold flex items-center justify-center gap-2 cursor-pointer shadow-md transition-all active:scale-95 self-start sm:self-auto"
+                >
+                  <Crop className="w-3.5 h-3.5 text-[#9FD842]" />
+                  <span>Crop & Edit Photo</span>
+                </button>
               </div>
             </div>
           )}
@@ -683,6 +739,14 @@ export const AdminProductModal = ({ isOpen, onClose, product = null }) => {
         </div>
 
       </motion.div>
+
+      {/* Interactive Photo Cropper & Studio Modal */}
+      <ImageCropperModal
+        isOpen={isCropperOpen}
+        imageSrc={imageToCrop}
+        onClose={() => setIsCropperOpen(false)}
+        onApply={handleApplyCroppedImage}
+      />
     </div>
   );
 };

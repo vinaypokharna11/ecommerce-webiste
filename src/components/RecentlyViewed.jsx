@@ -61,13 +61,13 @@ export const RecentlyViewed = ({
             >
               <div>
                 {/* Image Box */}
-                <div className="relative w-full aspect-square rounded-[20px] bg-[#EEEEEC] overflow-hidden mb-3">
+                <div className="relative w-full aspect-square rounded-[20px] overflow-hidden mb-3 bg-transparent flex items-center justify-center">
                   <Image
                     src={product.image || '/assets/images/prod_headphones.jpg'}
                     alt={product.name}
                     fill
                     sizes="(max-width: 768px) 50vw, 25vw"
-                    className="object-cover group-hover:scale-105 transition-transform duration-300"
+                    className="object-cover rounded-[20px] group-hover:scale-108 transition-transform duration-300"
                   />
 
                   {/* Favorite Toggle */}
