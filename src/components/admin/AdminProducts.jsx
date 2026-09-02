@@ -45,8 +45,14 @@ export const AdminProducts = ({ onPreviewStore }) => {
     bulkApplyDiscount,
     bulkDeleteProducts,
     bulkUpdateStockStatus,
+    restoreMasterSeed,
+    clearAllCatalog,
+    isLiveConnected,
     storeConfig,
   } = useCatalog();
+
+  const [isSeeding, setIsSeeding] = useState(false);
+  const [isWiping, setIsWiping] = useState(false);
 
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('');
@@ -151,18 +157,64 @@ export const AdminProducts = ({ onPreviewStore }) => {
       {/* ── Top Header & Actions ── */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-[#171717] tracking-tight">
-            Products Catalog
-          </h1>
-          <p className="text-xs sm:text-sm text-[#777777] mt-0.5">
-            Manage your store items, stock levels, pricing, badges, and homepage showcases
+          <div className="flex items-center gap-3 mb-1">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-[#171717] tracking-tight">
+              Products Catalog
+            </h1>
+            <span
+              className={`inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-[11px] font-bold ${
+                isLiveConnected
+                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60'
+                  : 'bg-amber-50 text-amber-700 border border-amber-200/60'
+              }`}
+            >
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  isLiveConnected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'
+                }`}
+              />
+              <span>{isLiveConnected ? 'Real-Time Sync' : 'Connecting Live...'}</span>
+            </span>
+          </div>
+          <p className="text-xs sm:text-sm text-[#777777]">
+            Manage items, live stock updates, pricing, and master demo seed data
           </p>
         </div>
 
-        <div className="flex items-center gap-3 w-full sm:w-auto">
+        <div className="flex items-center flex-wrap gap-2.5 w-full sm:w-auto">
+          {products.length === 0 ? (
+            <button
+              onClick={async () => {
+                setIsSeeding(true);
+                await restoreMasterSeed();
+                setIsSeeding(false);
+              }}
+              disabled={isSeeding}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#9FD842] hover:bg-[#8EC731] text-[#171717] font-extrabold text-xs shadow-sm active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+            >
+              <Sparkles className="w-4 h-4" />
+              <span>{isSeeding ? 'Seeding Catalog...' : 'Seed Demo Products'}</span>
+            </button>
+          ) : (
+            <button
+              onClick={async () => {
+                if (window.confirm('Wipe and delete ALL products, categories, and offers from the active database? This will leave the catalog permanently empty until you add products or re-seed.')) {
+                  setIsWiping(true);
+                  await clearAllCatalog();
+                  setIsWiping(false);
+                }
+              }}
+              disabled={isWiping}
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 text-xs font-bold transition-all cursor-pointer disabled:opacity-50"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>{isWiping ? 'Wiping...' : 'Clear All'}</span>
+            </button>
+          )}
+
           <button
             onClick={handleOpenAddModal}
-            className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-[#171717] hover:bg-black text-white font-extrabold text-xs sm:text-sm shadow-md hover:scale-105 active:scale-95 transition-all cursor-pointer"
+            className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-full bg-[#171717] hover:bg-black text-white font-extrabold text-xs sm:text-sm shadow-md hover:scale-105 active:scale-95 transition-all cursor-pointer"
           >
             <Plus className="w-4 h-4 text-[#9FD842]" />
             <span>Add New Product</span>
@@ -303,8 +355,42 @@ export const AdminProducts = ({ onPreviewStore }) => {
         )}
       </div>
 
-      {/* ── Table View Mode ── */}
-      {viewMode === 'table' && (
+      {/* ── Catalog Empty State (0 items in DB) ── */}
+      {products.length === 0 ? (
+        <div className="p-12 text-center bg-white rounded-[32px] border border-black/10 shadow-[0_4px_20px_rgba(0,0,0,0.02)] space-y-4">
+          <div className="w-16 h-16 rounded-full bg-[#F3FCDA] text-[#709E1E] flex items-center justify-center mx-auto border border-[#9FD842]/30">
+            <Package className="w-8 h-8" />
+          </div>
+          <h2 className="text-xl font-extrabold text-[#171717]">Your Catalog is Empty</h2>
+          <p className="text-xs sm:text-sm text-[#777777] max-w-md mx-auto leading-relaxed">
+            All items have been removed. This clean state will persist across refreshes. You can create brand-new items or restore demo items from your master seed template anytime.
+          </p>
+          <div className="flex items-center justify-center gap-3 pt-2">
+            <button
+              onClick={handleOpenAddModal}
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[#171717] hover:bg-black text-white font-extrabold text-xs shadow-md active:scale-95 transition-all cursor-pointer"
+            >
+              <Plus className="w-4 h-4 text-[#9FD842]" />
+              <span>Add Your First Product</span>
+            </button>
+            <button
+              onClick={async () => {
+                setIsSeeding(true);
+                await restoreMasterSeed();
+                setIsSeeding(false);
+              }}
+              disabled={isSeeding}
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[#9FD842] hover:bg-[#8EC731] text-[#171717] font-extrabold text-xs shadow-md active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+            >
+              <Sparkles className="w-4 h-4" />
+              <span>{isSeeding ? 'Restoring...' : 'Seed Demo Catalog'}</span>
+            </button>
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* ── Table View Mode ── */}
+          {viewMode === 'table' && (
         <div className="bg-white rounded-[28px] border border-black/10 overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
@@ -607,6 +693,8 @@ export const AdminProducts = ({ onPreviewStore }) => {
             );
           })}
         </div>
+      )}
+        </>
       )}
 
       {/* ── Product Edit/Create Modal ── */}

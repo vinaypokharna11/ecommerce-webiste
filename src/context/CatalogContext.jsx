@@ -225,53 +225,11 @@ export const CatalogProvider = ({ children }) => {
     }
   }, [storeConfig]);
 
-  useEffect(() => {
-    if (!isHydratedRef.current) return;
-    try {
-      localStorage.setItem(STORAGE_KEYS.ACTIVITY, JSON.stringify(activities.slice(0, 20)));
-    } catch (e) {
-      console.warn('Failed to save activity log to localStorage', e);
-    }
-  }, [activities]);
-
-  // Initial Sync with Backend REST APIs & Persistent DB
-  useEffect(() => {
-    async function syncWithServer() {
-      try {
-        const [prodRes, catRes, offRes, cfgRes] = await Promise.allSettled([
-          fetch('/api/products').then((r) => r.json()),
-          fetch('/api/categories').then((r) => r.json()),
-          fetch('/api/offers').then((r) => r.json()),
-          fetch('/api/settings').then((r) => r.json()),
-        ]);
-
-        if (prodRes.status === 'fulfilled' && prodRes.value?.success && prodRes.value.products?.length > 0) {
-          setProducts(prodRes.value.products);
-        }
-        if (catRes.status === 'fulfilled' && catRes.value?.success && catRes.value.categories?.length > 0) {
-          setCategories(catRes.value.categories);
-        }
-        if (offRes.status === 'fulfilled' && offRes.value?.success && offRes.value.offers?.length > 0) {
-          setOffers(offRes.value.offers);
-        }
-        if (cfgRes.status === 'fulfilled' && cfgRes.value?.success && cfgRes.value.storeConfig) {
-          const cfg = cfgRes.value.storeConfig;
-          if (!cfg.name || cfg.name === 'ShopEase') {
-            cfg.name = 'Nakoda Imitation';
-            cfg.tagline = 'Premium Imitation Jewelry & Lifestyle Collection';
-          }
-          setStoreConfig(cfg);
-        }
-      } catch (err) {
-        console.info('Using local client cache for catalog');
-      }
-    }
-
-    syncWithServer();
-  }, []);
+  const [isLiveConnected, setIsLiveConnected] = useState(false);
+  const broadcastChannelRef = useRef(null);
 
   // Helper to construct authorization headers for admin REST APIs
-  const getAuthHeaders = () => {
+  const getAuthHeaders = useCallback(() => {
     const token = typeof window !== 'undefined' 
       ? (localStorage.getItem('nakoda_admin_token') || localStorage.getItem('shopease_admin_token')) 
       : null;
@@ -279,7 +237,7 @@ export const CatalogProvider = ({ children }) => {
       'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     };
-  };
+  }, []);
 
   // Activity Logger
   const logActivity = useCallback((title, type = 'info', icon = 'Check') => {
@@ -293,6 +251,189 @@ export const CatalogProvider = ({ children }) => {
     };
     setActivities((prev) => [newAct, ...prev.slice(0, 19)]);
   }, []);
+
+  // Fetch full live catalog from backend REST APIs & Persistent DB
+  const fetchCatalogData = useCallback(async () => {
+    try {
+      const [prodRes, catRes, offRes, cfgRes] = await Promise.allSettled([
+        fetch('/api/products').then((r) => r.json()),
+        fetch('/api/categories').then((r) => r.json()),
+        fetch('/api/offers').then((r) => r.json()),
+        fetch('/api/settings').then((r) => r.json()),
+      ]);
+
+      if (prodRes.status === 'fulfilled' && prodRes.value?.success && Array.isArray(prodRes.value.products)) {
+        setProducts(prodRes.value.products);
+      }
+      if (catRes.status === 'fulfilled' && catRes.value?.success && Array.isArray(catRes.value.categories)) {
+        setCategories(catRes.value.categories);
+      }
+      if (offRes.status === 'fulfilled' && offRes.value?.success && Array.isArray(offRes.value.offers)) {
+        setOffers(offRes.value.offers);
+      }
+      if (cfgRes.status === 'fulfilled' && cfgRes.value?.success && cfgRes.value.storeConfig) {
+        const cfg = cfgRes.value.storeConfig;
+        if (!cfg.name || cfg.name === 'ShopEase') {
+          cfg.name = 'Nakoda Imitation';
+          cfg.tagline = 'Premium Imitation Jewelry & Lifestyle Collection';
+        }
+        setStoreConfig(cfg);
+      }
+    } catch (err) {
+      console.info('Using local client cache for catalog');
+    }
+  }, []);
+
+  // Initial Sync on Client Mount
+  useEffect(() => {
+    fetchCatalogData();
+  }, [fetchCatalogData]);
+
+  // Broadcast to other open browser tabs
+  const broadcastLocal = useCallback((type, payload) => {
+    if (broadcastChannelRef.current) {
+      try {
+        broadcastChannelRef.current.postMessage({ type, payload });
+      } catch (e) {}
+    }
+  }, []);
+
+  // Real-time Event Handler (from SSE stream and BroadcastChannel)
+  const handleRealtimeEvent = useCallback((event) => {
+    if (!event || !event.type) return;
+    const { type, payload } = event;
+
+    switch (type) {
+      case 'PRODUCT_CREATED':
+        if (payload?.product) {
+          setProducts((prev) => [payload.product, ...prev.filter((p) => p.id !== payload.product.id)]);
+        }
+        break;
+      case 'PRODUCT_UPDATED':
+        if (payload?.product) {
+          setProducts((prev) => prev.map((p) => (p.id === payload.product.id ? { ...p, ...payload.product } : p)));
+        }
+        break;
+      case 'PRODUCT_DELETED':
+        if (payload?.id) {
+          setProducts((prev) => prev.filter((p) => p.id !== payload.id));
+        }
+        break;
+      case 'PRODUCTS_BULK_DELETED':
+        if (Array.isArray(payload?.ids)) {
+          setProducts((prev) => prev.filter((p) => !payload.ids.includes(p.id)));
+        }
+        break;
+      case 'CATEGORY_CREATED':
+        if (payload?.category) {
+          setCategories((prev) => [...prev.filter((c) => c.id !== payload.category.id), payload.category]);
+        }
+        break;
+      case 'CATEGORY_UPDATED':
+        if (payload?.category) {
+          setCategories((prev) => prev.map((c) => (c.id === payload.category.id ? { ...c, ...payload.category } : c)));
+        }
+        break;
+      case 'CATEGORY_DELETED':
+        if (payload?.id) {
+          setCategories((prev) => prev.filter((c) => c.id !== payload.id));
+        }
+        break;
+      case 'OFFER_CREATED':
+        if (payload?.offer) {
+          setOffers((prev) => [payload.offer, ...prev.filter((o) => o.id !== payload.offer.id)]);
+        }
+        break;
+      case 'OFFER_UPDATED':
+        if (payload?.offer) {
+          setOffers((prev) => prev.map((o) => (o.id === payload.offer.id ? { ...o, ...payload.offer } : o)));
+        }
+        break;
+      case 'OFFER_DELETED':
+        if (payload?.id) {
+          setOffers((prev) => prev.filter((o) => o.id !== payload.id));
+        }
+        break;
+      case 'CONFIG_UPDATED':
+        if (payload?.storeConfig) {
+          setStoreConfig(payload.storeConfig);
+        }
+        break;
+      case 'CATALOG_SEEDED':
+      case 'CATALOG_CLEARED':
+      case 'SEED_TEMPLATE_UPDATED':
+        fetchCatalogData();
+        break;
+      default:
+        break;
+    }
+  }, [fetchCatalogData]);
+
+  // Connect to SSE Live Stream & Cross-Tab Broadcast Channel
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    // 1. Cross-Tab Real-Time Sync Channel
+    try {
+      if ('BroadcastChannel' in window) {
+        const bc = new BroadcastChannel('nakoda_realtime_v1');
+        broadcastChannelRef.current = bc;
+        bc.onmessage = (ev) => {
+          if (ev.data) handleRealtimeEvent(ev.data);
+        };
+      }
+    } catch (e) {}
+
+    // 2. Server-Sent Events (SSE) Persistent Real-time Stream
+    let eventSource = null;
+    let reconnectTimeout = null;
+
+    function connectSSE() {
+      try {
+        eventSource = new EventSource('/api/realtime');
+
+        eventSource.onopen = () => {
+          setIsLiveConnected(true);
+        };
+
+        eventSource.onmessage = (ev) => {
+          try {
+            const data = JSON.parse(ev.data);
+            if (data.type && data.type !== 'CONNECTED') {
+              handleRealtimeEvent(data);
+            }
+          } catch (err) {}
+        };
+
+        eventSource.onerror = () => {
+          setIsLiveConnected(false);
+          if (eventSource) {
+            eventSource.close();
+            eventSource = null;
+          }
+          // Auto-reconnect after 3s
+          reconnectTimeout = setTimeout(connectSSE, 3000);
+        };
+      } catch (err) {
+        setIsLiveConnected(false);
+      }
+    }
+
+    connectSSE();
+
+    return () => {
+      if (broadcastChannelRef.current) {
+        broadcastChannelRef.current.close();
+        broadcastChannelRef.current = null;
+      }
+      if (eventSource) {
+        eventSource.close();
+      }
+      if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout);
+      }
+    };
+  }, [handleRealtimeEvent]);
 
   // ─────────────────── Product Actions ───────────────────
   const addProduct = useCallback(async (productData) => {
@@ -318,8 +459,9 @@ export const CatalogProvider = ({ children }) => {
         : [],
     };
 
-    // 1. Optimistic state update (shows on home page and catalog immediately)
+    // 1. Optimistic state update
     setProducts((prev) => [newProduct, ...prev.filter((p) => p.id !== newProduct.id)]);
+    broadcastLocal('PRODUCT_CREATED', { product: newProduct });
     logActivity(`Added new product "${newProduct.name}"`, 'product', 'Plus');
 
     // 2. Persist to MongoDB Server
@@ -338,9 +480,10 @@ export const CatalogProvider = ({ children }) => {
     }
 
     return newProduct;
-  }, [logActivity]);
+  }, [getAuthHeaders, broadcastLocal, logActivity]);
 
   const updateProduct = useCallback(async (id, updatedFields) => {
+    let mergedProduct = null;
     setProducts((prev) =>
       prev.map((p) => {
         if (p.id === id) {
@@ -355,11 +498,15 @@ export const CatalogProvider = ({ children }) => {
             else if (count < 5) merged.stockStatus = 'low_stock';
             else merged.stockStatus = 'in_stock';
           }
+          mergedProduct = merged;
           return merged;
         }
         return p;
       })
     );
+    if (mergedProduct) {
+      broadcastLocal('PRODUCT_UPDATED', { product: mergedProduct });
+    }
     logActivity(`Updated product "${updatedFields.name || id}"`, 'product', 'Edit3');
 
     try {
@@ -371,7 +518,7 @@ export const CatalogProvider = ({ children }) => {
     } catch (e) {
       console.warn('Product update to DB failed', e);
     }
-  }, [logActivity]);
+  }, [getAuthHeaders, broadcastLocal, logActivity]);
 
   const deleteProduct = useCallback(async (id) => {
     let deletedName = id;
@@ -380,6 +527,7 @@ export const CatalogProvider = ({ children }) => {
       if (target) deletedName = target.name;
       return prev.filter((p) => p.id !== id);
     });
+    broadcastLocal('PRODUCT_DELETED', { id });
     logActivity(`Deleted product "${deletedName}"`, 'delete', 'Trash2');
 
     try {
@@ -390,7 +538,7 @@ export const CatalogProvider = ({ children }) => {
     } catch (e) {
       console.warn('Product delete to DB failed', e);
     }
-  }, [logActivity]);
+  }, [getAuthHeaders, broadcastLocal, logActivity]);
 
   const duplicateProduct = useCallback(async (id) => {
     const source = products.find((p) => p.id === id);
@@ -554,6 +702,7 @@ export const CatalogProvider = ({ children }) => {
 
   const bulkDeleteProducts = useCallback(async (productIds) => {
     setProducts((prev) => prev.filter((p) => !productIds.includes(p.id)));
+    broadcastLocal('PRODUCTS_BULK_DELETED', { ids: productIds });
     logActivity(`Bulk deleted ${productIds.length} products`, 'delete', 'Trash2');
 
     try {
@@ -566,7 +715,7 @@ export const CatalogProvider = ({ children }) => {
         )
       );
     } catch (e) {}
-  }, [logActivity]);
+  }, [getAuthHeaders, broadcastLocal, logActivity]);
 
   const bulkUpdateStockStatus = useCallback(async (productIds, stockStatus, stockCount = 10) => {
     setProducts((prev) =>
@@ -592,7 +741,7 @@ export const CatalogProvider = ({ children }) => {
         )
       );
     } catch (e) {}
-  }, [logActivity]);
+  }, [getAuthHeaders, logActivity]);
 
   // ─────────────────── Category Actions ───────────────────
   const addCategory = useCallback(async (categoryData) => {
@@ -607,6 +756,7 @@ export const CatalogProvider = ({ children }) => {
       itemCount: '0 Items',
     };
     setCategories((prev) => [...prev.filter((c) => c.id !== newCat.id), newCat]);
+    broadcastLocal('CATEGORY_CREATED', { category: newCat });
     logActivity(`Created category "${newCat.name}"`, 'category', 'FolderPlus');
 
     try {
@@ -621,12 +771,22 @@ export const CatalogProvider = ({ children }) => {
       }
     } catch (e) {}
     return newCat;
-  }, [logActivity]);
+  }, [getAuthHeaders, broadcastLocal, logActivity]);
 
   const updateCategory = useCallback(async (id, updatedFields) => {
+    let mergedCat = null;
     setCategories((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, ...updatedFields } : c))
+      prev.map((c) => {
+        if (c.id === id) {
+          mergedCat = { ...c, ...updatedFields };
+          return mergedCat;
+        }
+        return c;
+      })
     );
+    if (mergedCat) {
+      broadcastLocal('CATEGORY_UPDATED', { category: mergedCat });
+    }
     if (updatedFields.name) {
       setProducts((prev) =>
         prev.map((p) =>
@@ -643,7 +803,7 @@ export const CatalogProvider = ({ children }) => {
         body: JSON.stringify(updatedFields),
       });
     } catch (e) {}
-  }, [logActivity]);
+  }, [getAuthHeaders, broadcastLocal, logActivity]);
 
   const deleteCategory = useCallback(async (id) => {
     let catName = id;
@@ -652,6 +812,7 @@ export const CatalogProvider = ({ children }) => {
       if (target) catName = target.name;
       return prev.filter((c) => c.id !== id);
     });
+    broadcastLocal('CATEGORY_DELETED', { id });
     logActivity(`Deleted category "${catName}"`, 'delete', 'Trash2');
 
     try {
@@ -660,7 +821,7 @@ export const CatalogProvider = ({ children }) => {
         headers: getAuthHeaders(),
       });
     } catch (e) {}
-  }, [logActivity]);
+  }, [getAuthHeaders, broadcastLocal, logActivity]);
 
   // ─────────────────── Offers Actions ───────────────────
   const addOffer = useCallback(async (offerData) => {
@@ -679,6 +840,7 @@ export const CatalogProvider = ({ children }) => {
       icon: offerData.icon || '🎁',
     };
     setOffers((prev) => [newOffer, ...prev.filter((o) => o.id !== newOffer.id)]);
+    broadcastLocal('OFFER_CREATED', { offer: newOffer });
     logActivity(`Created promo offer "${newOffer.code}" (${newOffer.title})`, 'offer', 'Tag');
 
     try {
@@ -693,12 +855,22 @@ export const CatalogProvider = ({ children }) => {
       }
     } catch (e) {}
     return newOffer;
-  }, [logActivity]);
+  }, [getAuthHeaders, broadcastLocal, logActivity]);
 
   const updateOffer = useCallback(async (id, updatedFields) => {
+    let mergedOffer = null;
     setOffers((prev) =>
-      prev.map((o) => (o.id === id ? { ...o, ...updatedFields } : o))
+      prev.map((o) => {
+        if (o.id === id) {
+          mergedOffer = { ...o, ...updatedFields };
+          return mergedOffer;
+        }
+        return o;
+      })
     );
+    if (mergedOffer) {
+      broadcastLocal('OFFER_UPDATED', { offer: mergedOffer });
+    }
     logActivity(`Updated offer "${updatedFields.code || id}"`, 'offer', 'Edit3');
 
     try {
@@ -708,7 +880,7 @@ export const CatalogProvider = ({ children }) => {
         body: JSON.stringify(updatedFields),
       });
     } catch (e) {}
-  }, [logActivity]);
+  }, [getAuthHeaders, broadcastLocal, logActivity]);
 
   const deleteOffer = useCallback(async (id) => {
     let codeName = id;
@@ -717,6 +889,7 @@ export const CatalogProvider = ({ children }) => {
       if (target) codeName = target.code || target.id;
       return prev.filter((o) => o.id !== id);
     });
+    broadcastLocal('OFFER_DELETED', { id });
     logActivity(`Deleted offer "${codeName}"`, 'delete', 'Trash2');
 
     try {
@@ -725,7 +898,7 @@ export const CatalogProvider = ({ children }) => {
         headers: getAuthHeaders(),
       });
     } catch (e) {}
-  }, [logActivity]);
+  }, [getAuthHeaders, broadcastLocal, logActivity]);
 
   const toggleOfferActive = useCallback(async (id) => {
     let nextVal = false;
@@ -747,11 +920,12 @@ export const CatalogProvider = ({ children }) => {
         body: JSON.stringify({ isActive: nextVal }),
       });
     } catch (e) {}
-  }, [logActivity]);
+  }, [getAuthHeaders, logActivity]);
 
-  // ─────────────────── Store Settings & Reset ───────────────────
+  // ─────────────────── Store Settings & Master Seed Actions ───────────────────
   const updateStoreConfig = useCallback(async (newConfig) => {
     setStoreConfig((prev) => ({ ...prev, ...newConfig }));
+    broadcastLocal('CONFIG_UPDATED', { storeConfig: newConfig });
     logActivity('Updated store contact & configuration', 'settings', 'Settings');
 
     try {
@@ -761,22 +935,76 @@ export const CatalogProvider = ({ children }) => {
         body: JSON.stringify(newConfig),
       });
     } catch (e) {}
-  }, [logActivity]);
+  }, [getAuthHeaders, broadcastLocal, logActivity]);
+
+  const restoreMasterSeed = useCallback(async () => {
+    logActivity('Restoring master seed catalog into live database...', 'system', 'RotateCcw');
+    try {
+      const res = await fetch('/api/admin/seed', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ action: 'restore_defaults' }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        await fetchCatalogData();
+        logActivity('Catalog successfully seeded from master template', 'system', 'CheckCircle2');
+        return { success: true, count: data.count };
+      }
+      return { success: false, error: data.error };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  }, [getAuthHeaders, fetchCatalogData, logActivity]);
+
+  const saveCurrentAsMasterSeed = useCallback(async () => {
+    logActivity('Saving current catalog as updateable master seed template...', 'system', 'Save');
+    try {
+      const res = await fetch('/api/admin/seed', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          action: 'update_seed',
+          template: { products, categories, offers, storeConfig },
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        logActivity(`Master seed template updated to v${data.template?.version || 1}`, 'system', 'CheckCircle2');
+        return { success: true, version: data.template?.version };
+      }
+      return { success: false, error: data.error };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  }, [getAuthHeaders, products, categories, offers, storeConfig, logActivity]);
+
+  const clearAllCatalog = useCallback(async () => {
+    setProducts([]);
+    setCategories([]);
+    setOffers([]);
+    broadcastLocal('CATALOG_CLEARED', {});
+    logActivity('Permanently wiped all catalog products, categories, and offers', 'delete', 'Trash2');
+
+    try {
+      const res = await fetch('/api/admin/seed', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ action: 'clear_catalog' }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        return { success: true };
+      }
+      return { success: false, error: data.error };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  }, [getAuthHeaders, broadcastLocal, logActivity]);
 
   const resetToDefaults = useCallback(() => {
-    setProducts(DEFAULT_PRODUCTS);
-    setCategories(INITIAL_CATEGORIES);
-    setOffers(DEFAULT_OFFERS);
-    setStoreConfig(DEFAULT_STORE_CONFIG);
-    setActivities([
-      { id: Date.now(), title: 'Catalog restored to factory defaults', time: 'Just now', type: 'system', icon: 'RotateCcw' },
-    ]);
-    localStorage.removeItem(STORAGE_KEYS.PRODUCTS);
-    localStorage.removeItem(STORAGE_KEYS.CATEGORIES);
-    localStorage.removeItem(STORAGE_KEYS.OFFERS);
-    localStorage.removeItem(STORAGE_KEYS.CONFIG);
-    localStorage.removeItem(STORAGE_KEYS.ACTIVITY);
-  }, []);
+    restoreMasterSeed();
+  }, [restoreMasterSeed]);
 
   const exportCatalogJson = useCallback(() => {
     const data = {
@@ -872,6 +1100,7 @@ export const CatalogProvider = ({ children }) => {
     catalogStats,
     storefrontCategories,
     homePopularProducts,
+    isLiveConnected,
     // Operations
     addProduct,
     updateProduct,
@@ -892,7 +1121,11 @@ export const CatalogProvider = ({ children }) => {
     deleteOffer,
     toggleOfferActive,
     updateStoreConfig,
+    restoreMasterSeed,
+    saveCurrentAsMasterSeed,
+    clearAllCatalog,
     resetToDefaults,
+    fetchCatalogData,
     exportCatalogJson,
     importCatalogJson,
     logActivity,

@@ -23,6 +23,9 @@ import {
   Cloud,
   Image as ImageIcon,
   ExternalLink,
+  Sparkles,
+  Save,
+  Radio,
 } from 'lucide-react';
 import { useCatalog } from '../../context/CatalogContext';
 
@@ -30,12 +33,16 @@ export const AdminSettings = () => {
   const {
     storeConfig,
     updateStoreConfig,
+    restoreMasterSeed,
+    saveCurrentAsMasterSeed,
+    clearAllCatalog,
     resetToDefaults,
     exportCatalogJson,
     importCatalogJson,
     products,
     categories,
     offers,
+    isLiveConnected,
   } = useCatalog();
 
   const [formData, setFormData] = useState({ ...storeConfig });
@@ -43,6 +50,8 @@ export const AdminSettings = () => {
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
   const [importJsonText, setImportJsonText] = useState('');
   const [importStatus, setImportStatus] = useState(null);
+  const [seedActionLoading, setSeedActionLoading] = useState(false);
+  const [seedActionMessage, setSeedActionMessage] = useState(null);
   const [testEmailAddress, setTestEmailAddress] = useState('admin@nakodaimitation.com');
   const [isSendingTestEmail, setIsSendingTestEmail] = useState(false);
   const [testEmailResult, setTestEmailResult] = useState(null);
@@ -168,12 +177,47 @@ export const AdminSettings = () => {
     reader.readAsText(file);
   };
 
-  const handleConfirmReset = () => {
-    resetToDefaults();
+  const handleSaveMasterSeed = async () => {
+    setSeedActionLoading(true);
+    setSeedActionMessage(null);
+    const res = await saveCurrentAsMasterSeed();
+    setSeedActionLoading(false);
+    if (res.success) {
+      setSeedActionMessage({ success: true, text: `Successfully saved active catalog as Master Seed Template v${res.version}!` });
+    } else {
+      setSeedActionMessage({ success: false, text: res.error || 'Failed to update master seed template.' });
+    }
+  };
+
+  const handleRestoreMasterSeed = async () => {
+    setSeedActionLoading(true);
+    setSeedActionMessage(null);
+    const res = await restoreMasterSeed();
+    setSeedActionLoading(false);
     setIsResetModalOpen(false);
-    setFormData(storeConfig);
-    setSaveSuccess(true);
-    setTimeout(() => setSaveSuccess(false), 3000);
+    if (res.success) {
+      setSeedActionMessage({ success: true, text: `Successfully restored active catalog with ${res.count} items from Master Seed Template!` });
+    } else {
+      setSeedActionMessage({ success: false, text: res.error || 'Failed to restore from seed template.' });
+    }
+  };
+
+  const handleClearAll = async () => {
+    if (window.confirm('Wipe ALL products, categories, and offers from the active database? The store will remain clean & empty across refreshes until you add items or seed demo products.')) {
+      setSeedActionLoading(true);
+      setSeedActionMessage(null);
+      const res = await clearAllCatalog();
+      setSeedActionLoading(false);
+      if (res.success) {
+        setSeedActionMessage({ success: true, text: 'Catalog successfully wiped and emptied.' });
+      } else {
+        setSeedActionMessage({ success: false, text: res.error || 'Failed to clear catalog.' });
+      }
+    }
+  };
+
+  const handleConfirmReset = () => {
+    handleRestoreMasterSeed();
   };
 
   return (
@@ -495,27 +539,110 @@ export const AdminSettings = () => {
         )}
       </div>
 
-      {/* ── Factory Reset Danger Zone ── */}
-      <div className="bg-white rounded-[28px] border border-rose-200 p-6 shadow-[0_4px_20px_rgba(0,0,0,0.02)] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h3 className="text-sm font-extrabold text-rose-700 flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-rose-600" />
-            <span>Reset to Factory Defaults</span>
-          </h3>
-          <p className="text-xs text-[#777777] mt-0.5 max-w-lg">
-            Restores the initial sample products, default categories, and original mock configuration.
-          </p>
+      {/* ── Updateable Master Seed Template & Real-Time Sync Controls ── */}
+      <div className="bg-white rounded-[28px] border border-black/10 p-6 sm:p-8 shadow-[0_4px_20px_rgba(0,0,0,0.02)] space-y-5">
+        <div className="flex items-center justify-between pb-4 border-b border-black/10 flex-wrap gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-[#F3FCDA] text-[#709E1E] flex items-center justify-center">
+              <Sparkles className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-base font-extrabold text-[#171717]">Master Seed Template & Real-Time Sync</h2>
+                <span
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border ${
+                    isLiveConnected
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                      : 'bg-amber-50 text-amber-700 border-amber-200'
+                  }`}
+                >
+                  <span className={`w-1.5 h-1.5 rounded-full ${isLiveConnected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
+                  <span>{isLiveConnected ? 'Live Stream Active' : 'Connecting...'}</span>
+                </span>
+              </div>
+              <p className="text-xs text-[#777777] mt-0.5">
+                Updateable master seed template allows you to save custom store setups or restore defaults anytime
+              </p>
+            </div>
+          </div>
         </div>
 
-        <button
-          onClick={() => setIsResetModalOpen(true)}
-          className="px-5 py-2.5 rounded-full bg-rose-50 text-rose-600 hover:bg-rose-100 text-xs font-bold border border-rose-200 transition-colors cursor-pointer"
-        >
-          Reset Store
-        </button>
+        {seedActionMessage && (
+          <div
+            className={`p-3.5 rounded-2xl text-xs font-semibold ${
+              seedActionMessage.success
+                ? 'bg-emerald-50 text-emerald-900 border border-emerald-200'
+                : 'bg-rose-50 text-rose-900 border border-rose-200'
+            }`}
+          >
+            {seedActionMessage.text}
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {/* Action 1: Save Active as Master Seed */}
+          <div className="p-4 rounded-2xl bg-[#EEEEEC]/50 border border-black/5 flex flex-col justify-between space-y-3">
+            <div>
+              <h4 className="text-xs font-extrabold text-[#171717] flex items-center gap-1.5 mb-1">
+                <Save className="w-3.5 h-3.5 text-[#709E1E]" />
+                <span>Save as Master Seed</span>
+              </h4>
+              <p className="text-[11px] text-[#777777] leading-relaxed">
+                Saves your current {products.length} products & {categories.length} categories as the new permanent master template.
+              </p>
+            </div>
+            <button
+              onClick={handleSaveMasterSeed}
+              disabled={seedActionLoading}
+              className="w-full py-2.5 px-4 rounded-full bg-[#171717] hover:bg-black text-white text-xs font-bold shadow-xs active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+            >
+              {seedActionLoading ? 'Saving...' : 'Update Master Seed'}
+            </button>
+          </div>
+
+          {/* Action 2: Restore from Master Seed */}
+          <div className="p-4 rounded-2xl bg-[#EEEEEC]/50 border border-black/5 flex flex-col justify-between space-y-3">
+            <div>
+              <h4 className="text-xs font-extrabold text-[#171717] flex items-center gap-1.5 mb-1">
+                <RotateCcw className="w-3.5 h-3.5 text-[#6257FF]" />
+                <span>Restore from Master Seed</span>
+              </h4>
+              <p className="text-[11px] text-[#777777] leading-relaxed">
+                Repopulates the live database with all items from your current master seed template.
+              </p>
+            </div>
+            <button
+              onClick={() => setIsResetModalOpen(true)}
+              disabled={seedActionLoading}
+              className="w-full py-2.5 px-4 rounded-full bg-[#9FD842] hover:bg-[#8EC731] text-[#171717] text-xs font-bold shadow-xs active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+            >
+              {seedActionLoading ? 'Restoring...' : 'Restore Seed Catalog'}
+            </button>
+          </div>
+
+          {/* Action 3: Permanently Wipe Catalog */}
+          <div className="p-4 rounded-2xl bg-rose-50/50 border border-rose-100 flex flex-col justify-between space-y-3">
+            <div>
+              <h4 className="text-xs font-extrabold text-rose-700 flex items-center gap-1.5 mb-1">
+                <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
+                <span>Clear All Active Items</span>
+              </h4>
+              <p className="text-[11px] text-[#777777] leading-relaxed">
+                Empties all products & categories. Database stays permanently clean and empty across refreshes.
+              </p>
+            </div>
+            <button
+              onClick={handleClearAll}
+              disabled={seedActionLoading}
+              className="w-full py-2.5 px-4 rounded-full bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-xs active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+            >
+              {seedActionLoading ? 'Wiping...' : 'Clear Catalog'}
+            </button>
+          </div>
+        </div>
       </div>
 
-      {/* Reset Modal */}
+      {/* Restore Confirmation Modal */}
       <AnimatePresence>
         {isResetModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -532,14 +659,14 @@ export const AdminSettings = () => {
               exit={{ scale: 0.95, opacity: 0 }}
               className="relative w-full max-w-md bg-white rounded-[32px] p-6 border border-black/10 shadow-2xl z-10 text-center"
             >
-              <div className="w-14 h-14 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center mx-auto mb-4 border border-rose-100">
+              <div className="w-14 h-14 rounded-full bg-[#F3FCDA] text-[#709E1E] flex items-center justify-center mx-auto mb-4 border border-[#9FD842]/30">
                 <RotateCcw className="w-7 h-7" />
               </div>
               <h3 className="text-lg font-bold text-[#171717] mb-1">
-                Reset Catalog to Factory Defaults?
+                Restore Catalog from Master Seed?
               </h3>
-              <p className="text-xs text-[#777777] mb-6">
-                This will reset your products, categories, and offers back to standard defaults.
+              <p className="text-xs text-[#777777] mb-6 leading-relaxed">
+                This will load and populate your database with items from the current Master Seed Template. Any newly added unsaved products will be replaced.
               </p>
               <div className="flex items-center justify-center gap-3">
                 <button
@@ -550,9 +677,9 @@ export const AdminSettings = () => {
                 </button>
                 <button
                   onClick={handleConfirmReset}
-                  className="px-6 py-2.5 rounded-full bg-rose-600 text-white text-xs font-bold hover:bg-rose-700 shadow-md cursor-pointer"
+                  className="px-6 py-2.5 rounded-full bg-[#171717] hover:bg-black text-white text-xs font-bold shadow-md cursor-pointer"
                 >
-                  Yes, Reset Catalog
+                  Yes, Restore Seed
                 </button>
               </div>
             </motion.div>

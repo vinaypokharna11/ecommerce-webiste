@@ -341,17 +341,21 @@ export const CatalogPage = ({
               <ShoppingBag className="w-6 h-6" />
             </div>
             <h3 className="text-lg font-bold text-[#171717] mb-1">
-              We couldn't find that product
+              {products.length === 0 ? 'No Products in Catalog' : "We couldn't find that product"}
             </h3>
             <p className="text-xs text-[#777777] max-w-xs mx-auto mb-5">
-              Try adjusting your search terms or clearing active filters.
+              {products.length === 0
+                ? 'Our catalog is currently being updated with new jewelry items. Please check back soon!'
+                : 'Try adjusting your search terms or clearing active filters.'}
             </p>
-            <button
-              onClick={handleResetFilters}
-              className="px-6 py-2.5 rounded-full bg-[#9FD842] text-[#171717] font-bold text-xs shadow-sm hover:bg-[#8EC731]"
-            >
-              Browse All Products
-            </button>
+            {products.length > 0 && (
+              <button
+                onClick={handleResetFilters}
+                className="px-6 py-2.5 rounded-full bg-[#9FD842] text-[#171717] font-bold text-xs shadow-sm hover:bg-[#8EC731] cursor-pointer"
+              >
+                Browse All Products
+              </button>
+            )}
           </div>
         )}
       </div>

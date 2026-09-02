@@ -9,6 +9,8 @@ const StoreConfigSchema = new mongoose.Schema(
     address: { type: String, default: 'Shop #14, Main Market Road, Bangalore' },
     hours: { type: String, default: 'Mon - Sun: 9:30 AM – 9:30 PM' },
     currency: { type: String, default: '₹' },
+    isInitialized: { type: Boolean, default: true },
+    seedVersion: { type: Number, default: 1 },
   },
   { timestamps: true }
 );

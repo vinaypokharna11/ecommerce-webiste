@@ -10,8 +10,10 @@ import Order from '../models/Order.js';
 import Inquiry from '../models/Inquiry.js';
 import ContactMessage from '../models/ContactMessage.js';
 import StoreConfig from '../models/StoreConfig.js';
+import { broadcastCatalogEvent, CATALOG_EVENTS } from './events.js';
 
 const DB_FILE_PATH = path.join(process.cwd(), 'src', 'data', 'db.json');
+const SEED_TEMPLATE_FILE_PATH = path.join(process.cwd(), 'src', 'data', 'seedTemplate.json');
 
 // Initial baseline mock data for seeding MongoDB and JSON fallback
 export const INITIAL_DB_STATE = {
@@ -690,6 +692,142 @@ const memoryCache = {
   },
 };
 
+// ─── MASTER SEED TEMPLATE MANAGEMENT (Updateable & Dynamic) ─────────────────
+export function getMasterSeedTemplate() {
+  try {
+    if (fs.existsSync(SEED_TEMPLATE_FILE_PATH)) {
+      const raw = fs.readFileSync(SEED_TEMPLATE_FILE_PATH, 'utf-8');
+      return JSON.parse(raw);
+    }
+  } catch (err) {
+    console.warn('Error reading seedTemplate.json:', err.message);
+  }
+  return {
+    version: 1,
+    updatedAt: new Date().toISOString(),
+    products: INITIAL_DB_STATE.products,
+    categories: INITIAL_DB_STATE.categories,
+    offers: INITIAL_DB_STATE.offers,
+    storeConfig: INITIAL_DB_STATE.storeConfig,
+  };
+}
+
+export function updateMasterSeedTemplate(customData) {
+  try {
+    const current = getMasterSeedTemplate();
+    const updated = {
+      ...current,
+      ...customData,
+      version: (current.version || 1) + 1,
+      updatedAt: new Date().toISOString(),
+    };
+    const dir = path.dirname(SEED_TEMPLATE_FILE_PATH);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(SEED_TEMPLATE_FILE_PATH, JSON.stringify(updated, null, 2), 'utf-8');
+    
+    broadcastCatalogEvent(CATALOG_EVENTS.SEED_TEMPLATE_UPDATED, {
+      version: updated.version,
+      updatedAt: updated.updatedAt,
+      productsCount: (updated.products || []).length,
+      categoriesCount: (updated.categories || []).length,
+      offersCount: (updated.offers || []).length,
+    });
+    return updated;
+  } catch (err) {
+    console.error('Failed to update master seed template:', err);
+    throw err;
+  }
+}
+
+export async function restoreSeedCatalog(customSeed = null) {
+  const template = customSeed || getMasterSeedTemplate();
+  const db = await connectToDatabase();
+  if (db) {
+    await Promise.all([
+      Product.deleteMany({}),
+      Category.deleteMany({}),
+      Offer.deleteMany({}),
+    ]);
+
+    const prods = template.products || INITIAL_DB_STATE.products;
+    const cats = template.categories || INITIAL_DB_STATE.categories;
+    const offs = template.offers || INITIAL_DB_STATE.offers;
+
+    if (prods.length > 0) await Product.insertMany(prods);
+    if (cats.length > 0) await Category.insertMany(cats);
+    if (offs.length > 0) await Offer.insertMany(offs);
+
+    await StoreConfig.updateOne({}, { $set: { isInitialized: true } }, { upsert: true });
+
+    isSeeded = true;
+    memoryCache.invalidateProducts();
+    memoryCache.invalidateCategories();
+    memoryCache.invalidateOffers();
+    memoryCache.invalidateConfig();
+
+    broadcastCatalogEvent(CATALOG_EVENTS.CATALOG_SEEDED, {
+      productsCount: prods.length,
+      categoriesCount: cats.length,
+      offersCount: offs.length,
+    });
+
+    return { success: true, count: prods.length };
+  }
+
+  // Fallback JSON DB
+  const jdb = readJSONDB();
+  jdb.products = template.products || INITIAL_DB_STATE.products;
+  jdb.categories = template.categories || INITIAL_DB_STATE.categories;
+  jdb.offers = template.offers || INITIAL_DB_STATE.offers;
+  jdb.isInitialized = true;
+  writeJSONDB(jdb);
+
+  memoryCache.invalidateProducts();
+  memoryCache.invalidateCategories();
+  memoryCache.invalidateOffers();
+
+  broadcastCatalogEvent(CATALOG_EVENTS.CATALOG_SEEDED, {
+    productsCount: (jdb.products || []).length,
+    categoriesCount: (jdb.categories || []).length,
+    offersCount: (jdb.offers || []).length,
+  });
+
+  return { success: true, count: (jdb.products || []).length };
+}
+
+export async function clearCatalog() {
+  const db = await connectToDatabase();
+  if (db) {
+    await Promise.all([
+      Product.deleteMany({}),
+      Category.deleteMany({}),
+      Offer.deleteMany({}),
+    ]);
+    await StoreConfig.updateOne({}, { $set: { isInitialized: true } }, { upsert: true });
+    isSeeded = true;
+    memoryCache.invalidateProducts();
+    memoryCache.invalidateCategories();
+    memoryCache.invalidateOffers();
+
+    broadcastCatalogEvent(CATALOG_EVENTS.CATALOG_CLEARED, { timestamp: new Date().toISOString() });
+    return { success: true, count: 0 };
+  }
+
+  const jdb = readJSONDB();
+  jdb.products = [];
+  jdb.categories = [];
+  jdb.offers = [];
+  jdb.isInitialized = true;
+  writeJSONDB(jdb);
+
+  memoryCache.invalidateProducts();
+  memoryCache.invalidateCategories();
+  memoryCache.invalidateOffers();
+
+  broadcastCatalogEvent(CATALOG_EVENTS.CATALOG_CLEARED, { timestamp: new Date().toISOString() });
+  return { success: true, count: 0 };
+}
+
 // ─── MongoDB Auto-Seeding Helper (Parallel Singleton) ─────────────────────────
 let isSeeded = false;
 let seedPromise = null;
@@ -699,36 +837,30 @@ async function ensureMongoSeeded() {
   if (!seedPromise) {
     seedPromise = (async () => {
       try {
-        const [productCount, categoryCount, offerCount, configCount] = await Promise.all([
-          Product.estimatedDocumentCount().catch(() => 0),
-          Category.estimatedDocumentCount().catch(() => 0),
-          Offer.estimatedDocumentCount().catch(() => 0),
-          StoreConfig.estimatedDocumentCount().catch(() => 0),
+        const existingConfig = await StoreConfig.findOne().lean().catch(() => null);
+        // If DB has already been initialized, DO NOT auto-seed (respect empty catalog)
+        if (existingConfig && existingConfig.isInitialized) {
+          isSeeded = true;
+          return;
+        }
+
+        // Only run on fresh brand-new database installation
+        const template = getMasterSeedTemplate();
+        console.log('🌱 Performing initial one-time seed of catalog into MongoDB Atlas...');
+        
+        await Promise.all([
+          Product.insertMany(template.products || INITIAL_DB_STATE.products),
+          Category.insertMany(template.categories || INITIAL_DB_STATE.categories),
+          Offer.insertMany(template.offers || INITIAL_DB_STATE.offers),
+          StoreConfig.create({
+            ...(template.storeConfig || INITIAL_DB_STATE.storeConfig),
+            isInitialized: true,
+          }),
         ]);
-
-        const seedActions = [];
-        if (productCount === 0) {
-          console.log('🌱 Seeding default products to MongoDB...');
-          seedActions.push(Product.insertMany(INITIAL_DB_STATE.products));
-        }
-        if (categoryCount === 0) {
-          console.log('🌱 Seeding default categories to MongoDB...');
-          seedActions.push(Category.insertMany(INITIAL_DB_STATE.categories));
-        }
-        if (offerCount === 0) {
-          console.log('🌱 Seeding default offers to MongoDB...');
-          seedActions.push(Offer.insertMany(INITIAL_DB_STATE.offers));
-        }
-        if (configCount === 0) {
-          seedActions.push(StoreConfig.create(INITIAL_DB_STATE.storeConfig));
-        }
-
-        if (seedActions.length > 0) {
-          await Promise.all(seedActions);
-        }
         isSeeded = true;
       } catch (err) {
-        console.warn('MongoDB seed warning:', err.message);
+        console.warn('MongoDB initial seed notice:', err.message);
+        isSeeded = true; // Avoid re-trying in loop
       } finally {
         seedPromise = null;
       }
@@ -847,6 +979,7 @@ export async function createProduct(productData) {
     const { _id, __v, ...rest } = created.toObject();
     memoryCache.invalidateProducts();
     memoryCache.invalidateCategories();
+    broadcastCatalogEvent(CATALOG_EVENTS.PRODUCT_CREATED, { product: rest });
     return rest;
   }
 
@@ -855,6 +988,7 @@ export async function createProduct(productData) {
   writeJSONDB(jdb);
   memoryCache.invalidateProducts();
   memoryCache.invalidateCategories();
+  broadcastCatalogEvent(CATALOG_EVENTS.PRODUCT_CREATED, { product: newProduct });
   return newProduct;
 }
 
@@ -872,6 +1006,7 @@ export async function updateProduct(id, updateData) {
     const { _id, __v, ...rest } = updated;
     memoryCache.invalidateProducts();
     memoryCache.invalidateCategories();
+    broadcastCatalogEvent(CATALOG_EVENTS.PRODUCT_UPDATED, { product: rest });
     return rest;
   }
 
@@ -890,6 +1025,7 @@ export async function updateProduct(id, updateData) {
   writeJSONDB(jdb);
   memoryCache.invalidateProducts();
   memoryCache.invalidateCategories();
+  broadcastCatalogEvent(CATALOG_EVENTS.PRODUCT_UPDATED, { product: merged });
   return merged;
 }
 
@@ -901,6 +1037,7 @@ export async function deleteProduct(id) {
     if (ok) {
       memoryCache.invalidateProducts();
       memoryCache.invalidateCategories();
+      broadcastCatalogEvent(CATALOG_EVENTS.PRODUCT_DELETED, { id });
     }
     return ok;
   }
@@ -913,6 +1050,7 @@ export async function deleteProduct(id) {
     writeJSONDB(jdb);
     memoryCache.invalidateProducts();
     memoryCache.invalidateCategories();
+    broadcastCatalogEvent(CATALOG_EVENTS.PRODUCT_DELETED, { id });
   }
   return deleted;
 }
@@ -970,6 +1108,7 @@ export async function createCategory(data) {
     const created = await Category.create(newCat);
     const { _id, __v, ...rest } = created.toObject();
     memoryCache.invalidateCategories();
+    broadcastCatalogEvent(CATALOG_EVENTS.CATEGORY_CREATED, { category: rest });
     return rest;
   }
 
@@ -977,6 +1116,7 @@ export async function createCategory(data) {
   jdb.categories = [...(jdb.categories || []), newCat];
   writeJSONDB(jdb);
   memoryCache.invalidateCategories();
+  broadcastCatalogEvent(CATALOG_EVENTS.CATEGORY_CREATED, { category: newCat });
   return newCat;
 }
 
@@ -987,6 +1127,7 @@ export async function updateCategory(id, updateData) {
     if (!updated) return null;
     const { _id, __v, ...rest } = updated;
     memoryCache.invalidateCategories();
+    broadcastCatalogEvent(CATALOG_EVENTS.CATEGORY_UPDATED, { category: rest });
     return rest;
   }
 
@@ -996,6 +1137,7 @@ export async function updateCategory(id, updateData) {
   jdb.categories[index] = { ...jdb.categories[index], ...updateData };
   writeJSONDB(jdb);
   memoryCache.invalidateCategories();
+  broadcastCatalogEvent(CATALOG_EVENTS.CATEGORY_UPDATED, { category: jdb.categories[index] });
   return jdb.categories[index];
 }
 
@@ -1004,7 +1146,10 @@ export async function deleteCategory(id) {
   if (db) {
     const res = await Category.deleteOne({ id });
     const ok = res.deletedCount > 0;
-    if (ok) memoryCache.invalidateCategories();
+    if (ok) {
+      memoryCache.invalidateCategories();
+      broadcastCatalogEvent(CATALOG_EVENTS.CATEGORY_DELETED, { id });
+    }
     return ok;
   }
 
@@ -1015,6 +1160,7 @@ export async function deleteCategory(id) {
   if (deleted) {
     writeJSONDB(jdb);
     memoryCache.invalidateCategories();
+    broadcastCatalogEvent(CATALOG_EVENTS.CATEGORY_DELETED, { id });
   }
   return deleted;
 }
@@ -1062,6 +1208,7 @@ export async function createOffer(data) {
     const created = await Offer.create(newOffer);
     const { _id, __v, ...rest } = created.toObject();
     memoryCache.invalidateOffers();
+    broadcastCatalogEvent(CATALOG_EVENTS.OFFER_CREATED, { offer: rest });
     return rest;
   }
 
@@ -1069,6 +1216,7 @@ export async function createOffer(data) {
   jdb.offers = [newOffer, ...(jdb.offers || [])];
   writeJSONDB(jdb);
   memoryCache.invalidateOffers();
+  broadcastCatalogEvent(CATALOG_EVENTS.OFFER_CREATED, { offer: newOffer });
   return newOffer;
 }
 
@@ -1079,6 +1227,7 @@ export async function updateOffer(id, updateData) {
     if (!updated) return null;
     const { _id, __v, ...rest } = updated;
     memoryCache.invalidateOffers();
+    broadcastCatalogEvent(CATALOG_EVENTS.OFFER_UPDATED, { offer: rest });
     return rest;
   }
 
@@ -1088,6 +1237,7 @@ export async function updateOffer(id, updateData) {
   jdb.offers[index] = { ...jdb.offers[index], ...updateData };
   writeJSONDB(jdb);
   memoryCache.invalidateOffers();
+  broadcastCatalogEvent(CATALOG_EVENTS.OFFER_UPDATED, { offer: jdb.offers[index] });
   return jdb.offers[index];
 }
 
@@ -1096,7 +1246,10 @@ export async function deleteOffer(id) {
   if (db) {
     const res = await Offer.deleteOne({ id });
     const ok = res.deletedCount > 0;
-    if (ok) memoryCache.invalidateOffers();
+    if (ok) {
+      memoryCache.invalidateOffers();
+      broadcastCatalogEvent(CATALOG_EVENTS.OFFER_DELETED, { id });
+    }
     return ok;
   }
 
@@ -1107,6 +1260,7 @@ export async function deleteOffer(id) {
   if (deleted) {
     writeJSONDB(jdb);
     memoryCache.invalidateOffers();
+    broadcastCatalogEvent(CATALOG_EVENTS.OFFER_DELETED, { id });
   }
   return deleted;
 }
@@ -1398,11 +1552,13 @@ export async function updateStoreConfig(configData) {
       await config.save();
       const { _id, __v, ...rest } = config.toObject();
       memoryCache.invalidateConfig();
+      broadcastCatalogEvent(CATALOG_EVENTS.CONFIG_UPDATED, { storeConfig: rest });
       return rest;
     } else {
       const created = await StoreConfig.create(configData);
       const { _id, __v, ...rest } = created.toObject();
       memoryCache.invalidateConfig();
+      broadcastCatalogEvent(CATALOG_EVENTS.CONFIG_UPDATED, { storeConfig: rest });
       return rest;
     }
   }
@@ -1411,6 +1567,7 @@ export async function updateStoreConfig(configData) {
   jdb.storeConfig = { ...(jdb.storeConfig || {}), ...configData };
   writeJSONDB(jdb);
   memoryCache.invalidateConfig();
+  broadcastCatalogEvent(CATALOG_EVENTS.CONFIG_UPDATED, { storeConfig: jdb.storeConfig });
   return jdb.storeConfig;
 }
 
