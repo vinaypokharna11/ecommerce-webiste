@@ -23,6 +23,7 @@ import {
 import { ASSET_GALLERY, BADGE_PRESETS } from './adminConstants';
 import { useCatalog } from '../../context/CatalogContext';
 import { ImageCropperModal } from './ImageCropperModal';
+import { uploadToCloudinary } from '../../lib/uploadClient';
 
 const DEFAULT_FORM_STATE = {
   name: '',
@@ -61,6 +62,7 @@ export const AdminProductModal = ({ isOpen, onClose, product = null }) => {
   // Image Cropper & Editor State
   const [isCropperOpen, setIsCropperOpen] = useState(false);
   const [imageToCrop, setImageToCrop] = useState('');
+  const [isUploadingToCloudinary, setIsUploadingToCloudinary] = useState(false);
 
   const isEditing = !!product;
 
@@ -172,13 +174,29 @@ export const AdminProductModal = ({ isOpen, onClose, product = null }) => {
     }
   };
 
-  const handleApplyCroppedImage = (croppedBase64) => {
+  const handleApplyCroppedImage = async (croppedBase64) => {
+    setIsCropperOpen(false);
     setFormData((prev) => ({
       ...prev,
       image: croppedBase64,
       customImageUrl: '',
     }));
-    setIsCropperOpen(false);
+
+    setIsUploadingToCloudinary(true);
+    try {
+      const res = await uploadToCloudinary(croppedBase64, 'nakoda_imitation/products');
+      if (res?.url) {
+        setFormData((prev) => ({
+          ...prev,
+          image: res.url,
+          customImageUrl: res.url,
+        }));
+      }
+    } catch (err) {
+      console.warn('Cloudinary upload notification:', err);
+    } finally {
+      setIsUploadingToCloudinary(false);
+    }
   };
 
   const validate = () => {
@@ -629,12 +647,25 @@ export const AdminProductModal = ({ isOpen, onClose, product = null }) => {
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold text-[#171717] block">Active Product Image</span>
-                      <span className="px-2 py-0.5 rounded-full bg-[#F3FCDA] border border-[#9FD842]/30 text-[#709E1E] text-[10px] font-extrabold">
-                        Ready
-                      </span>
+                      {isUploadingToCloudinary ? (
+                        <span className="px-2 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-[10px] font-extrabold animate-pulse flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
+                          Uploading to Cloudinary...
+                        </span>
+                      ) : (formData.customImageUrl || formData.image)?.includes('res.cloudinary.com') ? (
+                        <span className="px-2 py-0.5 rounded-full bg-[#F3FCDA] border border-[#9FD842]/40 text-[#5F8C1D] text-[10px] font-extrabold flex items-center gap-1">
+                          <span>☁️ Cloudinary CDN</span>
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded-full bg-[#F3FCDA] border border-[#9FD842]/30 text-[#709E1E] text-[10px] font-extrabold">
+                          Ready
+                        </span>
+                      )}
                     </div>
                     <span className="text-[11px] text-[#777777] block mt-0.5">
-                      Displayed on catalog cards, quick view, and detail pages.
+                      {isUploadingToCloudinary
+                        ? 'Optimizing and syncing photo with Cloudinary...'
+                        : 'Displayed on catalog cards, quick view, and detail pages.'}
                     </span>
                   </div>
                 </div>

@@ -20,6 +20,9 @@ import {
   Mail,
   Send,
   CheckCircle2,
+  Cloud,
+  Image as ImageIcon,
+  ExternalLink,
 } from 'lucide-react';
 import { useCatalog } from '../../context/CatalogContext';
 
@@ -43,6 +46,54 @@ export const AdminSettings = () => {
   const [testEmailAddress, setTestEmailAddress] = useState('admin@nakodaimitation.com');
   const [isSendingTestEmail, setIsSendingTestEmail] = useState(false);
   const [testEmailResult, setTestEmailResult] = useState(null);
+
+  // Cloudinary Diagnostics State
+  const [isTestingCloudinary, setIsTestingCloudinary] = useState(false);
+  const [cloudinaryTestResult, setCloudinaryTestResult] = useState(null);
+
+  const handleTestCloudinaryUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsTestingCloudinary(true);
+    setCloudinaryTestResult(null);
+
+    try {
+      const formDataUpload = new FormData();
+      formDataUpload.append('file', file);
+      formDataUpload.append('folder', 'nakoda_imitation/test');
+
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formDataUpload,
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setCloudinaryTestResult({
+          success: true,
+          url: data.url,
+          isCloudinary: data.isCloudinary,
+          message: data.isCloudinary
+            ? 'Successfully uploaded and optimized on Cloudinary CDN!'
+            : 'Uploaded with local fallback (Add Cloudinary keys to .env.local to enable CDN).',
+        });
+      } else {
+        setCloudinaryTestResult({
+          success: false,
+          message: data.error || 'Failed to upload test image',
+        });
+      }
+    } catch (err) {
+      setCloudinaryTestResult({
+        success: false,
+        message: 'Network error connecting to /api/upload endpoint',
+      });
+    } finally {
+      setIsTestingCloudinary(false);
+      e.target.value = '';
+    }
+  };
 
   const handleSendTestEmail = async (e) => {
     e.preventDefault();
@@ -357,6 +408,89 @@ export const AdminSettings = () => {
             importStatus.success ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-rose-50 text-rose-800 border border-rose-200'
           }`}>
             {importStatus.message}
+          </div>
+        )}
+      </div>
+
+      {/* ── Cloudinary Image CDN & Upload Diagnostics ── */}
+      <div className="bg-white rounded-[28px] border border-black/10 p-6 sm:p-8 shadow-[0_4px_20px_rgba(0,0,0,0.02)] space-y-4">
+        <div className="flex items-center gap-3 pb-4 border-b border-black/10">
+          <div className="w-10 h-10 rounded-2xl bg-[#F3FCDA] text-[#709E1E] flex items-center justify-center">
+            <Cloud className="w-5 h-5" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <h2 className="text-base font-extrabold text-[#171717]">Cloudinary Image CDN Integration</h2>
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-[#F3FCDA] text-[#5F8C1D] border border-[#9FD842]/40">
+                Active & Integrated
+              </span>
+            </div>
+            <p className="text-xs text-[#777777]">
+              High-speed image compression, auto-WebP conversion (<code className="bg-black/5 px-1 rounded">f_auto, q_auto</code>), and secure cloud storage
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+          <div className="md:col-span-8 text-xs text-[#666666] space-y-2">
+            <p>
+              Product photos uploaded via the Product Editor and Cropper are automatically processed and delivered via Cloudinary's worldwide CDN.
+            </p>
+            <div className="flex items-center gap-4 text-[11px] text-[#888888] flex-wrap">
+              <span>• Auto Quality & WebP</span>
+              <span>• Lossless Compression</span>
+              <span>• Instant Global Edge Delivery</span>
+            </div>
+          </div>
+
+          <div className="md:col-span-4 flex flex-col gap-2">
+            <label className="w-full py-3 px-5 rounded-full bg-[#171717] hover:bg-black text-white font-extrabold text-xs flex items-center justify-center gap-2 shadow-sm cursor-pointer transition-all active:scale-95">
+              <ImageIcon className="w-4 h-4 text-[#9FD842]" />
+              <span>{isTestingCloudinary ? 'Uploading & Testing...' : 'Test Cloudinary Upload'}</span>
+              <input
+                type="file"
+                accept="image/*"
+                disabled={isTestingCloudinary}
+                onChange={handleTestCloudinaryUpload}
+                className="hidden"
+              />
+            </label>
+          </div>
+        </div>
+
+        {cloudinaryTestResult && (
+          <div className={`p-4 rounded-2xl text-xs flex items-center justify-between gap-3 ${
+            cloudinaryTestResult.success
+              ? 'bg-emerald-50 text-emerald-900 border border-emerald-200'
+              : 'bg-rose-50 text-rose-900 border border-rose-200'
+          }`}>
+            <div className="flex items-center gap-2.5 min-w-0">
+              {cloudinaryTestResult.success ? (
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+              ) : (
+                <AlertTriangle className="w-4 h-4 text-rose-600 flex-shrink-0" />
+              )}
+              <div className="min-w-0">
+                <span className="font-bold block">{cloudinaryTestResult.message}</span>
+                {cloudinaryTestResult.url && (
+                  <span className="text-[11px] text-emerald-700 truncate block mt-0.5 max-w-md">
+                    CDN URL: {cloudinaryTestResult.url}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {cloudinaryTestResult.url && (
+              <a
+                href={cloudinaryTestResult.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-1.5 rounded-lg bg-white text-[#171717] border border-emerald-200 hover:bg-emerald-100 transition-colors flex-shrink-0"
+                title="View in new tab"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+            )}
           </div>
         )}
       </div>

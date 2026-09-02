@@ -37,6 +37,7 @@ import {
   verifyCustomerAuth 
 } from '../src/lib/auth.js';
 import { checkRateLimit } from '../src/lib/rateLimit.js';
+import { uploadImage, isCloudinaryConfigured } from '../src/lib/cloudinary.js';
 
 let passed = 0;
 let failed = 0;
@@ -286,6 +287,13 @@ async function runTests() {
   console.log('\n⚙️ 9. Testing Store Config Settings:');
   const config = await getStoreConfig();
   assert(config && (config.name === 'ShopEase' || config.name === 'Nakoda Imitation'), `Loaded store config: ${config?.name} (${config?.whatsappDisplay})`);
+
+  // 10. Cloudinary Image CDN & Upload Pipeline
+  console.log('\n☁️ 10. Testing Cloudinary & Image Upload Pipeline:');
+  const sampleDataUri = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+  const uploadRes = await uploadImage(sampleDataUri, { folder: 'nakoda_imitation/test' });
+  assert(uploadRes && uploadRes.success && Boolean(uploadRes.url), `Image upload pipeline returned valid URL (Local or Cloudinary CDN)`);
+  assert(typeof isCloudinaryConfigured === 'function', `isCloudinaryConfigured helper is properly exported and callable`);
 
   console.log('\n═══════════════════════════════════════════════════════');
   console.log(`📊 AUDIT TEST RESULTS: ${passed} PASSED, ${failed} FAILED`);
