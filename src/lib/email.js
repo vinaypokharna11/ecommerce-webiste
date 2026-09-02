@@ -15,13 +15,24 @@ function escapeHtml(str) {
 
 // Create Nodemailer Transporter
 function getTransporter() {
-  const host = process.env.SMTP_HOST || 'smtp.gmail.com';
+  let host = (process.env.SMTP_HOST || 'smtp.gmail.com').trim();
+  if (host.includes('@')) {
+    host = 'smtp.gmail.com'; // Auto-fix if email was placed in host field
+  }
   const port = Number(process.env.SMTP_PORT) || 587;
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
+  const user = (process.env.SMTP_USER || '').trim();
+  const pass = (process.env.SMTP_PASS || '').replace(/\s+/g, '').trim();
   const secure = process.env.SMTP_SECURE === 'true' || port === 465;
 
   if (user && pass) {
+    // If Gmail, use Nodemailer's native Gmail configuration for maximum reliability
+    if (user.endsWith('@gmail.com') || host.includes('gmail.com')) {
+      return nodemailer.createTransport({
+        service: 'gmail',
+        auth: { user, pass },
+      });
+    }
+
     return nodemailer.createTransport({
       host,
       port,
@@ -50,9 +61,13 @@ function getTransporter() {
 
 export async function sendEmail({ to, subject, html, text }) {
   try {
-    const transporter = getTransporter();
-    const from = process.env.SMTP_FROM || '"Nakoda Imitation" <orders@nakodaimitation.com>';
+    const user = (process.env.SMTP_USER || '').trim();
+    let from = process.env.SMTP_FROM;
+    if (!from || from.includes('yourdomain.com')) {
+      from = user ? `"Nakoda Imitation" <${user}>` : '"Nakoda Imitation" <orders@nakodaimitation.com>';
+    }
 
+    const transporter = getTransporter();
     const info = await transporter.sendMail({
       from,
       to,
@@ -61,9 +76,10 @@ export async function sendEmail({ to, subject, html, text }) {
       html: html || text || '',
     });
 
+    console.log(`✅ [SMTP DISPATCH] Sent to ${to} (MessageId: ${info.messageId})`);
     return { success: true, messageId: info.messageId, isMock: transporter.isMock };
   } catch (error) {
-    console.error('Error sending email via SMTP:', error);
+    console.error('❌ Error sending email via SMTP:', error);
     return { success: false, error: error.message };
   }
 }

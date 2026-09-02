@@ -661,49 +661,97 @@ function writeJSONDB(data) {
   }
 }
 
-// ─── MongoDB Auto-Seeding Helper ─────────────────────────────────────────────
+// ─── Ultra High-Speed In-Memory Cache ────────────────────────────────────────
+const memoryCache = {
+  products: null,
+  productsTime: 0,
+  categories: null,
+  categoriesTime: 0,
+  offers: null,
+  offersTime: 0,
+  config: null,
+  configTime: 0,
+  TTL: 30000, // 30-second hot cache
+  invalidateProducts() {
+    memoryCache.products = null;
+    memoryCache.productsTime = 0;
+  },
+  invalidateCategories() {
+    memoryCache.categories = null;
+    memoryCache.categoriesTime = 0;
+  },
+  invalidateOffers() {
+    memoryCache.offers = null;
+    memoryCache.offersTime = 0;
+  },
+  invalidateConfig() {
+    memoryCache.config = null;
+    memoryCache.configTime = 0;
+  },
+};
+
+// ─── MongoDB Auto-Seeding Helper (Parallel Singleton) ─────────────────────────
 let isSeeded = false;
+let seedPromise = null;
+
 async function ensureMongoSeeded() {
   if (isSeeded) return;
-  try {
-    const productCount = await Product.countDocuments();
-    if (productCount === 0) {
-      console.log('🌱 Seeding default products to MongoDB...');
-      await Product.insertMany(INITIAL_DB_STATE.products);
-    }
+  if (!seedPromise) {
+    seedPromise = (async () => {
+      try {
+        const [productCount, categoryCount, offerCount, configCount] = await Promise.all([
+          Product.estimatedDocumentCount().catch(() => 0),
+          Category.estimatedDocumentCount().catch(() => 0),
+          Offer.estimatedDocumentCount().catch(() => 0),
+          StoreConfig.estimatedDocumentCount().catch(() => 0),
+        ]);
 
-    const categoryCount = await Category.countDocuments();
-    if (categoryCount === 0) {
-      console.log('🌱 Seeding default categories to MongoDB...');
-      await Category.insertMany(INITIAL_DB_STATE.categories);
-    }
+        const seedActions = [];
+        if (productCount === 0) {
+          console.log('🌱 Seeding default products to MongoDB...');
+          seedActions.push(Product.insertMany(INITIAL_DB_STATE.products));
+        }
+        if (categoryCount === 0) {
+          console.log('🌱 Seeding default categories to MongoDB...');
+          seedActions.push(Category.insertMany(INITIAL_DB_STATE.categories));
+        }
+        if (offerCount === 0) {
+          console.log('🌱 Seeding default offers to MongoDB...');
+          seedActions.push(Offer.insertMany(INITIAL_DB_STATE.offers));
+        }
+        if (configCount === 0) {
+          seedActions.push(StoreConfig.create(INITIAL_DB_STATE.storeConfig));
+        }
 
-    const offerCount = await Offer.countDocuments();
-    if (offerCount === 0) {
-      console.log('🌱 Seeding default offers to MongoDB...');
-      await Offer.insertMany(INITIAL_DB_STATE.offers);
-    }
-
-    const configCount = await StoreConfig.countDocuments();
-    if (configCount === 0) {
-      await StoreConfig.create(INITIAL_DB_STATE.storeConfig);
-    } else {
-      const existingConfig = await StoreConfig.findOne();
-      if (existingConfig && (!existingConfig.name || existingConfig.name === 'ShopEase')) {
-        existingConfig.name = 'Nakoda Imitation';
-        existingConfig.tagline = 'Premium Imitation Jewelry & Lifestyle Collection';
-        await existingConfig.save();
+        if (seedActions.length > 0) {
+          await Promise.all(seedActions);
+        }
+        isSeeded = true;
+      } catch (err) {
+        console.warn('MongoDB seed warning:', err.message);
+      } finally {
+        seedPromise = null;
       }
-    }
-
-    isSeeded = true;
-  } catch (err) {
-    console.warn('MongoDB seed warning:', err.message);
+    })();
   }
+  await seedPromise;
 }
 
 // ─── PRODUCTS CRUD ───────────────────────────────────────────────────────────
 export async function getProducts(filters = {}) {
+  const hasFilters = Boolean(
+    (filters.category && filters.category !== 'all') ||
+    (filters.stockStatus && filters.stockStatus !== 'all') ||
+    filters.isPopular ||
+    filters.isFeatured ||
+    filters.search
+  );
+
+  // Return from high-speed memory cache for default catalog load (<1ms)
+  if (!hasFilters && memoryCache.products && Date.now() - memoryCache.productsTime < memoryCache.TTL) {
+    return memoryCache.products;
+  }
+
   const db = await connectToDatabase();
   if (db) {
     await ensureMongoSeeded();
@@ -718,7 +766,14 @@ export async function getProducts(filters = {}) {
       query.$or = [{ name: regex }, { categoryName: regex }, { tags: regex }, { id: regex }];
     }
     const products = await Product.find(query).sort({ createdAt: -1 }).lean();
-    return products.map(({ _id, __v, ...p }) => p);
+    const cleanProducts = products.map(({ _id, __v, ...p }) => p);
+
+    if (!hasFilters) {
+      memoryCache.products = cleanProducts;
+      memoryCache.productsTime = Date.now();
+    }
+
+    return cleanProducts;
   }
 
   // Fallback
@@ -738,6 +793,12 @@ export async function getProducts(filters = {}) {
         (p.tags && p.tags.some((t) => t.toLowerCase().includes(q)))
     );
   }
+
+  if (!hasFilters) {
+    memoryCache.products = list;
+    memoryCache.productsTime = Date.now();
+  }
+
   return list;
 }
 
@@ -784,12 +845,16 @@ export async function createProduct(productData) {
   if (db) {
     const created = await Product.create(newProduct);
     const { _id, __v, ...rest } = created.toObject();
+    memoryCache.invalidateProducts();
+    memoryCache.invalidateCategories();
     return rest;
   }
 
   const jdb = readJSONDB();
   jdb.products = [newProduct, ...(jdb.products || [])];
   writeJSONDB(jdb);
+  memoryCache.invalidateProducts();
+  memoryCache.invalidateCategories();
   return newProduct;
 }
 
@@ -805,6 +870,8 @@ export async function updateProduct(id, updateData) {
     const updated = await Product.findOneAndUpdate({ id }, updateData, { returnDocument: 'after' }).lean();
     if (!updated) return null;
     const { _id, __v, ...rest } = updated;
+    memoryCache.invalidateProducts();
+    memoryCache.invalidateCategories();
     return rest;
   }
 
@@ -821,6 +888,8 @@ export async function updateProduct(id, updateData) {
   }
   jdb.products[index] = merged;
   writeJSONDB(jdb);
+  memoryCache.invalidateProducts();
+  memoryCache.invalidateCategories();
   return merged;
 }
 
@@ -828,19 +897,32 @@ export async function deleteProduct(id) {
   const db = await connectToDatabase();
   if (db) {
     const res = await Product.deleteOne({ id });
-    return res.deletedCount > 0;
+    const ok = res.deletedCount > 0;
+    if (ok) {
+      memoryCache.invalidateProducts();
+      memoryCache.invalidateCategories();
+    }
+    return ok;
   }
 
   const jdb = readJSONDB();
   const initLen = (jdb.products || []).length;
   jdb.products = (jdb.products || []).filter((p) => p.id !== id);
   const deleted = jdb.products.length < initLen;
-  if (deleted) writeJSONDB(jdb);
+  if (deleted) {
+    writeJSONDB(jdb);
+    memoryCache.invalidateProducts();
+    memoryCache.invalidateCategories();
+  }
   return deleted;
 }
 
 // ─── CATEGORIES CRUD ─────────────────────────────────────────────────────────
 export async function getCategories() {
+  if (memoryCache.categories && Date.now() - memoryCache.categoriesTime < memoryCache.TTL) {
+    return memoryCache.categories;
+  }
+
   const db = await connectToDatabase();
   if (db) {
     await ensureMongoSeeded();
@@ -849,18 +931,26 @@ export async function getCategories() {
       Product.find().select('category').lean(),
     ]);
 
-    return categories.map(({ _id, __v, ...cat }) => ({
+    const result = categories.map(({ _id, __v, ...cat }) => ({
       ...cat,
       count: products.filter((p) => p.category === cat.id).length,
     }));
+
+    memoryCache.categories = result;
+    memoryCache.categoriesTime = Date.now();
+    return result;
   }
 
   const jdb = readJSONDB();
   const products = jdb.products || [];
-  return (jdb.categories || []).map((cat) => ({
+  const result = (jdb.categories || []).map((cat) => ({
     ...cat,
     count: products.filter((p) => p.category === cat.id).length,
   }));
+
+  memoryCache.categories = result;
+  memoryCache.categoriesTime = Date.now();
+  return result;
 }
 
 export async function createCategory(data) {
@@ -879,12 +969,14 @@ export async function createCategory(data) {
   if (db) {
     const created = await Category.create(newCat);
     const { _id, __v, ...rest } = created.toObject();
+    memoryCache.invalidateCategories();
     return rest;
   }
 
   const jdb = readJSONDB();
   jdb.categories = [...(jdb.categories || []), newCat];
   writeJSONDB(jdb);
+  memoryCache.invalidateCategories();
   return newCat;
 }
 
@@ -894,6 +986,7 @@ export async function updateCategory(id, updateData) {
     const updated = await Category.findOneAndUpdate({ id }, updateData, { returnDocument: 'after' }).lean();
     if (!updated) return null;
     const { _id, __v, ...rest } = updated;
+    memoryCache.invalidateCategories();
     return rest;
   }
 
@@ -902,6 +995,7 @@ export async function updateCategory(id, updateData) {
   if (index === -1) return null;
   jdb.categories[index] = { ...jdb.categories[index], ...updateData };
   writeJSONDB(jdb);
+  memoryCache.invalidateCategories();
   return jdb.categories[index];
 }
 
@@ -909,27 +1003,42 @@ export async function deleteCategory(id) {
   const db = await connectToDatabase();
   if (db) {
     const res = await Category.deleteOne({ id });
-    return res.deletedCount > 0;
+    const ok = res.deletedCount > 0;
+    if (ok) memoryCache.invalidateCategories();
+    return ok;
   }
 
   const jdb = readJSONDB();
   const initLen = (jdb.categories || []).length;
   jdb.categories = (jdb.categories || []).filter((c) => c.id !== id);
   const deleted = jdb.categories.length < initLen;
-  if (deleted) writeJSONDB(jdb);
+  if (deleted) {
+    writeJSONDB(jdb);
+    memoryCache.invalidateCategories();
+  }
   return deleted;
 }
 
 // ─── OFFERS CRUD ─────────────────────────────────────────────────────────────
 export async function getOffers() {
+  if (memoryCache.offers && Date.now() - memoryCache.offersTime < memoryCache.TTL) {
+    return memoryCache.offers;
+  }
+
   const db = await connectToDatabase();
   if (db) {
     await ensureMongoSeeded();
     const offers = await Offer.find().lean();
-    return offers.map(({ _id, __v, ...o }) => o);
+    const result = offers.map(({ _id, __v, ...o }) => o);
+    memoryCache.offers = result;
+    memoryCache.offersTime = Date.now();
+    return result;
   }
   const jdb = readJSONDB();
-  return jdb.offers || [];
+  const result = jdb.offers || [];
+  memoryCache.offers = result;
+  memoryCache.offersTime = Date.now();
+  return result;
 }
 
 export async function createOffer(data) {
@@ -952,12 +1061,14 @@ export async function createOffer(data) {
   if (db) {
     const created = await Offer.create(newOffer);
     const { _id, __v, ...rest } = created.toObject();
+    memoryCache.invalidateOffers();
     return rest;
   }
 
   const jdb = readJSONDB();
   jdb.offers = [newOffer, ...(jdb.offers || [])];
   writeJSONDB(jdb);
+  memoryCache.invalidateOffers();
   return newOffer;
 }
 
@@ -967,6 +1078,7 @@ export async function updateOffer(id, updateData) {
     const updated = await Offer.findOneAndUpdate({ id }, updateData, { returnDocument: 'after' }).lean();
     if (!updated) return null;
     const { _id, __v, ...rest } = updated;
+    memoryCache.invalidateOffers();
     return rest;
   }
 
@@ -975,6 +1087,7 @@ export async function updateOffer(id, updateData) {
   if (index === -1) return null;
   jdb.offers[index] = { ...jdb.offers[index], ...updateData };
   writeJSONDB(jdb);
+  memoryCache.invalidateOffers();
   return jdb.offers[index];
 }
 
@@ -982,14 +1095,19 @@ export async function deleteOffer(id) {
   const db = await connectToDatabase();
   if (db) {
     const res = await Offer.deleteOne({ id });
-    return res.deletedCount > 0;
+    const ok = res.deletedCount > 0;
+    if (ok) memoryCache.invalidateOffers();
+    return ok;
   }
 
   const jdb = readJSONDB();
   const initLen = (jdb.offers || []).length;
   jdb.offers = (jdb.offers || []).filter((o) => o.id !== id);
   const deleted = jdb.offers.length < initLen;
-  if (deleted) writeJSONDB(jdb);
+  if (deleted) {
+    writeJSONDB(jdb);
+    memoryCache.invalidateOffers();
+  }
   return deleted;
 }
 
@@ -1237,6 +1355,10 @@ export async function deleteContactMessage(id) {
 
 // ─── STORE CONFIG ────────────────────────────────────────────────────────────
 export async function getStoreConfig() {
+  if (memoryCache.config && Date.now() - memoryCache.configTime < memoryCache.TTL) {
+    return memoryCache.config;
+  }
+
   const envWhatsapp = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || process.env.WHATSAPP_NUMBER;
   const envWhatsappDisplay = process.env.NEXT_PUBLIC_WHATSAPP_DISPLAY;
   const envWhatsappLink = process.env.NEXT_PUBLIC_WHATSAPP_LINK;
@@ -1251,6 +1373,8 @@ export async function getStoreConfig() {
       if (envWhatsapp) rest.whatsappNumber = envWhatsapp;
       if (envWhatsappDisplay) rest.whatsappDisplay = envWhatsappDisplay;
       if (envWhatsappLink) rest.whatsappLink = envWhatsappLink;
+      memoryCache.config = rest;
+      memoryCache.configTime = Date.now();
       return rest;
     }
   }
@@ -1260,6 +1384,8 @@ export async function getStoreConfig() {
   if (envWhatsapp) cfg.whatsappNumber = envWhatsapp;
   if (envWhatsappDisplay) cfg.whatsappDisplay = envWhatsappDisplay;
   if (envWhatsappLink) cfg.whatsappLink = envWhatsappLink;
+  memoryCache.config = cfg;
+  memoryCache.configTime = Date.now();
   return cfg;
 }
 
@@ -1271,10 +1397,12 @@ export async function updateStoreConfig(configData) {
       Object.assign(config, configData);
       await config.save();
       const { _id, __v, ...rest } = config.toObject();
+      memoryCache.invalidateConfig();
       return rest;
     } else {
       const created = await StoreConfig.create(configData);
       const { _id, __v, ...rest } = created.toObject();
+      memoryCache.invalidateConfig();
       return rest;
     }
   }
@@ -1282,6 +1410,7 @@ export async function updateStoreConfig(configData) {
   const jdb = readJSONDB();
   jdb.storeConfig = { ...(jdb.storeConfig || {}), ...configData };
   writeJSONDB(jdb);
+  memoryCache.invalidateConfig();
   return jdb.storeConfig;
 }
 

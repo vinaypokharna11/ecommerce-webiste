@@ -1,29 +1,33 @@
 import mongoose from 'mongoose';
 
 /**
- * Global is used here to maintain a cached connection across hot reloads
- * in development and serverless function invocations in production.
+ * Global cache across hot-reloads and concurrent Next.js API requests.
  */
 let cached = global.mongoose;
 
 if (!cached) {
-  cached = global.mongoose = { conn: null, promise: null, lastAttempt: 0, failedCooldown: 30000 };
+  cached = global.mongoose = { conn: null, promise: null, lastAttempt: 0, failedCooldown: 15000 };
 }
 
 export async function connectToDatabase() {
-  const MONGODB_URI = process.env.MONGODB_URI;
+  let MONGODB_URI = process.env.MONGODB_URI;
 
   if (!MONGODB_URI) {
     return null;
   }
 
-  if (cached.conn) {
+  // Auto-inject database name if missing to prevent default admin cluster traversal
+  if (MONGODB_URI.startsWith('mongodb+srv://') && MONGODB_URI.includes('.mongodb.net/?')) {
+    MONGODB_URI = MONGODB_URI.replace('.mongodb.net/?', '.mongodb.net/nakodaimitation?');
+  }
+
+  if (cached.conn && mongoose.connection.readyState === 1) {
     return cached.conn;
   }
 
-  // If recent attempt failed, fail instantly during cooldown so API routes never block
   const now = Date.now();
-  if (cached.lastAttempt && !cached.conn && now - cached.lastAttempt < (cached.failedCooldown || 30000)) {
+  // If recent attempt failed, fail quickly during cooldown so API routes never hang
+  if (cached.lastAttempt && !cached.conn && now - cached.lastAttempt < (cached.failedCooldown || 15000)) {
     return null;
   }
 
@@ -32,20 +36,25 @@ export async function connectToDatabase() {
     const isProd = process.env.NODE_ENV === 'production';
     const opts = {
       bufferCommands: false,
-      serverSelectionTimeoutMS: isProd ? 5000 : 1200,
-      maxPoolSize: 10,
+      serverSelectionTimeoutMS: isProd ? 4000 : 2500,
+      connectTimeoutMS: 3000,
+      maxPoolSize: 20,
+      minPoolSize: 2,
       socketTimeoutMS: 45000,
+      family: 4, // Force IPv4 to prevent slow Windows/Node DNS IPv6 resolution stalls
     };
 
     cached.promise = mongoose
       .connect(MONGODB_URI, opts)
       .then((mongooseInstance) => {
-        console.log('✅ Connected to MongoDB successfully.');
+        cached.conn = mongooseInstance;
+        console.log('⚡ Connected to MongoDB Atlas successfully.');
         return mongooseInstance;
       })
       .catch((err) => {
-        console.info('ℹ️ Using local persistent database fallback');
+        console.info('ℹ️ Using high-speed local persistent database fallback');
         cached.promise = null;
+        cached.conn = null;
         cached.lastAttempt = Date.now();
         return null;
       });
@@ -55,6 +64,7 @@ export async function connectToDatabase() {
     cached.conn = await cached.promise;
   } catch (e) {
     cached.promise = null;
+    cached.conn = null;
     cached.lastAttempt = Date.now();
     return null;
   }
