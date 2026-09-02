@@ -56,6 +56,11 @@ export const AuthModal = () => {
       setError(res.error || 'Invalid credentials');
     } else {
       firePartyPopper();
+      if (res.isAdmin || res.redirectTo === '/admin' || res.user?.role === 'admin' || res.user?.role === 'superadmin') {
+        closeAuthModal();
+        window.location.href = '/admin';
+        return;
+      }
     }
   };
 

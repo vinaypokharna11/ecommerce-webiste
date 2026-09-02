@@ -30,6 +30,7 @@ import {
   ExternalLink,
   LogIn,
   Sparkles,
+  ShieldCheck,
 } from 'lucide-react';
 import { STORE_CONFIG } from '../data/mockData';
 import { useAuth } from '@/context/AuthContext';
@@ -709,6 +710,32 @@ export const ProfilePage = ({ orders = [], onExploreCatalog, onNavigate }) => {
               </div>
               <ChevronRight className="w-4 h-4 text-[#A0A0A0] group-hover:text-[#171717]" />
             </button>
+
+            {/* Admin Portal Quick Launcher (if admin) */}
+            {(user?.role === 'admin' || user?.role === 'superadmin' || user?.email === 'vinaypokharna36@gmail.com') && (
+              <a
+                href="/admin"
+                className="w-full flex items-center gap-3.5 px-5 sm:px-6 py-4 bg-[#171717] text-white hover:bg-black transition-colors text-left group border-t border-black/5"
+              >
+                <div className="w-9 h-9 rounded-full bg-[#9FD842] text-[#171717] flex items-center justify-center flex-shrink-0 font-extrabold">
+                  <ShieldCheck className="w-4 h-4" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-extrabold text-white">
+                      Open Admin Dashboard
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-[#9FD842] text-[#171717]">
+                      Admin
+                    </span>
+                  </div>
+                  <span className="text-[11px] text-white/70 block">
+                    Manage products, stock inventory, categories, coupons & inquiries
+                  </span>
+                </div>
+                <ChevronRight className="w-4 h-4 text-[#9FD842] group-hover:translate-x-0.5 transition-transform" />
+              </a>
+            )}
           </div>
         </motion.div>
 

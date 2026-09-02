@@ -61,11 +61,11 @@ export function LoginContent({ defaultTab = 'login' }) {
       const res = await login(loginEmail, loginPassword);
       if (res.success) {
         if (res.isAdmin) {
-          setSuccessMessage('Admin credentials verified! Redirecting to Admin Portal...');
+          setSuccessMessage('Admin credentials verified! Opening Admin Portal...');
           firePartyPopper();
           setTimeout(() => {
-            router.push('/admin');
-          }, 300);
+            window.location.href = '/admin';
+          }, 200);
         } else {
           setSuccessMessage('Welcome back! Logging you in...');
           firePartyPopper();
