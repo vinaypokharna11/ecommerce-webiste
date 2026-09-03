@@ -58,6 +58,8 @@ export const AdminProductModal = ({ isOpen, onClose, product = null }) => {
   const [newColorName, setNewColorName] = useState('');
   const [newColorHex, setNewColorHex] = useState('#9FD842');
   const [errors, setErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
 
   // Image Cropper & Editor State
   const [isCropperOpen, setIsCropperOpen] = useState(false);
@@ -85,6 +87,8 @@ export const AdminProductModal = ({ isOpen, onClose, product = null }) => {
       });
     }
     setErrors({});
+    setSubmitError('');
+    setIsSubmitting(false);
     setActiveTab('basic');
   }, [product, isOpen, categories]);
 
@@ -207,36 +211,51 @@ export const AdminProductModal = ({ isOpen, onClose, product = null }) => {
     return Object.keys(errs).length === 0;
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  const handleSubmit = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    setSubmitError('');
     if (!validate()) {
       setActiveTab('basic');
       return;
     }
 
-    const payload = {
-      ...formData,
-      price: Number(formData.price),
-      oldPrice: Number(formData.oldPrice) || undefined,
-      stockCount: Number(formData.stockCount) || 0,
-      rating: Number(formData.rating) || 4.9,
-      reviews: Number(formData.reviews) || 0,
-      image: formData.customImageUrl?.trim() || formData.image,
-      tags: typeof formData.tags === 'string'
-        ? formData.tags.split(',').map((t) => t.trim()).filter(Boolean)
-        : formData.tags,
-      sizes: typeof formData.sizes === 'string' && formData.sizes.trim()
-        ? formData.sizes.split(',').map((s) => s.trim()).filter(Boolean)
-        : undefined,
-    };
+    setIsSubmitting(true);
+    try {
+      const payload = {
+        ...formData,
+        price: Number(formData.price),
+        oldPrice: Number(formData.oldPrice) || undefined,
+        stockCount: Number(formData.stockCount) || 0,
+        rating: Number(formData.rating) || 4.9,
+        reviews: Number(formData.reviews) || 0,
+        image: formData.customImageUrl?.trim() || formData.image,
+        tags: typeof formData.tags === 'string'
+          ? formData.tags.split(',').map((t) => t.trim()).filter(Boolean)
+          : formData.tags,
+        sizes: typeof formData.sizes === 'string' && formData.sizes.trim()
+          ? formData.sizes.split(',').map((s) => s.trim()).filter(Boolean)
+          : undefined,
+      };
 
-    if (isEditing) {
-      updateProduct(product.id, payload);
-    } else {
-      addProduct(payload);
+      let result;
+      if (isEditing) {
+        result = await updateProduct(product.id, payload);
+      } else {
+        result = await addProduct(payload);
+      }
+
+      if (result && result.success === false) {
+        setSubmitError(result.error || 'Server rejected product submission');
+        setIsSubmitting(false);
+        return;
+      }
+
+      setIsSubmitting(false);
+      onClose();
+    } catch (err) {
+      setSubmitError(err.message || 'An unexpected error occurred while saving.');
+      setIsSubmitting(false);
     }
-
-    onClose();
   };
 
   const tabs = [
@@ -749,12 +768,28 @@ export const AdminProductModal = ({ isOpen, onClose, product = null }) => {
 
         </form>
 
+        {/* Error Notification Banner */}
+        {submitError && (
+          <div className="mx-6 mb-3 p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+            <span className="flex-1">{submitError}</span>
+            <button
+              type="button"
+              onClick={() => setSubmitError('')}
+              className="text-rose-500 hover:text-rose-700 text-xs font-bold"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
         {/* Modal Footer Controls */}
         <div className="p-6 border-t border-black/10 bg-[#EEEEEC]/40 flex items-center justify-between">
           <button
             type="button"
             onClick={onClose}
-            className="px-6 py-2.5 rounded-full bg-[#EEEEEC] hover:bg-[#E2E2DE] text-[#171717] font-bold text-xs transition-colors cursor-pointer"
+            disabled={isSubmitting}
+            className="px-6 py-2.5 rounded-full bg-[#EEEEEC] hover:bg-[#E2E2DE] text-[#171717] font-bold text-xs transition-colors cursor-pointer disabled:opacity-50"
           >
             Cancel
           </button>
@@ -762,10 +797,20 @@ export const AdminProductModal = ({ isOpen, onClose, product = null }) => {
           <button
             type="button"
             onClick={handleSubmit}
-            className="px-8 py-2.5 rounded-full bg-[#171717] hover:bg-black text-white font-extrabold text-xs shadow-md active:scale-95 transition-all flex items-center gap-2 cursor-pointer"
+            disabled={isSubmitting}
+            className="px-8 py-2.5 rounded-full bg-[#171717] hover:bg-black text-white font-extrabold text-xs shadow-md active:scale-95 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Check className="w-4 h-4 text-[#9FD842]" />
-            <span>{isEditing ? 'Save Product Changes' : 'Publish Product to Store'}</span>
+            {isSubmitting ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-[#9FD842] rounded-full animate-spin" />
+                <span>Saving to Database...</span>
+              </>
+            ) : (
+              <>
+                <Check className="w-4 h-4 text-[#9FD842]" />
+                <span>{isEditing ? 'Save Product Changes' : 'Publish Product to Store'}</span>
+              </>
+            )}
           </button>
         </div>
 

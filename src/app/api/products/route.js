@@ -3,6 +3,7 @@ import { getProducts, createProduct } from '@/lib/db';
 import { verifyAdminAuth, unauthorizedResponse } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 export async function GET(request) {
   try {
@@ -28,10 +29,17 @@ export async function POST(request) {
       return unauthorizedResponse();
     }
 
-    const body = await request.json();
-    if (!body.name || !body.price) {
+    const body = await request.json().catch(() => ({}));
+    if (!body.name || typeof body.name !== 'string' || !body.name.trim()) {
       return NextResponse.json(
-        { success: false, error: 'Product name and price are required' },
+        { success: false, error: 'Product name is required' },
+        { status: 400 }
+      );
+    }
+    const priceNum = Number(body.price);
+    if (isNaN(priceNum) || priceNum <= 0) {
+      return NextResponse.json(
+        { success: false, error: 'Valid product price greater than 0 is required' },
         { status: 400 }
       );
     }

@@ -39,9 +39,15 @@ export function verifyToken(token) {
  * Returns decoded admin user if authorized, or null.
  */
 export function verifyAdminAuth(request) {
-  const token =
-    request?.cookies?.get?.('admin_token')?.value ||
-    request?.headers?.get?.('authorization')?.replace('Bearer ', '');
+  let token = request?.cookies?.get?.('admin_token')?.value;
+  if (!token) {
+    const authHeader = request?.headers?.get?.('authorization') || '';
+    if (authHeader.toLowerCase().startsWith('bearer ')) {
+      token = authHeader.slice(7).trim();
+    } else if (authHeader.trim()) {
+      token = authHeader.trim();
+    }
+  }
 
   if (!token) {
     return null;

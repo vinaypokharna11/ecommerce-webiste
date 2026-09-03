@@ -673,10 +673,18 @@ function readJSONDB() {
 function writeJSONDB(data) {
   initJSONDB();
   try {
-    fs.writeFileSync(DB_FILE_PATH, JSON.stringify(data, null, 2), 'utf-8');
+    const tmpPath = `${DB_FILE_PATH}.${Date.now()}.${Math.random().toString(36).slice(2)}.tmp`;
+    fs.writeFileSync(tmpPath, JSON.stringify(data, null, 2), 'utf-8');
+    fs.renameSync(tmpPath, DB_FILE_PATH);
     return true;
   } catch (err) {
-    return false;
+    try {
+      fs.writeFileSync(DB_FILE_PATH, JSON.stringify(data, null, 2), 'utf-8');
+      return true;
+    } catch (e) {
+      console.error('Failed to write JSON DB:', e);
+      return false;
+    }
   }
 }
 
@@ -981,58 +989,104 @@ export async function getProducts(filters = {}) {
   return list;
 }
 
+export function sanitizeProductPayload(data = {}) {
+  const {
+    _id,
+    __v,
+    createdAt,
+    updatedAt,
+    ...rest
+  } = data;
+
+  const sanitized = { ...rest };
+  if (sanitized.price !== undefined) sanitized.price = Number(sanitized.price) || 0;
+  if (sanitized.oldPrice !== undefined) sanitized.oldPrice = Number(sanitized.oldPrice) || undefined;
+  if (sanitized.stockCount !== undefined) {
+    const count = Math.max(0, parseInt(sanitized.stockCount, 10) || 0);
+    sanitized.stockCount = count;
+    sanitized.stockStatus = count === 0 ? 'out_of_stock' : count < 5 ? 'low_stock' : 'in_stock';
+  }
+  if (sanitized.rating !== undefined) sanitized.rating = Number(sanitized.rating) || 4.8;
+  if (sanitized.reviews !== undefined) sanitized.reviews = Number(sanitized.reviews) || 0;
+  if (sanitized.tags !== undefined) {
+    sanitized.tags = Array.isArray(sanitized.tags)
+      ? sanitized.tags
+      : typeof sanitized.tags === 'string'
+      ? sanitized.tags.split(',').map((t) => t.trim()).filter(Boolean)
+      : [];
+  }
+  if (sanitized.sizes !== undefined) {
+    sanitized.sizes = Array.isArray(sanitized.sizes)
+      ? sanitized.sizes
+      : typeof sanitized.sizes === 'string'
+      ? sanitized.sizes.split(',').map((s) => s.trim()).filter(Boolean)
+      : [];
+  }
+  if (sanitized.colors && !Array.isArray(sanitized.colors)) {
+    sanitized.colors = [];
+  }
+  return sanitized;
+}
+
 export async function getProductById(id) {
+  const cleanId = String(id || '').trim();
+  if (!cleanId) return null;
+
   const db = await connectToDatabase();
   if (db) {
     await ensureMongoSeeded();
-    const prod = await Product.findOne({ id }).lean();
-    if (!prod) return null;
-    const { _id, __v, ...rest } = prod;
-    return rest;
+    const prod = await Product.findOne({ id: cleanId }).lean();
+    if (prod) {
+      const { _id, __v, ...rest } = prod;
+      return rest;
+    }
   }
   const jdb = readJSONDB();
-  return (jdb.products || []).find((p) => p.id === id) || null;
+  return (jdb.products || []).find((p) => String(p.id).trim() === cleanId) || null;
 }
 
 export async function createProduct(productData) {
-  const id = productData.id || `prod-${Date.now()}`;
-  const price = Number(productData.price) || 0;
-  const oldPrice = Number(productData.oldPrice) || 0;
+  const cleanId = String(productData.id || `prod-${Date.now()}`).trim();
+  const sanitized = sanitizeProductPayload(productData);
+  const price = Number(sanitized.price) || 0;
+  const oldPrice = Number(sanitized.oldPrice) || 0;
   const discountPercent = oldPrice > price && oldPrice > 0
     ? Math.round(((oldPrice - price) / oldPrice) * 100)
-    : Number(productData.discountPercent) || 0;
-  const stockCount = Number(productData.stockCount) || 0;
+    : Number(sanitized.discountPercent) || 0;
+  const stockCount = Number(sanitized.stockCount) || 0;
   const stockStatus = stockCount <= 0 ? 'out_of_stock' : stockCount < 5 ? 'low_stock' : 'in_stock';
 
   const newProduct = {
-    ...productData,
-    id,
+    ...sanitized,
+    id: cleanId,
     price,
     oldPrice: oldPrice || undefined,
     discountPercent,
     stockCount,
     stockStatus,
-    rating: Number(productData.rating) || 5.0,
-    reviews: Number(productData.reviews) || 0,
-    isPopular: !!productData.isPopular,
-    isFeatured: !!productData.isFeatured,
-    tags: Array.isArray(productData.tags) ? productData.tags : [],
-    createdAt: new Date().toISOString(),
+    rating: Number(sanitized.rating) || 5.0,
+    reviews: Number(sanitized.reviews) || 0,
+    isPopular: !!sanitized.isPopular,
+    isFeatured: !!sanitized.isFeatured,
+    tags: Array.isArray(sanitized.tags) ? sanitized.tags : [],
+    createdAt: sanitized.createdAt || new Date().toISOString(),
   };
 
+  // 1. Persist to MongoDB if available
   const db = await connectToDatabase();
   if (db) {
-    const created = await Product.create(newProduct);
-    const { _id, __v, ...rest } = created.toObject();
-    memoryCache.invalidateProducts();
-    memoryCache.invalidateCategories();
-    broadcastCatalogEvent(CATALOG_EVENTS.PRODUCT_CREATED, { product: rest });
-    return rest;
+    try {
+      await Product.create(newProduct);
+    } catch (err) {
+      console.warn('MongoDB Product.create notice:', err.message);
+    }
   }
 
+  // 2. Always persist to local atomic JSON database
   const jdb = readJSONDB();
-  jdb.products = [newProduct, ...(jdb.products || [])];
+  jdb.products = [newProduct, ...(jdb.products || []).filter((p) => String(p.id).trim() !== cleanId)];
   writeJSONDB(jdb);
+
   memoryCache.invalidateProducts();
   memoryCache.invalidateCategories();
   broadcastCatalogEvent(CATALOG_EVENTS.PRODUCT_CREATED, { product: newProduct });
@@ -1040,55 +1094,76 @@ export async function createProduct(productData) {
 }
 
 export async function updateProduct(id, updateData) {
+  const cleanId = String(id || '').trim();
+  if (!cleanId) return null;
+
+  const sanitized = sanitizeProductPayload(updateData);
+  delete sanitized.id; // Prevent modifying unique business key ID
+
+  let updatedProduct = null;
+
+  // 1. Update in MongoDB if available
   const db = await connectToDatabase();
   if (db) {
-    if (updateData.stockCount !== undefined) {
-      const sc = Number(updateData.stockCount);
-      updateData.stockCount = sc;
-      updateData.stockStatus = sc <= 0 ? 'out_of_stock' : sc < 5 ? 'low_stock' : 'in_stock';
+    try {
+      const updated = await Product.findOneAndUpdate(
+        { id: cleanId },
+        { $set: sanitized },
+        { returnDocument: 'after' }
+      ).lean();
+      if (updated) {
+        const { _id, __v, ...rest } = updated;
+        updatedProduct = rest;
+      }
+    } catch (err) {
+      console.warn('MongoDB Product.findOneAndUpdate notice:', err.message);
     }
-
-    const updated = await Product.findOneAndUpdate({ id }, updateData, { returnDocument: 'after' }).lean();
-    if (!updated) return null;
-    const { _id, __v, ...rest } = updated;
-    memoryCache.invalidateProducts();
-    memoryCache.invalidateCategories();
-    broadcastCatalogEvent(CATALOG_EVENTS.PRODUCT_UPDATED, { product: rest });
-    return rest;
   }
 
+  // 2. Always update local JSON database
   const jdb = readJSONDB();
-  const index = (jdb.products || []).findIndex((p) => p.id === id);
-  if (index === -1) return null;
-
-  const current = jdb.products[index];
-  const merged = { ...current, ...updateData };
-  if (merged.stockCount !== undefined) {
-    const sc = Number(merged.stockCount);
-    merged.stockCount = sc;
-    merged.stockStatus = sc <= 0 ? 'out_of_stock' : sc < 5 ? 'low_stock' : 'in_stock';
+  const index = (jdb.products || []).findIndex((p) => String(p.id).trim() === cleanId);
+  if (index !== -1) {
+    const current = jdb.products[index];
+    const merged = { ...current, ...sanitized, id: cleanId };
+    if (merged.stockCount !== undefined) {
+      const sc = Number(merged.stockCount);
+      merged.stockCount = sc;
+      merged.stockStatus = sc <= 0 ? 'out_of_stock' : sc < 5 ? 'low_stock' : 'in_stock';
+    }
+    jdb.products[index] = merged;
+    writeJSONDB(jdb);
+    if (!updatedProduct) {
+      updatedProduct = merged;
+    }
+  } else if (!updatedProduct) {
+    return null;
   }
-  jdb.products[index] = merged;
-  writeJSONDB(jdb);
+
   memoryCache.invalidateProducts();
   memoryCache.invalidateCategories();
-  broadcastCatalogEvent(CATALOG_EVENTS.PRODUCT_UPDATED, { product: merged });
-  return merged;
+  broadcastCatalogEvent(CATALOG_EVENTS.PRODUCT_UPDATED, { product: updatedProduct });
+  return updatedProduct;
 }
 
 export async function deleteProduct(id) {
-  const cleanId = String(id).trim();
+  const cleanId = String(id || '').trim();
+  if (!cleanId) return false;
+
   let deleted = false;
 
+  // 1. Delete from MongoDB if available
   const db = await connectToDatabase();
   if (db) {
     try {
       const res = await Product.deleteOne({ id: cleanId });
       if (res.deletedCount > 0) deleted = true;
-    } catch (e) {}
+    } catch (e) {
+      console.warn('MongoDB deleteOne notice:', e.message);
+    }
   }
 
-  // Always sync deletion to local JSON fallback database as well
+  // 2. Always delete from local JSON database
   const jdb = readJSONDB();
   const initLen = (jdb.products || []).length;
   jdb.products = (jdb.products || []).filter((p) => String(p.id).trim() !== cleanId);
@@ -1101,7 +1176,70 @@ export async function deleteProduct(id) {
   memoryCache.invalidateCategories();
   broadcastCatalogEvent(CATALOG_EVENTS.PRODUCT_DELETED, { id: cleanId });
 
-  return deleted || true;
+  return deleted;
+}
+
+export async function bulkDeleteProductsDB(ids = []) {
+  if (!Array.isArray(ids) || ids.length === 0) return { deletedCount: 0 };
+  const cleanIds = ids.map((id) => String(id).trim()).filter(Boolean);
+
+  const db = await connectToDatabase();
+  if (db) {
+    try {
+      await Product.deleteMany({ id: { $in: cleanIds } });
+    } catch (e) {
+      console.warn('MongoDB bulk delete notice:', e.message);
+    }
+  }
+
+  const jdb = readJSONDB();
+  const initLen = (jdb.products || []).length;
+  jdb.products = (jdb.products || []).filter((p) => !cleanIds.includes(String(p.id).trim()));
+  const deletedCount = initLen - jdb.products.length;
+  writeJSONDB(jdb);
+
+  memoryCache.invalidateProducts();
+  memoryCache.invalidateCategories();
+  broadcastCatalogEvent(CATALOG_EVENTS.CATALOG_REFRESHED, {});
+  return { deletedCount };
+}
+
+export async function bulkUpdateProductsDB(ids = [], updates = {}) {
+  if (!Array.isArray(ids) || ids.length === 0) return { updatedCount: 0 };
+  const cleanIds = ids.map((id) => String(id).trim()).filter(Boolean);
+  const sanitized = sanitizeProductPayload(updates);
+  delete sanitized.id;
+
+  const db = await connectToDatabase();
+  if (db) {
+    try {
+      await Product.updateMany({ id: { $in: cleanIds } }, { $set: sanitized });
+    } catch (e) {
+      console.warn('MongoDB bulk update notice:', e.message);
+    }
+  }
+
+  const jdb = readJSONDB();
+  let count = 0;
+  jdb.products = (jdb.products || []).map((p) => {
+    if (cleanIds.includes(String(p.id).trim())) {
+      count++;
+      const merged = { ...p, ...sanitized };
+      if (merged.stockCount !== undefined) {
+        const sc = Number(merged.stockCount);
+        merged.stockCount = sc;
+        merged.stockStatus = sc <= 0 ? 'out_of_stock' : sc < 5 ? 'low_stock' : 'in_stock';
+      }
+      return merged;
+    }
+    return p;
+  });
+  writeJSONDB(jdb);
+
+  memoryCache.invalidateProducts();
+  memoryCache.invalidateCategories();
+  broadcastCatalogEvent(CATALOG_EVENTS.CATALOG_REFRESHED, {});
+  return { updatedCount: count };
 }
 
 // ─── CATEGORIES CRUD ─────────────────────────────────────────────────────────

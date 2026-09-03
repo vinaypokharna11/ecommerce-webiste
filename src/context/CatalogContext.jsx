@@ -155,11 +155,11 @@ export const CatalogProvider = ({ children }) => {
 
   const isHydratedRef = useRef(false);
 
-  // Load from localStorage on client mount without triggering hydration mismatch
+  // Load user settings and transient metadata on mount
   useEffect(() => {
     try {
-      const savedProds = localStorage.getItem(STORAGE_KEYS.PRODUCTS);
-      if (savedProds) setProducts(JSON.parse(savedProds));
+      // Clean up legacy localStorage products to prevent zombie product resurrection
+      localStorage.removeItem(STORAGE_KEYS.PRODUCTS);
 
       const savedCats = localStorage.getItem(STORAGE_KEYS.CATEGORIES);
       if (savedCats) setCategories(JSON.parse(savedCats));
@@ -187,16 +187,6 @@ export const CatalogProvider = ({ children }) => {
       isHydratedRef.current = true;
     }
   }, []);
-
-  // Persist changes to localStorage once client is hydrated
-  useEffect(() => {
-    if (!isHydratedRef.current) return;
-    try {
-      localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(products));
-    } catch (e) {
-      console.warn('Failed to save products to localStorage', e);
-    }
-  }, [products]);
 
   useEffect(() => {
     if (!isHydratedRef.current) return;
@@ -306,27 +296,23 @@ export const CatalogProvider = ({ children }) => {
         if (payload?.product) {
           setProducts((prev) => [payload.product, ...prev.filter((p) => String(p.id).trim() !== String(payload.product.id).trim())]);
         }
-        fetchCatalogData();
         break;
       case 'PRODUCT_UPDATED':
         if (payload?.product) {
           setProducts((prev) => prev.map((p) => (String(p.id).trim() === String(payload.product.id).trim() ? { ...p, ...payload.product } : p)));
         }
-        fetchCatalogData();
         break;
       case 'PRODUCT_DELETED':
         if (payload?.id) {
           const delId = String(payload.id).trim();
           setProducts((prev) => prev.filter((p) => String(p.id).trim() !== delId));
         }
-        fetchCatalogData();
         break;
       case 'PRODUCTS_BULK_DELETED':
         if (Array.isArray(payload?.ids)) {
           const idSet = new Set(payload.ids.map((x) => String(x).trim()));
           setProducts((prev) => prev.filter((p) => !idSet.has(String(p.id).trim())));
         }
-        fetchCatalogData();
         break;
       case 'CATEGORY_CREATED':
         if (payload?.category) {
@@ -463,10 +449,10 @@ export const CatalogProvider = ({ children }) => {
 
   // ─────────────────── Product Actions ───────────────────
   const addProduct = useCallback(async (productData) => {
-    const id = productData.id || `prod-${Date.now()}`;
+    const cleanId = String(productData.id || `prod-${Date.now()}`).trim();
     const newProduct = {
       ...productData,
-      id,
+      id: cleanId,
       rating: Number(productData.rating) || 5.0,
       reviews: Number(productData.reviews) || 0,
       discountPercent: productData.oldPrice && productData.price && productData.oldPrice > productData.price
@@ -486,11 +472,11 @@ export const CatalogProvider = ({ children }) => {
     };
 
     // 1. Immediate optimistic state update
-    setProducts((prev) => [newProduct, ...prev.filter((p) => String(p.id).trim() !== String(newProduct.id).trim())]);
+    setProducts((prev) => [newProduct, ...prev.filter((p) => String(p.id).trim() !== cleanId)]);
     broadcastLocal('PRODUCT_CREATED', { product: newProduct });
     logActivity(`Added new product "${newProduct.name}"`, 'product', 'Plus');
 
-    // 2. Persist to MongoDB Server / Fallback JSON database
+    // 2. Persist to Backend API
     try {
       const res = await fetch('/api/products', {
         method: 'POST',
@@ -498,30 +484,37 @@ export const CatalogProvider = ({ children }) => {
         credentials: 'include',
         body: JSON.stringify(newProduct),
       });
-      const data = await res.json();
-      if (data.success && data.product) {
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success && data.product) {
         setProducts((prev) => [
           data.product,
-          ...prev.filter(
-            (p) => String(p.id).trim() !== String(newProduct.id).trim() && String(p.id).trim() !== String(data.product.id).trim()
-          ),
+          ...prev.filter((p) => String(p.id).trim() !== cleanId && String(p.id).trim() !== String(data.product.id).trim()),
         ]);
         broadcastLocal('PRODUCT_CREATED', { product: data.product });
+        return { success: true, product: data.product };
+      } else {
+        // Revert optimistic update on failure
+        setProducts((prev) => prev.filter((p) => String(p.id).trim() !== cleanId));
+        return { success: false, error: data.error || `Failed to create product (HTTP ${res.status})` };
       }
     } catch (e) {
-      console.warn('Product save to DB failed', e);
+      setProducts((prev) => prev.filter((p) => String(p.id).trim() !== cleanId));
+      return { success: false, error: e.message || 'Network error saving product' };
     }
-
-    return newProduct;
   }, [getAuthHeaders, broadcastLocal, logActivity]);
 
   const updateProduct = useCallback(async (id, updatedFields) => {
-    const cleanId = String(id).trim();
+    const cleanId = String(id || '').trim();
+    if (!cleanId) return { success: false, error: 'Product ID required' };
+
+    let originalProduct = null;
     let mergedProduct = null;
+
     setProducts((prev) =>
       prev.map((p) => {
         if (String(p.id).trim() === cleanId) {
-          const merged = { ...p, ...updatedFields };
+          originalProduct = p;
+          const merged = { ...p, ...updatedFields, id: cleanId };
           if (merged.oldPrice && merged.price && merged.oldPrice > merged.price) {
             merged.discountPercent = Math.round(((merged.oldPrice - merged.price) / merged.oldPrice) * 100);
           }
@@ -538,42 +531,74 @@ export const CatalogProvider = ({ children }) => {
         return p;
       })
     );
+
     if (mergedProduct) {
       broadcastLocal('PRODUCT_UPDATED', { product: mergedProduct });
+      logActivity(`Updated product "${updatedFields.name || cleanId}"`, 'product', 'Edit3');
     }
-    logActivity(`Updated product "${updatedFields.name || cleanId}"`, 'product', 'Edit3');
 
     try {
-      await fetch(`/api/products/${cleanId}`, {
+      const res = await fetch(`/api/products/${cleanId}`, {
         method: 'PUT',
         headers: getAuthHeaders(),
         credentials: 'include',
         body: JSON.stringify(updatedFields),
       });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success && data.product) {
+        setProducts((prev) => prev.map((p) => String(p.id).trim() === cleanId ? data.product : p));
+        broadcastLocal('PRODUCT_UPDATED', { product: data.product });
+        return { success: true, product: data.product };
+      } else {
+        // Revert optimistic update on failure
+        if (originalProduct) {
+          setProducts((prev) => prev.map((p) => String(p.id).trim() === cleanId ? originalProduct : p));
+        }
+        return { success: false, error: data.error || `Failed to update product (HTTP ${res.status})` };
+      }
     } catch (e) {
-      console.warn('Product update to DB failed', e);
+      if (originalProduct) {
+        setProducts((prev) => prev.map((p) => String(p.id).trim() === cleanId ? originalProduct : p));
+      }
+      return { success: false, error: e.message || 'Network error updating product' };
     }
   }, [getAuthHeaders, broadcastLocal, logActivity]);
 
   const deleteProduct = useCallback(async (id) => {
-    const cleanId = String(id).trim();
-    let deletedName = cleanId;
+    const cleanId = String(id || '').trim();
+    if (!cleanId) return { success: false, error: 'Product ID required' };
+
+    let originalProduct = null;
     setProducts((prev) => {
       const target = prev.find((p) => String(p.id).trim() === cleanId);
-      if (target) deletedName = target.name;
+      if (target) originalProduct = target;
       return prev.filter((p) => String(p.id).trim() !== cleanId);
     });
+
     broadcastLocal('PRODUCT_DELETED', { id: cleanId });
-    logActivity(`Deleted product "${deletedName}"`, 'delete', 'Trash2');
+    logActivity(`Deleted product "${originalProduct?.name || cleanId}"`, 'delete', 'Trash2');
 
     try {
-      await fetch(`/api/products/${cleanId}`, {
+      const res = await fetch(`/api/products/${cleanId}`, {
         method: 'DELETE',
         headers: getAuthHeaders(),
         credentials: 'include',
       });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success) {
+        return { success: true, id: cleanId };
+      } else {
+        // Revert optimistic deletion on failure
+        if (originalProduct) {
+          setProducts((prev) => [originalProduct, ...prev.filter((p) => String(p.id).trim() !== cleanId)]);
+        }
+        return { success: false, error: data.error || `Failed to delete product (HTTP ${res.status})` };
+      }
     } catch (e) {
-      console.warn('Product delete to DB failed', e);
+      if (originalProduct) {
+        setProducts((prev) => [originalProduct, ...prev.filter((p) => String(p.id).trim() !== cleanId)]);
+      }
+      return { success: false, error: e.message || 'Network error deleting product' };
     }
   }, [getAuthHeaders, broadcastLocal, logActivity]);
 
@@ -666,13 +691,17 @@ export const CatalogProvider = ({ children }) => {
       await fetch(`/api/products/${id}`, {
         method: 'PUT',
         headers: getAuthHeaders(),
+        credentials: 'include',
         body: JSON.stringify({ stockCount: newCount }),
       });
     } catch (e) {}
-  }, [logActivity]);
+  }, [getAuthHeaders, logActivity]);
 
-  // Bulk Product Actions
+  // Bulk Product Actions (Single Atomic API Call)
   const bulkUpdateCategory = useCallback(async (productIds, newCategory, newCategoryName) => {
+    if (!Array.isArray(productIds) || productIds.length === 0) return { success: true };
+    const originalProducts = products;
+
     setProducts((prev) =>
       prev.map((p) =>
         productIds.includes(p.id)
@@ -683,19 +712,34 @@ export const CatalogProvider = ({ children }) => {
     logActivity(`Bulk moved ${productIds.length} products to "${newCategoryName || newCategory}"`, 'bulk', 'Layers');
 
     try {
-      await Promise.allSettled(
-        productIds.map((id) =>
-          fetch(`/api/products/${id}`, {
-            method: 'PUT',
-            headers: getAuthHeaders(),
-            body: JSON.stringify({ category: newCategory, categoryName: newCategoryName || newCategory }),
-          })
-        )
-      );
-    } catch (e) {}
-  }, [logActivity]);
+      const res = await fetch('/api/products/bulk', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+        body: JSON.stringify({
+          action: 'update_category',
+          ids: productIds,
+          category: newCategory,
+          categoryName: newCategoryName || newCategory,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success) {
+        return { success: true, updatedCount: data.updatedCount };
+      } else {
+        setProducts(originalProducts);
+        return { success: false, error: data.error };
+      }
+    } catch (e) {
+      setProducts(originalProducts);
+      return { success: false, error: e.message };
+    }
+  }, [getAuthHeaders, logActivity, products]);
 
   const bulkApplyDiscount = useCallback(async (productIds, discountPercent) => {
+    if (!Array.isArray(productIds) || productIds.length === 0) return { success: true };
+    const originalProducts = products;
+
     setProducts((prev) =>
       prev.map((p) => {
         if (productIds.includes(p.id)) {
@@ -716,45 +760,65 @@ export const CatalogProvider = ({ children }) => {
     logActivity(`Applied ${discountPercent}% discount to ${productIds.length} products`, 'offer', 'Tag');
 
     try {
-      await Promise.allSettled(
-        productIds.map((id) => {
-          const p = products.find((x) => x.id === id);
-          const basePrice = p?.oldPrice || p?.price || 1000;
-          const newPrice = Math.round(basePrice * (1 - discountPercent / 100));
-          return fetch(`/api/products/${id}`, {
-            method: 'PUT',
-            headers: getAuthHeaders(),
-            body: JSON.stringify({
-              oldPrice: basePrice,
-              price: newPrice,
-              discountPercent,
-              badge: `${discountPercent}% OFF`,
-              badgeType: 'discount',
-            }),
-          });
-        })
-      );
-    } catch (e) {}
-  }, [products, logActivity]);
+      const res = await fetch('/api/products/bulk', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+        body: JSON.stringify({
+          action: 'apply_discount',
+          ids: productIds,
+          discountPercent,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success) {
+        return { success: true, updatedCount: data.updatedCount };
+      } else {
+        setProducts(originalProducts);
+        return { success: false, error: data.error };
+      }
+    } catch (e) {
+      setProducts(originalProducts);
+      return { success: false, error: e.message };
+    }
+  }, [getAuthHeaders, products, logActivity]);
 
   const bulkDeleteProducts = useCallback(async (productIds) => {
-    setProducts((prev) => prev.filter((p) => !productIds.includes(p.id)));
+    if (!Array.isArray(productIds) || productIds.length === 0) return { success: true, deletedCount: 0 };
+    const originalProducts = products;
+    const idSet = new Set(productIds.map((x) => String(x).trim()));
+
+    setProducts((prev) => prev.filter((p) => !idSet.has(String(p.id).trim())));
     broadcastLocal('PRODUCTS_BULK_DELETED', { ids: productIds });
     logActivity(`Bulk deleted ${productIds.length} products`, 'delete', 'Trash2');
 
     try {
-      await Promise.allSettled(
-        productIds.map((id) =>
-          fetch(`/api/products/${id}`, {
-            method: 'DELETE',
-            headers: getAuthHeaders(),
-          })
-        )
-      );
-    } catch (e) {}
-  }, [getAuthHeaders, broadcastLocal, logActivity]);
+      const res = await fetch('/api/products/bulk', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+        body: JSON.stringify({
+          action: 'delete',
+          ids: productIds,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success) {
+        return { success: true, deletedCount: data.deletedCount };
+      } else {
+        setProducts(originalProducts);
+        return { success: false, error: data.error };
+      }
+    } catch (e) {
+      setProducts(originalProducts);
+      return { success: false, error: e.message };
+    }
+  }, [getAuthHeaders, broadcastLocal, logActivity, products]);
 
   const bulkUpdateStockStatus = useCallback(async (productIds, stockStatus, stockCount = 10) => {
+    if (!Array.isArray(productIds) || productIds.length === 0) return { success: true };
+    const originalProducts = products;
+
     setProducts((prev) =>
       prev.map((p) =>
         productIds.includes(p.id)
@@ -765,20 +829,29 @@ export const CatalogProvider = ({ children }) => {
     logActivity(`Bulk updated stock for ${productIds.length} products to ${stockStatus}`, 'inventory', 'Package');
 
     try {
-      await Promise.allSettled(
-        productIds.map((id) =>
-          fetch(`/api/products/${id}`, {
-            method: 'PUT',
-            headers: getAuthHeaders(),
-            body: JSON.stringify({
-              stockStatus,
-              stockCount: stockStatus === 'out_of_stock' ? 0 : stockCount,
-            }),
-          })
-        )
-      );
-    } catch (e) {}
-  }, [getAuthHeaders, logActivity]);
+      const res = await fetch('/api/products/bulk', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+        body: JSON.stringify({
+          action: 'update_stock',
+          ids: productIds,
+          stockStatus,
+          stockCount,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success) {
+        return { success: true, updatedCount: data.updatedCount };
+      } else {
+        setProducts(originalProducts);
+        return { success: false, error: data.error };
+      }
+    } catch (e) {
+      setProducts(originalProducts);
+      return { success: false, error: e.message };
+    }
+  }, [getAuthHeaders, logActivity, products]);
 
   // ─────────────────── Category Actions ───────────────────
   const addCategory = useCallback(async (categoryData) => {

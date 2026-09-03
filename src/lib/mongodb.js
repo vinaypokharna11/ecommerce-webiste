@@ -6,7 +6,7 @@ import mongoose from 'mongoose';
 let cached = global.mongoose;
 
 if (!cached) {
-  cached = global.mongoose = { conn: null, promise: null, lastAttempt: 0, failedCooldown: 15000 };
+  cached = global.mongoose = { conn: null, promise: null, lastAttempt: 0, failedCooldown: 60000 };
 }
 
 export async function connectToDatabase() {
@@ -27,7 +27,7 @@ export async function connectToDatabase() {
 
   const now = Date.now();
   // If recent attempt failed, fail quickly during cooldown so API routes never hang
-  if (cached.lastAttempt && !cached.conn && now - cached.lastAttempt < (cached.failedCooldown || 15000)) {
+  if (cached.lastAttempt && !cached.conn && now - cached.lastAttempt < (cached.failedCooldown || 60000)) {
     return null;
   }
 
@@ -36,11 +36,11 @@ export async function connectToDatabase() {
     const isProd = process.env.NODE_ENV === 'production';
     const opts = {
       bufferCommands: false,
-      serverSelectionTimeoutMS: isProd ? 4000 : 2500,
-      connectTimeoutMS: 3000,
-      maxPoolSize: 20,
-      minPoolSize: 2,
-      socketTimeoutMS: 45000,
+      serverSelectionTimeoutMS: 2000,
+      connectTimeoutMS: 2500,
+      maxPoolSize: 10,
+      minPoolSize: 1,
+      socketTimeoutMS: 30000,
       family: 4, // Force IPv4 to prevent slow Windows/Node DNS IPv6 resolution stalls
     };
 
@@ -52,7 +52,7 @@ export async function connectToDatabase() {
         return mongooseInstance;
       })
       .catch((err) => {
-        console.info('ℹ️ Using high-speed local persistent database fallback');
+        console.warn('ℹ️ MongoDB Atlas unavailable (' + (err.message || 'connection failed') + '). Operating with atomic local database.');
         cached.promise = null;
         cached.conn = null;
         cached.lastAttempt = Date.now();

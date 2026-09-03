@@ -67,6 +67,11 @@ export const AdminProducts = ({ onPreviewStore }) => {
   const [editingProduct, setEditingProduct] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
+  const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [bulkDeleteError, setBulkDeleteError] = useState('');
 
   // Bulk action dropdown state
   const [bulkDiscountVal, setBulkDiscountVal] = useState(20);
@@ -138,11 +143,37 @@ export const AdminProducts = ({ onPreviewStore }) => {
     setIsModalOpen(true);
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (productToDelete) {
-      deleteProduct(productToDelete.id);
+      setIsDeleting(true);
+      setDeleteError('');
+      const res = await deleteProduct(productToDelete.id);
+      setIsDeleting(false);
+      if (res && res.success === false) {
+        setDeleteError(res.error || 'Failed to delete product');
+        return;
+      }
       setProductToDelete(null);
       setSelectedProductIds((prev) => prev.filter((id) => id !== productToDelete.id));
+    }
+  };
+
+  const handleConfirmBulkDelete = async () => {
+    if (selectedProductIds.length === 0) return;
+    setIsBulkDeleting(true);
+    setBulkDeleteError('');
+    try {
+      const res = await bulkDeleteProducts(selectedProductIds);
+      setIsBulkDeleting(false);
+      if (res && res.success === false) {
+        setBulkDeleteError(res.error || 'Failed to delete selected products');
+        return;
+      }
+      setSelectedProductIds([]);
+      setIsBulkDeleteModalOpen(false);
+    } catch (err) {
+      setIsBulkDeleting(false);
+      setBulkDeleteError(err.message || 'Error occurred during bulk deletion');
     }
   };
 
@@ -341,14 +372,13 @@ export const AdminProducts = ({ onPreviewStore }) => {
               </button>
               <button
                 onClick={() => {
-                  if (window.confirm(`Delete ${selectedProductIds.length} products permanently?`)) {
-                    bulkDeleteProducts(selectedProductIds);
-                    setSelectedProductIds([]);
-                  }
+                  setBulkDeleteError('');
+                  setIsBulkDeleteModalOpen(true);
                 }}
-                className="px-3 py-1 rounded-full bg-rose-500/20 hover:bg-rose-500 text-rose-300 hover:text-white font-bold transition-all cursor-pointer"
+                className="px-3.5 py-1.5 rounded-full bg-rose-500/20 hover:bg-rose-600 text-rose-300 hover:text-white font-bold transition-all cursor-pointer flex items-center gap-1.5 active:scale-95"
               >
-                Delete Selected
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Delete Selected ({selectedProductIds.length})</span>
               </button>
             </div>
           </motion.div>
@@ -734,18 +764,94 @@ export const AdminProducts = ({ onPreviewStore }) => {
                 Are you sure you want to remove <strong className="text-[#171717]">"{productToDelete.name}"</strong>? This will immediately remove it from your live customer storefront.
               </p>
 
+              {deleteError && (
+                <div className="mb-4 p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold text-center">
+                  {deleteError}
+                </div>
+              )}
+
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setProductToDelete(null)}
-                  className="flex-1 py-3 rounded-full bg-[#EEEEEC] text-[#171717] font-bold text-xs hover:bg-[#E2E2DE] transition-colors cursor-pointer"
+                  disabled={isDeleting}
+                  className="flex-1 py-3 rounded-full bg-[#EEEEEC] text-[#171717] font-bold text-xs hover:bg-[#E2E2DE] transition-colors cursor-pointer disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleConfirmDelete}
-                  className="flex-1 py-3 rounded-full bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-md transition-colors cursor-pointer"
+                  disabled={isDeleting}
+                  className="flex-1 py-3 rounded-full bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-md transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                  Yes, Delete
+                  {isDeleting ? (
+                    <>
+                      <div className="w-3.5 h-3.5 border-2 border-white border-t-rose-300 rounded-full animate-spin" />
+                      <span>Deleting...</span>
+                    </>
+                  ) : (
+                    <span>Yes, Delete</span>
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Bulk Delete Confirmation Modal ── */}
+      <AnimatePresence>
+        {isBulkDeleteModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => !isBulkDeleting && setIsBulkDeleteModalOpen(false)}
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="relative w-full max-w-md bg-white rounded-[32px] p-6 shadow-2xl border border-black/10 z-10 text-center"
+            >
+              <div className="w-14 h-14 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center mx-auto mb-4 border border-rose-100">
+                <Trash2 className="w-7 h-7" />
+              </div>
+              <h3 className="text-lg font-bold text-[#171717] mb-1">
+                Delete {selectedProductIds.length} Selected Products?
+              </h3>
+              <p className="text-xs text-[#777777] mb-6 leading-relaxed">
+                Are you sure you want to permanently remove <strong className="text-[#171717]">{selectedProductIds.length} products</strong> from the catalog? This action will immediately update across all customer screens.
+              </p>
+
+              {bulkDeleteError && (
+                <div className="mb-4 p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold text-center">
+                  {bulkDeleteError}
+                </div>
+              )}
+
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setIsBulkDeleteModalOpen(false)}
+                  disabled={isBulkDeleting}
+                  className="flex-1 py-3 rounded-full bg-[#EEEEEC] text-[#171717] font-bold text-xs hover:bg-[#E2E2DE] transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmBulkDelete}
+                  disabled={isBulkDeleting}
+                  className="flex-1 py-3 rounded-full bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-md transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {isBulkDeleting ? (
+                    <>
+                      <div className="w-3.5 h-3.5 border-2 border-white border-t-rose-300 rounded-full animate-spin" />
+                      <span>Deleting {selectedProductIds.length}...</span>
+                    </>
+                  ) : (
+                    <span>Yes, Delete All ({selectedProductIds.length})</span>
+                  )}
                 </button>
               </div>
             </motion.div>
