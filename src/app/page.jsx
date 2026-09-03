@@ -7,17 +7,62 @@ import { HeroSection } from '@/components/HeroSection';
 import { FeatureBenefits } from '@/components/FeatureBenefits';
 import { Categories } from '@/components/Categories';
 import { PopularProducts } from '@/components/PopularProducts';
+import dynamic from 'next/dynamic';
 import { PromoBanner } from '@/components/PromoBanner';
 import { RecentlyViewed } from '@/components/RecentlyViewed';
-import { CatalogPage } from '@/components/CatalogPage';
-import { OffersPage } from '@/components/OffersPage';
-import { CartPage } from '@/components/CartPage';
-import { ProfilePage, INITIAL_ORDERS } from '@/components/ProfilePage';
-import { ContactInquirePage } from '@/components/ContactInquirePage';
 import { FloatingCartBar } from '@/components/FloatingCartBar';
 import { Footer } from '@/components/Footer';
 import { Toast } from '@/components/Toast';
-import { QuickViewModal } from '@/components/QuickViewModal';
+
+// Code-split and lazy-load non-initial storefront tabs
+const CatalogPage = dynamic(() => import('@/components/CatalogPage').then((m) => m.CatalogPage), {
+  loading: () => (
+    <div className="min-h-[60vh] flex flex-col items-center justify-center gap-3">
+      <div className="w-10 h-10 border-3 border-[#9FD842] border-t-transparent rounded-full animate-spin" />
+      <span className="text-xs font-bold text-[#666666]">Loading catalog...</span>
+    </div>
+  ),
+});
+
+const OffersPage = dynamic(() => import('@/components/OffersPage').then((m) => m.OffersPage), {
+  loading: () => (
+    <div className="min-h-[60vh] flex flex-col items-center justify-center gap-3">
+      <div className="w-10 h-10 border-3 border-[#9FD842] border-t-transparent rounded-full animate-spin" />
+      <span className="text-xs font-bold text-[#666666]">Loading offers...</span>
+    </div>
+  ),
+});
+
+const CartPage = dynamic(() => import('@/components/CartPage').then((m) => m.CartPage), {
+  loading: () => (
+    <div className="min-h-[60vh] flex flex-col items-center justify-center gap-3">
+      <div className="w-10 h-10 border-3 border-[#9FD842] border-t-transparent rounded-full animate-spin" />
+      <span className="text-xs font-bold text-[#666666]">Loading bag...</span>
+    </div>
+  ),
+});
+
+const ProfilePage = dynamic(() => import('@/components/ProfilePage').then((m) => m.ProfilePage), {
+  loading: () => (
+    <div className="min-h-[60vh] flex flex-col items-center justify-center gap-3">
+      <div className="w-10 h-10 border-3 border-[#9FD842] border-t-transparent rounded-full animate-spin" />
+      <span className="text-xs font-bold text-[#666666]">Loading profile...</span>
+    </div>
+  ),
+});
+
+const ContactInquirePage = dynamic(() => import('@/components/ContactInquirePage').then((m) => m.ContactInquirePage), {
+  loading: () => (
+    <div className="min-h-[60vh] flex flex-col items-center justify-center gap-3">
+      <div className="w-10 h-10 border-3 border-[#9FD842] border-t-transparent rounded-full animate-spin" />
+      <span className="text-xs font-bold text-[#666666]">Loading contact form...</span>
+    </div>
+  ),
+});
+
+const QuickViewModal = dynamic(() => import('@/components/QuickViewModal').then((m) => m.QuickViewModal), {
+  ssr: false,
+});
 import { useCatalog } from '@/context/CatalogContext';
 import { useAuth } from '@/context/AuthContext';
 import { createHelpWhatsAppUrl } from '@/utils/whatsapp';

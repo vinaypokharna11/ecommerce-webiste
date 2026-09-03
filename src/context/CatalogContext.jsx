@@ -252,32 +252,30 @@ export const CatalogProvider = ({ children }) => {
     setActivities((prev) => [newAct, ...prev.slice(0, 19)]);
   }, []);
 
-  // Fetch full live catalog from backend REST APIs & Persistent DB
+  // Fetch full live catalog from single unified backend endpoint
   const fetchCatalogData = useCallback(async () => {
     try {
-      const [prodRes, catRes, offRes, cfgRes] = await Promise.allSettled([
-        fetch('/api/products').then((r) => r.json()),
-        fetch('/api/categories').then((r) => r.json()),
-        fetch('/api/offers').then((r) => r.json()),
-        fetch('/api/settings').then((r) => r.json()),
-      ]);
+      const res = await fetch('/api/catalog');
+      const data = await res.json();
 
-      if (prodRes.status === 'fulfilled' && prodRes.value?.success && Array.isArray(prodRes.value.products)) {
-        setProducts(prodRes.value.products);
-      }
-      if (catRes.status === 'fulfilled' && catRes.value?.success && Array.isArray(catRes.value.categories)) {
-        setCategories(catRes.value.categories);
-      }
-      if (offRes.status === 'fulfilled' && offRes.value?.success && Array.isArray(offRes.value.offers)) {
-        setOffers(offRes.value.offers);
-      }
-      if (cfgRes.status === 'fulfilled' && cfgRes.value?.success && cfgRes.value.storeConfig) {
-        const cfg = cfgRes.value.storeConfig;
-        if (!cfg.name || cfg.name === 'ShopEase') {
-          cfg.name = 'Nakoda Imitation';
-          cfg.tagline = 'Premium Imitation Jewelry & Lifestyle Collection';
+      if (data?.success) {
+        if (Array.isArray(data.products)) {
+          setProducts(data.products);
         }
-        setStoreConfig(cfg);
+        if (Array.isArray(data.categories)) {
+          setCategories(data.categories);
+        }
+        if (Array.isArray(data.offers)) {
+          setOffers(data.offers);
+        }
+        if (data.storeConfig) {
+          const cfg = data.storeConfig;
+          if (!cfg.name || cfg.name === 'ShopEase') {
+            cfg.name = 'Nakoda Imitation';
+            cfg.tagline = 'Premium Imitation Jewelry & Lifestyle Collection';
+          }
+          setStoreConfig(cfg);
+        }
       }
     } catch (err) {
       console.info('Using local client cache for catalog');

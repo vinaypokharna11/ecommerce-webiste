@@ -648,8 +648,13 @@ function readJSONDB() {
   try {
     const data = fs.readFileSync(DB_FILE_PATH, 'utf-8');
     const parsed = JSON.parse(data);
-    // Auto-seed if products list is missing or empty on uninitialized database
-    if (!parsed.products || !Array.isArray(parsed.products) || (parsed.products.length === 0 && !parsed.isInitialized)) {
+    // Auto-seed ONLY on a brand-new, never-initialized database.
+    // If isInitialized is already true, the admin intentionally manages the catalog
+    // (including possibly deleting all products), so we must NOT re-seed.
+    const needsSeed =
+      !parsed.isInitialized &&
+      (!parsed.products || !Array.isArray(parsed.products) || parsed.products.length === 0);
+    if (needsSeed) {
       parsed.products = INITIAL_DB_STATE.products;
       if (!parsed.categories || parsed.categories.length === 0) parsed.categories = INITIAL_DB_STATE.categories;
       if (!parsed.offers || parsed.offers.length === 0) parsed.offers = INITIAL_DB_STATE.offers;
@@ -685,24 +690,54 @@ const memoryCache = {
   offersTime: 0,
   config: null,
   configTime: 0,
-  TTL: 30000, // 30-second hot cache
+  catalogBundle: null,
+  catalogBundleTime: 0,
+  TTL: 300000, // 5-minute hot cache — safe because all mutations immediately invalidate
   invalidateProducts() {
     memoryCache.products = null;
     memoryCache.productsTime = 0;
+    memoryCache.catalogBundle = null;
   },
   invalidateCategories() {
     memoryCache.categories = null;
     memoryCache.categoriesTime = 0;
+    memoryCache.catalogBundle = null;
   },
   invalidateOffers() {
     memoryCache.offers = null;
     memoryCache.offersTime = 0;
+    memoryCache.catalogBundle = null;
   },
   invalidateConfig() {
     memoryCache.config = null;
     memoryCache.configTime = 0;
+    memoryCache.catalogBundle = null;
   },
 };
+
+export async function getCatalogBundle() {
+  if (memoryCache.catalogBundle && Date.now() - memoryCache.catalogBundleTime < memoryCache.TTL) {
+    return memoryCache.catalogBundle;
+  }
+
+  const [products, categories, offers, storeConfig] = await Promise.all([
+    getProducts(),
+    getCategories(),
+    getOffers(),
+    getStoreConfig(),
+  ]);
+
+  const bundle = {
+    products,
+    categories,
+    offers,
+    storeConfig,
+  };
+
+  memoryCache.catalogBundle = bundle;
+  memoryCache.catalogBundleTime = Date.now();
+  return bundle;
+}
 
 // ─── MASTER SEED TEMPLATE MANAGEMENT (Updateable & Dynamic) ─────────────────
 export function getMasterSeedTemplate() {

@@ -46,9 +46,9 @@ export default function DriftWall({
     const cols = [];
     for (let c = 0; c < columns; c++) {
       const colItems = [];
-      const totalTiles = rowsPerColumn * 3; // Triple for infinite seamless loop
+      const totalTiles = rowsPerColumn * 2; // Double for smooth seamless loop without excessive DOM nodes
       for (let r = 0; r < totalTiles; r++) {
-        const itemIndex = (c * 3 + r) % items.length;
+        const itemIndex = (c * 2 + r) % items.length;
         colItems.push(items[itemIndex]);
       }
       cols.push(colItems);
@@ -131,7 +131,7 @@ export default function DriftWall({
   }, [columnData, direction, speed, variance, tileHeight, gap, rowsPerColumn]);
 
   const totalWidth = columns * tileWidth + (columns - 1) * gap;
-  const totalHeight = rowsPerColumn * 3 * tileHeight + (rowsPerColumn * 3 - 1) * gap;
+  const totalHeight = rowsPerColumn * 2 * tileHeight + (rowsPerColumn * 2 - 1) * gap;
 
   return (
     <div
@@ -180,7 +180,7 @@ export default function DriftWall({
                       <img
                         src={imageSrc}
                         alt={item.title || 'Product'}
-                        loading="eager"
+                        loading={r === 0 ? 'eager' : 'lazy'}
                         decoding="async"
                         className="w-full h-full object-contain p-2"
                       />

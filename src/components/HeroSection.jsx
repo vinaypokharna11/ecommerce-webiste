@@ -63,7 +63,8 @@ export const HeroSection = ({ onExploreClick }) => {
           <div className="absolute inset-0 w-full h-full pointer-events-auto">
             <DriftWall
               items={DRIFT_ITEMS}
-              columns={5}
+              columns={4}
+              rowsPerColumn={2}
               tileWidth={210}
               tileHeight={138}
               gap={16}

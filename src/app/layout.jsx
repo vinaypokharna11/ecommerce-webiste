@@ -1,9 +1,24 @@
 import './globals.css';
+import { Plus_Jakarta_Sans, Manrope } from 'next/font/google';
 import { CatalogProvider } from '@/context/CatalogContext';
 import { AuthProvider } from '@/context/AuthContext';
 import { AuthModal } from '@/components/AuthModal';
 import { SmoothScrollProvider } from '@/components/SmoothScrollProvider';
 import { GsapScrollAnimations } from '@/components/GsapScrollAnimations';
+
+const plusJakartaSans = Plus_Jakarta_Sans({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700', '800'],
+  variable: '--font-plus-jakarta',
+  display: 'swap',
+});
+
+const manrope = Manrope({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700', '800'],
+  variable: '--font-manrope',
+  display: 'swap',
+});
 
 export const metadata = {
   title: {
@@ -41,17 +56,14 @@ export const viewport = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
+    <html lang="en" className={`${plusJakartaSans.variable} ${manrope.variable}`} suppressHydrationWarning>
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600;1,700&display=swap"
-          rel="stylesheet"
-        />
         <meta name="theme-color" content="#9FD842" />
       </head>
-      <body className="bg-[#F5F5F3] text-[#171717] font-sans antialiased selection:bg-[#9FD842] selection:text-[#171717]">
+      <body
+        className="bg-[#F5F5F3] text-[#171717] font-sans antialiased selection:bg-[#9FD842] selection:text-[#171717]"
+        suppressHydrationWarning
+      >
         <SmoothScrollProvider>
           <AuthProvider>
             <CatalogProvider>

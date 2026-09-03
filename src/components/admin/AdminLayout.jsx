@@ -15,10 +15,8 @@ import {
   Plus,
   Menu,
   X,
-  Sparkles,
   LogOut,
   MessageSquare,
-  Eye,
   Clock,
   RefreshCw,
   Radio,
@@ -225,36 +223,6 @@ export const AdminLayout = ({
                 </button>
               );
             })}
-
-            {/* Quick Live Preview Box */}
-            <div className="pt-4 mt-4 border-t border-black/10 px-2">
-              <div className="p-3.5 rounded-2xl bg-[#F8FDF0] border border-[#9FD842]/30 text-left">
-                <div className="flex items-center gap-1.5 text-xs font-extrabold text-[#709E1E] mb-1">
-                  <Sparkles className="w-3.5 h-3.5 text-[#709E1E]" />
-                  <span>Real-Time Sync Active</span>
-                </div>
-                <p className="text-[11px] text-[#666666] leading-relaxed mb-3">
-                  All changes immediately update across all customer screens in real time.
-                </p>
-                <button
-                  onClick={onExitAdmin}
-                  className="w-full py-2 rounded-xl bg-white text-[#171717] text-xs font-bold shadow-xs hover:bg-[#EEEEEC] border border-black/10 flex items-center justify-center gap-1.5 mb-2 cursor-pointer transition-colors"
-                >
-                  <Eye className="w-3.5 h-3.5 text-[#709E1E]" />
-                  <span>Preview Storefront</span>
-                </button>
-
-                {onLogout && (
-                  <button
-                    onClick={onLogout}
-                    className="w-full py-1.5 rounded-xl bg-rose-50 text-rose-600 text-xs font-bold hover:bg-rose-100 border border-rose-200 flex items-center justify-center gap-1 transition-colors cursor-pointer"
-                  >
-                    <LogOut className="w-3 h-3" />
-                    <span>Sign Out</span>
-                  </button>
-                )}
-              </div>
-            </div>
 
           </div>
         </aside>

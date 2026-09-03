@@ -67,6 +67,7 @@ logs/
 coverage/
 .nyc_output/
 test-results/
+playwright-report/
 
 # === Misc / Project Specific ===
 prompt/
