@@ -188,3 +188,46 @@
     transition-delay: 0s !important;
   }
 }
+
+/* ── Lenis Smooth Scrolling Styles ── */
+html.lenis, html.lenis body {
+  height: auto;
+}
+
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+
+.lenis.lenis-smooth iframe {
+  pointer-events: none;
+}
+
+/* ── Premium Custom Scrollbar ── */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #EEEEEC;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #C4C4BF;
+  border-radius: 9999px;
+  border: 2px solid #EEEEEC;
+  transition: background-color 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #9FD842;
+}
+

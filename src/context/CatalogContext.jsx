@@ -306,58 +306,71 @@ export const CatalogProvider = ({ children }) => {
     switch (type) {
       case 'PRODUCT_CREATED':
         if (payload?.product) {
-          setProducts((prev) => [payload.product, ...prev.filter((p) => p.id !== payload.product.id)]);
+          setProducts((prev) => [payload.product, ...prev.filter((p) => String(p.id).trim() !== String(payload.product.id).trim())]);
         }
+        fetchCatalogData();
         break;
       case 'PRODUCT_UPDATED':
         if (payload?.product) {
-          setProducts((prev) => prev.map((p) => (p.id === payload.product.id ? { ...p, ...payload.product } : p)));
+          setProducts((prev) => prev.map((p) => (String(p.id).trim() === String(payload.product.id).trim() ? { ...p, ...payload.product } : p)));
         }
+        fetchCatalogData();
         break;
       case 'PRODUCT_DELETED':
         if (payload?.id) {
-          setProducts((prev) => prev.filter((p) => p.id !== payload.id));
+          const delId = String(payload.id).trim();
+          setProducts((prev) => prev.filter((p) => String(p.id).trim() !== delId));
         }
+        fetchCatalogData();
         break;
       case 'PRODUCTS_BULK_DELETED':
         if (Array.isArray(payload?.ids)) {
-          setProducts((prev) => prev.filter((p) => !payload.ids.includes(p.id)));
+          const idSet = new Set(payload.ids.map((x) => String(x).trim()));
+          setProducts((prev) => prev.filter((p) => !idSet.has(String(p.id).trim())));
         }
+        fetchCatalogData();
         break;
       case 'CATEGORY_CREATED':
         if (payload?.category) {
           setCategories((prev) => [...prev.filter((c) => c.id !== payload.category.id), payload.category]);
         }
+        fetchCatalogData();
         break;
       case 'CATEGORY_UPDATED':
         if (payload?.category) {
           setCategories((prev) => prev.map((c) => (c.id === payload.category.id ? { ...c, ...payload.category } : c)));
         }
+        fetchCatalogData();
         break;
       case 'CATEGORY_DELETED':
         if (payload?.id) {
           setCategories((prev) => prev.filter((c) => c.id !== payload.id));
         }
+        fetchCatalogData();
         break;
       case 'OFFER_CREATED':
         if (payload?.offer) {
           setOffers((prev) => [payload.offer, ...prev.filter((o) => o.id !== payload.offer.id)]);
         }
+        fetchCatalogData();
         break;
       case 'OFFER_UPDATED':
         if (payload?.offer) {
           setOffers((prev) => prev.map((o) => (o.id === payload.offer.id ? { ...o, ...payload.offer } : o)));
         }
+        fetchCatalogData();
         break;
       case 'OFFER_DELETED':
         if (payload?.id) {
           setOffers((prev) => prev.filter((o) => o.id !== payload.id));
         }
+        fetchCatalogData();
         break;
       case 'CONFIG_UPDATED':
         if (payload?.storeConfig) {
           setStoreConfig(payload.storeConfig);
         }
+        fetchCatalogData();
         break;
       case 'CATALOG_SEEDED':
       case 'CATALOG_CLEARED':
@@ -421,6 +434,19 @@ export const CatalogProvider = ({ children }) => {
 
     connectSSE();
 
+    // 3. Tab Visibility listener (Auto-refresh whenever tab becomes active)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchCatalogData();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // 4. Periodic lightweight heartbeat sync every 45 seconds
+    const syncInterval = setInterval(() => {
+      fetchCatalogData();
+    }, 45000);
+
     return () => {
       if (broadcastChannelRef.current) {
         broadcastChannelRef.current.close();
@@ -432,8 +458,10 @@ export const CatalogProvider = ({ children }) => {
       if (reconnectTimeout) {
         clearTimeout(reconnectTimeout);
       }
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      clearInterval(syncInterval);
     };
-  }, [handleRealtimeEvent]);
+  }, [handleRealtimeEvent, fetchCatalogData]);
 
   // ─────────────────── Product Actions ───────────────────
   const addProduct = useCallback(async (productData) => {
@@ -441,11 +469,11 @@ export const CatalogProvider = ({ children }) => {
     const newProduct = {
       ...productData,
       id,
-      rating: productData.rating || 5.0,
-      reviews: productData.reviews || 0,
+      rating: Number(productData.rating) || 5.0,
+      reviews: Number(productData.reviews) || 0,
       discountPercent: productData.oldPrice && productData.price && productData.oldPrice > productData.price
         ? Math.round(((productData.oldPrice - productData.price) / productData.oldPrice) * 100)
-        : productData.discountPercent || 0,
+        : Number(productData.discountPercent) || 0,
       stockCount: Number(productData.stockCount) || 0,
       stockStatus: Number(productData.stockCount) <= 0 
         ? 'out_of_stock' 
@@ -459,21 +487,28 @@ export const CatalogProvider = ({ children }) => {
         : [],
     };
 
-    // 1. Optimistic state update
-    setProducts((prev) => [newProduct, ...prev.filter((p) => p.id !== newProduct.id)]);
+    // 1. Immediate optimistic state update
+    setProducts((prev) => [newProduct, ...prev.filter((p) => String(p.id).trim() !== String(newProduct.id).trim())]);
     broadcastLocal('PRODUCT_CREATED', { product: newProduct });
     logActivity(`Added new product "${newProduct.name}"`, 'product', 'Plus');
 
-    // 2. Persist to MongoDB Server
+    // 2. Persist to MongoDB Server / Fallback JSON database
     try {
       const res = await fetch('/api/products', {
         method: 'POST',
         headers: getAuthHeaders(),
+        credentials: 'include',
         body: JSON.stringify(newProduct),
       });
       const data = await res.json();
       if (data.success && data.product) {
-        setProducts((prev) => [data.product, ...prev.filter((p) => p.id !== newProduct.id && p.id !== data.product.id)]);
+        setProducts((prev) => [
+          data.product,
+          ...prev.filter(
+            (p) => String(p.id).trim() !== String(newProduct.id).trim() && String(p.id).trim() !== String(data.product.id).trim()
+          ),
+        ]);
+        broadcastLocal('PRODUCT_CREATED', { product: data.product });
       }
     } catch (e) {
       console.warn('Product save to DB failed', e);
@@ -483,10 +518,11 @@ export const CatalogProvider = ({ children }) => {
   }, [getAuthHeaders, broadcastLocal, logActivity]);
 
   const updateProduct = useCallback(async (id, updatedFields) => {
+    const cleanId = String(id).trim();
     let mergedProduct = null;
     setProducts((prev) =>
       prev.map((p) => {
-        if (p.id === id) {
+        if (String(p.id).trim() === cleanId) {
           const merged = { ...p, ...updatedFields };
           if (merged.oldPrice && merged.price && merged.oldPrice > merged.price) {
             merged.discountPercent = Math.round(((merged.oldPrice - merged.price) / merged.oldPrice) * 100);
@@ -507,12 +543,13 @@ export const CatalogProvider = ({ children }) => {
     if (mergedProduct) {
       broadcastLocal('PRODUCT_UPDATED', { product: mergedProduct });
     }
-    logActivity(`Updated product "${updatedFields.name || id}"`, 'product', 'Edit3');
+    logActivity(`Updated product "${updatedFields.name || cleanId}"`, 'product', 'Edit3');
 
     try {
-      await fetch(`/api/products/${id}`, {
+      await fetch(`/api/products/${cleanId}`, {
         method: 'PUT',
         headers: getAuthHeaders(),
+        credentials: 'include',
         body: JSON.stringify(updatedFields),
       });
     } catch (e) {
@@ -521,19 +558,21 @@ export const CatalogProvider = ({ children }) => {
   }, [getAuthHeaders, broadcastLocal, logActivity]);
 
   const deleteProduct = useCallback(async (id) => {
-    let deletedName = id;
+    const cleanId = String(id).trim();
+    let deletedName = cleanId;
     setProducts((prev) => {
-      const target = prev.find((p) => p.id === id);
+      const target = prev.find((p) => String(p.id).trim() === cleanId);
       if (target) deletedName = target.name;
-      return prev.filter((p) => p.id !== id);
+      return prev.filter((p) => String(p.id).trim() !== cleanId);
     });
-    broadcastLocal('PRODUCT_DELETED', { id });
+    broadcastLocal('PRODUCT_DELETED', { id: cleanId });
     logActivity(`Deleted product "${deletedName}"`, 'delete', 'Trash2');
 
     try {
-      await fetch(`/api/products/${id}`, {
+      await fetch(`/api/products/${cleanId}`, {
         method: 'DELETE',
         headers: getAuthHeaders(),
+        credentials: 'include',
       });
     } catch (e) {
       console.warn('Product delete to DB failed', e);
@@ -1126,6 +1165,7 @@ export const CatalogProvider = ({ children }) => {
     clearAllCatalog,
     resetToDefaults,
     fetchCatalogData,
+    refreshCatalog: fetchCatalogData,
     exportCatalogJson,
     importCatalogJson,
     logActivity,

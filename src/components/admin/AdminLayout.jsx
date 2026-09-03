@@ -12,20 +12,16 @@ import {
   Settings,
   ArrowLeft,
   ShoppingBag,
-  ExternalLink,
   Plus,
-  Bell,
-  Search,
   Menu,
   X,
-  ChevronRight,
   Sparkles,
-  HelpCircle,
   LogOut,
-  UserCheck,
   MessageSquare,
   Eye,
   Clock,
+  RefreshCw,
+  Radio,
 } from 'lucide-react';
 import { useCatalog } from '../../context/CatalogContext';
 import { AdminDashboard } from './AdminDashboard';
@@ -38,11 +34,25 @@ import { AdminInquiries } from './AdminInquiries';
 import { AdminSettings } from './AdminSettings';
 import { AdminProductModal } from './AdminProductModal';
 
-export const AdminLayout = ({ onExitAdmin, onLogout, adminUser }) => {
-  const { catalogStats, storeConfig } = useCatalog();
-  const [activeNav, setActiveNav] = useState('dashboard'); // 'dashboard', 'products', 'categories', 'offers', 'featured', 'inventory', 'inquiries', 'settings'
+export const AdminLayout = ({ 
+  onExitAdmin, 
+  onLogout, 
+  adminUser, 
+  activeTab = 'dashboard', 
+  onTabChange 
+}) => {
+  const { catalogStats, storeConfig, isLiveConnected, refreshCatalog } = useCatalog();
+  const [activeNav, setActiveNav] = useState(activeTab);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  // Synchronize state whenever URL activeTab changes (e.g. Back/Forward button)
+  useEffect(() => {
+    if (activeTab && activeTab !== activeNav) {
+      setActiveNav(activeTab);
+    }
+  }, [activeTab]);
 
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -57,8 +67,19 @@ export const AdminLayout = ({ onExitAdmin, onLogout, adminUser }) => {
 
   const handleNavClick = (id) => {
     setActiveNav(id);
+    if (onTabChange) {
+      onTabChange(id);
+    }
     setIsSidebarOpen(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleManualSync = async () => {
+    setIsSyncing(true);
+    try {
+      if (refreshCatalog) await refreshCatalog();
+    } catch (e) {}
+    setTimeout(() => setIsSyncing(false), 600);
   };
 
   return (
@@ -108,8 +129,25 @@ export const AdminLayout = ({ onExitAdmin, onLogout, adminUser }) => {
           </div>
         </div>
 
-        {/* Right: Quick Storefront Switch, New Product Button & Logout */}
+        {/* Right: Real-time status, Quick Storefront Switch, New Product Button & Logout */}
         <div className="flex items-center gap-2 sm:gap-3">
+          
+          {/* Real-time Socket Live Sync Pill */}
+          <div 
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#EEEEEC]/80 border border-black/10 text-[11px] font-bold text-[#171717]"
+            title={isLiveConnected ? "Real-time auto-refresh socket is connected" : "Connecting real-time socket..."}
+          >
+            <span className={`w-2 h-2 rounded-full ${isLiveConnected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-400'}`} />
+            <span className="hidden sm:inline">{isLiveConnected ? 'Live Sync' : 'Connecting'}</span>
+            <button
+              onClick={handleManualSync}
+              className="p-0.5 rounded text-[#777777] hover:text-[#171717] transition-colors cursor-pointer"
+              title="Force Refresh Data"
+            >
+              <RefreshCw className={`w-3 h-3 ${isSyncing ? 'animate-spin text-[#709E1E]' : ''}`} />
+            </button>
+          </div>
+
           <button
             onClick={onExitAdmin}
             className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-[#EEEEEC] hover:bg-[#E2E2DE] text-xs font-bold text-[#171717] transition-all active:scale-95 cursor-pointer shadow-xs"
@@ -193,10 +231,10 @@ export const AdminLayout = ({ onExitAdmin, onLogout, adminUser }) => {
               <div className="p-3.5 rounded-2xl bg-[#F8FDF0] border border-[#9FD842]/30 text-left">
                 <div className="flex items-center gap-1.5 text-xs font-extrabold text-[#709E1E] mb-1">
                   <Sparkles className="w-3.5 h-3.5 text-[#709E1E]" />
-                  <span>Live Store Sync</span>
+                  <span>Real-Time Sync Active</span>
                 </div>
                 <p className="text-[11px] text-[#666666] leading-relaxed mb-3">
-                  All changes immediately update your live customer store.
+                  All changes immediately update across all customer screens in real time.
                 </p>
                 <button
                   onClick={onExitAdmin}
@@ -251,7 +289,7 @@ export const AdminLayout = ({ onExitAdmin, onLogout, adminUser }) => {
                     </div>
                     <button
                       onClick={() => setIsSidebarOpen(false)}
-                      className="p-1 rounded-lg text-[#777777] hover:bg-[#EEEEEC]"
+                      className="p-1 rounded-lg text-[#777777] hover:bg-[#EEEEEC] cursor-pointer"
                     >
                       <X className="w-5 h-5" />
                     </button>
@@ -265,7 +303,7 @@ export const AdminLayout = ({ onExitAdmin, onLogout, adminUser }) => {
                         <button
                           key={item.id}
                           onClick={() => handleNavClick(item.id)}
-                          className={`w-full flex items-center justify-between px-3.5 py-3 rounded-2xl text-xs font-bold ${
+                          className={`w-full flex items-center justify-between px-3.5 py-3 rounded-2xl text-xs font-bold cursor-pointer ${
                             isActive
                               ? 'bg-[#171717] text-white'
                               : 'text-[#555555] hover:bg-[#EEEEEC]'
@@ -289,7 +327,7 @@ export const AdminLayout = ({ onExitAdmin, onLogout, adminUser }) => {
                 <div className="pt-4 border-t border-black/10">
                   <button
                     onClick={onExitAdmin}
-                    className="w-full py-2.5 rounded-2xl bg-[#EEEEEC] text-[#171717] font-bold text-xs border border-black/10 flex items-center justify-center gap-2"
+                    className="w-full py-2.5 rounded-2xl bg-[#EEEEEC] text-[#171717] font-bold text-xs border border-black/10 flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <ArrowLeft className="w-4 h-4" />
                     <span>Back to Customer Store</span>
@@ -300,42 +338,52 @@ export const AdminLayout = ({ onExitAdmin, onLogout, adminUser }) => {
           )}
         </AnimatePresence>
 
-        {/* ── Dynamic Content Subview ── */}
+        {/* ── Dynamic Content Subview with Silky Transitions ── */}
         <main className="flex-1 min-w-0">
-          {activeNav === 'dashboard' && (
-            <AdminDashboard
-              onNavigate={setActiveNav}
-              onOpenAddProduct={() => setIsAddModalOpen(true)}
-            />
-          )}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeNav}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.18 }}
+            >
+              {activeNav === 'dashboard' && (
+                <AdminDashboard
+                  onNavigate={handleNavClick}
+                  onOpenAddProduct={() => setIsAddModalOpen(true)}
+                />
+              )}
 
-          {activeNav === 'products' && (
-            <AdminProducts onPreviewStore={onExitAdmin} />
-          )}
+              {activeNav === 'products' && (
+                <AdminProducts onPreviewStore={onExitAdmin} />
+              )}
 
-          {activeNav === 'categories' && (
-            <AdminCategories onNavigateToProducts={(catId) => setActiveNav('products')} />
-          )}
+              {activeNav === 'categories' && (
+                <AdminCategories onNavigateToProducts={(catId) => handleNavClick('products')} />
+              )}
 
-          {activeNav === 'offers' && (
-            <AdminOffers />
-          )}
+              {activeNav === 'offers' && (
+                <AdminOffers />
+              )}
 
-          {activeNav === 'featured' && (
-            <AdminFeatured />
-          )}
+              {activeNav === 'featured' && (
+                <AdminFeatured />
+              )}
 
-          {activeNav === 'inventory' && (
-            <AdminInventory />
-          )}
+              {activeNav === 'inventory' && (
+                <AdminInventory />
+              )}
 
-          {activeNav === 'inquiries' && (
-            <AdminInquiries />
-          )}
+              {activeNav === 'inquiries' && (
+                <AdminInquiries />
+              )}
 
-          {activeNav === 'settings' && (
-            <AdminSettings />
-          )}
+              {activeNav === 'settings' && (
+                <AdminSettings />
+              )}
+            </motion.div>
+          </AnimatePresence>
         </main>
 
       </div>

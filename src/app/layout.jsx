@@ -2,6 +2,8 @@ import './globals.css';
 import { CatalogProvider } from '@/context/CatalogContext';
 import { AuthProvider } from '@/context/AuthContext';
 import { AuthModal } from '@/components/AuthModal';
+import { SmoothScrollProvider } from '@/components/SmoothScrollProvider';
+import { GsapScrollAnimations } from '@/components/GsapScrollAnimations';
 
 export const metadata = {
   title: {
@@ -50,12 +52,16 @@ export default function RootLayout({ children }) {
         <meta name="theme-color" content="#9FD842" />
       </head>
       <body className="bg-[#F5F5F3] text-[#171717] font-sans antialiased selection:bg-[#9FD842] selection:text-[#171717]">
-        <AuthProvider>
-          <CatalogProvider>
-            {children}
-            <AuthModal />
-          </CatalogProvider>
-        </AuthProvider>
+        <SmoothScrollProvider>
+          <AuthProvider>
+            <CatalogProvider>
+              <GsapScrollAnimations>
+                {children}
+                <AuthModal />
+              </GsapScrollAnimations>
+            </CatalogProvider>
+          </AuthProvider>
+        </SmoothScrollProvider>
       </body>
     </html>
   );

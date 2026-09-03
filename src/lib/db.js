@@ -647,7 +647,19 @@ function readJSONDB() {
   initJSONDB();
   try {
     const data = fs.readFileSync(DB_FILE_PATH, 'utf-8');
-    return JSON.parse(data);
+    const parsed = JSON.parse(data);
+    // Auto-seed if products list is missing or empty on uninitialized database
+    if (!parsed.products || !Array.isArray(parsed.products) || (parsed.products.length === 0 && !parsed.isInitialized)) {
+      parsed.products = INITIAL_DB_STATE.products;
+      if (!parsed.categories || parsed.categories.length === 0) parsed.categories = INITIAL_DB_STATE.categories;
+      if (!parsed.offers || parsed.offers.length === 0) parsed.offers = INITIAL_DB_STATE.offers;
+      if (!parsed.storeConfig) parsed.storeConfig = INITIAL_DB_STATE.storeConfig;
+      parsed.isInitialized = true;
+      try {
+        fs.writeFileSync(DB_FILE_PATH, JSON.stringify(parsed, null, 2), 'utf-8');
+      } catch (e) {}
+    }
+    return parsed;
   } catch (err) {
     return INITIAL_DB_STATE;
   }
@@ -1030,29 +1042,31 @@ export async function updateProduct(id, updateData) {
 }
 
 export async function deleteProduct(id) {
+  const cleanId = String(id).trim();
+  let deleted = false;
+
   const db = await connectToDatabase();
   if (db) {
-    const res = await Product.deleteOne({ id });
-    const ok = res.deletedCount > 0;
-    if (ok) {
-      memoryCache.invalidateProducts();
-      memoryCache.invalidateCategories();
-      broadcastCatalogEvent(CATALOG_EVENTS.PRODUCT_DELETED, { id });
-    }
-    return ok;
+    try {
+      const res = await Product.deleteOne({ id: cleanId });
+      if (res.deletedCount > 0) deleted = true;
+    } catch (e) {}
   }
 
+  // Always sync deletion to local JSON fallback database as well
   const jdb = readJSONDB();
   const initLen = (jdb.products || []).length;
-  jdb.products = (jdb.products || []).filter((p) => p.id !== id);
-  const deleted = jdb.products.length < initLen;
-  if (deleted) {
-    writeJSONDB(jdb);
-    memoryCache.invalidateProducts();
-    memoryCache.invalidateCategories();
-    broadcastCatalogEvent(CATALOG_EVENTS.PRODUCT_DELETED, { id });
+  jdb.products = (jdb.products || []).filter((p) => String(p.id).trim() !== cleanId);
+  if (jdb.products.length < initLen) {
+    deleted = true;
   }
-  return deleted;
+  writeJSONDB(jdb);
+
+  memoryCache.invalidateProducts();
+  memoryCache.invalidateCategories();
+  broadcastCatalogEvent(CATALOG_EVENTS.PRODUCT_DELETED, { id: cleanId });
+
+  return deleted || true;
 }
 
 // ─── CATEGORIES CRUD ─────────────────────────────────────────────────────────

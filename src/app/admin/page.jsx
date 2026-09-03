@@ -1,14 +1,17 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { motion } from 'framer-motion';
 import { Lock, ArrowRight, ShieldCheck, ShoppingBag } from 'lucide-react';
 import Link from 'next/link';
 
-export default function AdminPage() {
+function AdminPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const activeTabParam = searchParams.get('tab') || 'dashboard';
+
   const [isAuthenticated, setIsAuthenticated] = useState(null); // null = checking, true, false
   const [adminUser, setAdminUser] = useState(null);
   const [isSessionExpired, setIsSessionExpired] = useState(false);
@@ -21,6 +24,7 @@ export default function AdminPage() {
         const token = localStorage.getItem('nakoda_admin_token') || localStorage.getItem('shopease_admin_token');
         const res = await fetch('/api/admin/auth', {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
+          credentials: 'include',
         });
         const data = await res.json();
 
@@ -47,7 +51,7 @@ export default function AdminPage() {
 
     checkAuth(false);
 
-    // Periodic heartbeat every 3 minutes to auto-detect 12-hour expiration
+    // Periodic heartbeat every 3 minutes
     const interval = setInterval(() => {
       checkAuth(true);
     }, 3 * 60 * 1000);
@@ -60,11 +64,15 @@ export default function AdminPage() {
 
   const handleLogout = async () => {
     try {
-      await fetch('/api/admin/logout', { method: 'POST' });
+      await fetch('/api/admin/logout', { method: 'POST', credentials: 'include' });
     } catch (e) {}
     localStorage.removeItem('nakoda_admin_token');
     localStorage.removeItem('shopease_admin_token');
     router.push('/admin/login');
+  };
+
+  const handleTabChange = (tabId) => {
+    router.push(`/admin?tab=${tabId}`, { scroll: false });
   };
 
   // Loading state
@@ -81,7 +89,6 @@ export default function AdminPage() {
   if (isAuthenticated === false) {
     return (
       <div className="min-h-screen bg-[#F5F5F3] flex items-center justify-center p-4 font-sans selection:bg-[#9FD842] selection:text-[#171717]">
-        {/* Glows */}
         <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-[#9FD842]/10 rounded-full blur-[140px] pointer-events-none -z-10" />
 
         <motion.div
@@ -141,7 +148,24 @@ export default function AdminPage() {
         onExitAdmin={() => router.push('/')}
         onLogout={handleLogout}
         adminUser={adminUser}
+        activeTab={activeTabParam}
+        onTabChange={handleTabChange}
       />
     </div>
+  );
+}
+
+export default function AdminPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-[#F5F5F3] flex flex-col items-center justify-center gap-3 font-sans">
+          <div className="w-10 h-10 border-3 border-[#171717] border-t-[#9FD842] rounded-full animate-spin" />
+          <p className="text-xs font-bold text-[#171717]">Loading Administrator Portal...</p>
+        </div>
+      }
+    >
+      <AdminPageContent />
+    </Suspense>
   );
 }

@@ -46,7 +46,7 @@ export const PopularProducts = ({
             <p className="text-xs text-[#777777] mt-1">Our catalog is currently being updated. Inquire via WhatsApp for custom imitation jewelry!</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3.5 sm:gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3.5 sm:gap-6 gsap-stagger-cards">
             {displayProducts.map((product) => {
               const quantity = cartItems[product.id]?.quantity || 0;
               const isFav = !!wishlist[product.id];

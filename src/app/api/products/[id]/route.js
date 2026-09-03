@@ -44,13 +44,9 @@ export async function DELETE(request, { params }) {
     }
 
     const { id } = params;
-    const deleted = await deleteProduct(id);
+    await deleteProduct(id);
 
-    if (!deleted) {
-      return NextResponse.json({ success: false, error: 'Product not found' }, { status: 404 });
-    }
-
-    return NextResponse.json({ success: true, message: `Product ${id} deleted successfully` });
+    return NextResponse.json({ success: true, id, message: `Product ${id} deleted successfully` });
   } catch (error) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }

@@ -16,7 +16,7 @@ export const FeatureBenefits = () => {
   return (
     <section className="py-6 sm:py-10" aria-label="Feature Benefits">
       <div className="w-full max-w-[1720px] mx-auto px-4 sm:px-8 lg:px-12 xl:px-16">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 gsap-stagger-cards">
           {FEATURE_BENEFITS.map((feature, idx) => {
             const Icon = iconMap[feature.icon] || ShoppingBag;
 

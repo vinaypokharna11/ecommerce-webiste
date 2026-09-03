@@ -17,10 +17,10 @@ export const PromoBanner = ({ onCheckOffers }) => {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: '-50px' }}
           transition={{ duration: 0.5 }}
-          className="relative overflow-hidden rounded-[30px] bg-gradient-to-r from-[#171717] to-[#262626] text-white p-6 sm:p-10 lg:p-12 shadow-neu-card"
+          className="relative overflow-hidden rounded-[30px] bg-gradient-to-r from-[#171717] to-[#262626] text-white p-6 sm:p-10 lg:p-12 shadow-neu-card gsap-reveal"
         >
-          {/* Subtle Organic Mesh Glow */}
-          <div className="absolute top-0 right-0 w-80 h-80 bg-[#9FD842]/15 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
+          {/* Subtle Organic Mesh Glow with GSAP Parallax */}
+          <div className="absolute top-0 right-0 w-80 h-80 bg-[#9FD842]/15 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20 gsap-parallax" />
 
           {/* Grid Layout */}
           <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
