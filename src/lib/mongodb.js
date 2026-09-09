@@ -1,4 +1,10 @@
 import mongoose from 'mongoose';
+import dns from 'dns';
+
+// Configure reliable public DNS servers for Node.js SRV cluster resolution on Windows
+try {
+  dns.setServers(['8.8.8.8', '1.1.1.1']);
+} catch (e) {}
 
 /**
  * Global cache across hot-reloads and concurrent Next.js API requests.
@@ -6,7 +12,7 @@ import mongoose from 'mongoose';
 let cached = global.mongoose;
 
 if (!cached) {
-  cached = global.mongoose = { conn: null, promise: null, lastAttempt: 0, failedCooldown: 60000 };
+  cached = global.mongoose = { conn: null, promise: null, lastAttempt: 0, failedCooldown: 3000 };
 }
 
 export async function connectToDatabase() {
@@ -26,21 +32,22 @@ export async function connectToDatabase() {
   }
 
   const now = Date.now();
-  // If recent attempt failed, fail quickly during cooldown so API routes never hang
-  if (cached.lastAttempt && !cached.conn && now - cached.lastAttempt < (cached.failedCooldown || 60000)) {
+  // If recent attempt failed, fail quickly during short 3s cooldown so API routes never hang
+  if (cached.lastAttempt && !cached.conn && now - cached.lastAttempt < (cached.failedCooldown || 3000)) {
     return null;
   }
 
   if (!cached.promise) {
     cached.lastAttempt = now;
-    const isProd = process.env.NODE_ENV === 'production';
+    const masked = MONGODB_URI.replace(/\/\/(.*?):(.*?)@/, '//$1:•••••••@');
+    
     const opts = {
       bufferCommands: false,
-      serverSelectionTimeoutMS: 2000,
-      connectTimeoutMS: 2500,
+      serverSelectionTimeoutMS: 10000,
+      connectTimeoutMS: 10000,
       maxPoolSize: 10,
       minPoolSize: 1,
-      socketTimeoutMS: 30000,
+      socketTimeoutMS: 45000,
       family: 4, // Force IPv4 to prevent slow Windows/Node DNS IPv6 resolution stalls
     };
 
@@ -48,11 +55,11 @@ export async function connectToDatabase() {
       .connect(MONGODB_URI, opts)
       .then((mongooseInstance) => {
         cached.conn = mongooseInstance;
-        console.log('⚡ Connected to MongoDB Atlas successfully.');
+        console.log(`⚡ Connected to MongoDB Atlas successfully [db: ${mongooseInstance.connection.name}].`);
         return mongooseInstance;
       })
       .catch((err) => {
-        console.warn('ℹ️ MongoDB Atlas unavailable (' + (err.message || 'connection failed') + '). Operating with atomic local database.');
+        console.warn(`ℹ️ MongoDB Atlas connection notice: ${err.message || 'connection failed'}`);
         cached.promise = null;
         cached.conn = null;
         cached.lastAttempt = Date.now();
@@ -73,3 +80,4 @@ export async function connectToDatabase() {
 }
 
 export default connectToDatabase;
+

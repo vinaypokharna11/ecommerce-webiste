@@ -8,7 +8,7 @@ test.describe('Cart', () => {
     await page.evaluate(() => {
       localStorage.removeItem('nakoda_cart_v2');
     });
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(500);
   });
 
@@ -29,7 +29,7 @@ test.describe('Cart', () => {
   test('adding a product and viewing cart shows item', async ({ page }) => {
     // Go to catalog and add a product
     await page.goto('/?tab=catalog');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(1500);
 
     const addBtn = page.getByRole('button', { name: 'Add to Cart' }).first();

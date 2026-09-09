@@ -10,6 +10,8 @@ import Order from '../models/Order.js';
 import Inquiry from '../models/Inquiry.js';
 import ContactMessage from '../models/ContactMessage.js';
 import StoreConfig from '../models/StoreConfig.js';
+import Wishlist from '../models/Wishlist.js';
+import Cart from '../models/Cart.js';
 import { broadcastCatalogEvent, CATALOG_EVENTS } from './events.js';
 
 const DB_FILE_PATH = path.join(process.cwd(), 'src', 'data', 'db.json');
@@ -892,26 +894,39 @@ async function ensureMongoSeeded() {
   if (!seedPromise) {
     seedPromise = (async () => {
       try {
-        const existingConfig = await StoreConfig.findOne().lean().catch(() => null);
-        // If DB has already been initialized, DO NOT auto-seed (respect empty catalog)
-        if (existingConfig && existingConfig.isInitialized) {
-          isSeeded = true;
-          return;
+        const prodCount = await Product.countDocuments().catch(() => 0);
+        const template = getMasterSeedTemplate();
+
+        if (prodCount === 0) {
+          const jdb = readJSONDB();
+          const productsToSeed = (template.products && template.products.length > 0)
+            ? template.products
+            : (jdb.products && jdb.products.length > 0 ? jdb.products : INITIAL_DB_STATE.products);
+
+          if (productsToSeed && productsToSeed.length > 0) {
+            console.log(`🌱 Synchronizing ${productsToSeed.length} catalog products to MongoDB Atlas...`);
+            await Product.insertMany(productsToSeed).catch((e) => console.warn('Product sync notice:', e.message));
+          }
         }
 
-        // Only run on fresh brand-new database installation
-        const template = getMasterSeedTemplate();
-        console.log('🌱 Performing initial one-time seed of catalog into MongoDB Atlas...');
-        
-        await Promise.all([
-          Product.insertMany(template.products || INITIAL_DB_STATE.products),
-          Category.insertMany(template.categories || INITIAL_DB_STATE.categories),
-          Offer.insertMany(template.offers || INITIAL_DB_STATE.offers),
-          StoreConfig.create({
+        const catCount = await Category.countDocuments().catch(() => 0);
+        if (catCount === 0) {
+          await Category.insertMany(template.categories || INITIAL_DB_STATE.categories).catch(() => {});
+        }
+
+        const offerCount = await Offer.countDocuments().catch(() => 0);
+        if (offerCount === 0) {
+          await Offer.insertMany(template.offers || INITIAL_DB_STATE.offers).catch(() => {});
+        }
+
+        const existingConfig = await StoreConfig.findOne().lean().catch(() => null);
+        if (!existingConfig) {
+          await StoreConfig.create({
             ...(template.storeConfig || INITIAL_DB_STATE.storeConfig),
             isInitialized: true,
-          }),
-        ]);
+          }).catch(() => {});
+        }
+
         isSeeded = true;
       } catch (err) {
         console.warn('MongoDB initial seed notice:', err.message);
@@ -1075,11 +1090,9 @@ export async function createProduct(productData) {
   // 1. Persist to MongoDB if available
   const db = await connectToDatabase();
   if (db) {
-    try {
-      await Product.create(newProduct);
-    } catch (err) {
-      console.warn('MongoDB Product.create notice:', err.message);
-    }
+    await Product.create(newProduct);
+  } else if (process.env.MONGODB_URI) {
+    throw new Error('Database connection failed. Unable to persist product to MongoDB Atlas.');
   }
 
   // 2. Always persist to local atomic JSON database
@@ -1105,19 +1118,17 @@ export async function updateProduct(id, updateData) {
   // 1. Update in MongoDB if available
   const db = await connectToDatabase();
   if (db) {
-    try {
-      const updated = await Product.findOneAndUpdate(
-        { id: cleanId },
-        { $set: sanitized },
-        { returnDocument: 'after' }
-      ).lean();
-      if (updated) {
-        const { _id, __v, ...rest } = updated;
-        updatedProduct = rest;
-      }
-    } catch (err) {
-      console.warn('MongoDB Product.findOneAndUpdate notice:', err.message);
+    const updated = await Product.findOneAndUpdate(
+      { id: cleanId },
+      { $set: sanitized },
+      { returnDocument: 'after' }
+    ).lean();
+    if (updated) {
+      const { _id, __v, ...rest } = updated;
+      updatedProduct = rest;
     }
+  } else if (process.env.MONGODB_URI) {
+    throw new Error('Database connection failed. Unable to update product in MongoDB Atlas.');
   }
 
   // 2. Always update local JSON database
@@ -1155,13 +1166,12 @@ export async function deleteProduct(id) {
   // 1. Delete from MongoDB if available
   const db = await connectToDatabase();
   if (db) {
-    try {
-      const res = await Product.deleteOne({ id: cleanId });
-      if (res.deletedCount > 0) deleted = true;
-    } catch (e) {
-      console.warn('MongoDB deleteOne notice:', e.message);
-    }
+    const res = await Product.deleteOne({ id: cleanId });
+    if (res.deletedCount > 0) deleted = true;
+  } else if (process.env.MONGODB_URI) {
+    throw new Error('Database connection failed. Unable to delete product from MongoDB Atlas.');
   }
+
 
   // 2. Always delete from local JSON database
   const jdb = readJSONDB();
@@ -1200,7 +1210,7 @@ export async function bulkDeleteProductsDB(ids = []) {
 
   memoryCache.invalidateProducts();
   memoryCache.invalidateCategories();
-  broadcastCatalogEvent(CATALOG_EVENTS.CATALOG_REFRESHED, {});
+  broadcastCatalogEvent(CATALOG_EVENTS.PRODUCTS_BULK_DELETED, { ids: cleanIds });
   return { deletedCount };
 }
 
@@ -1238,7 +1248,7 @@ export async function bulkUpdateProductsDB(ids = [], updates = {}) {
 
   memoryCache.invalidateProducts();
   memoryCache.invalidateCategories();
-  broadcastCatalogEvent(CATALOG_EVENTS.CATALOG_REFRESHED, {});
+  broadcastCatalogEvent(CATALOG_EVENTS.PRODUCTS_BULK_UPDATED, { ids: cleanIds, updates: sanitized });
   return { updatedCount: count };
 }
 
@@ -1473,67 +1483,161 @@ export async function getOrders(userId = null) {
 }
 
 export async function createOrder(data) {
-  const id = data.id || `#SE${Math.floor(1000 + Math.random() * 9000)}`;
-  const dateStr = data.date || new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  const id = data.id && typeof data.id === 'string' && data.id.startsWith('#SE')
+    ? data.id
+    : `#SE${Math.floor(1000 + Math.random() * 9000)}`;
+  const dateStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
-  // 1. Server-Side Price Verification & Anti-Tampering Calculation
+  // 1. Validate items array
+  if (!Array.isArray(data.items) || data.items.length === 0) {
+    throw new Error('Order must contain at least one item');
+  }
+
+  // 2. Server-Side Price Verification & Anti-Tampering Calculation
   const db = await connectToDatabase();
   const allProducts = db ? await Product.find().lean() : (readJSONDB().products || []);
 
   let calculatedAmount = 0;
   const verifiedItems = [];
 
-  if (Array.isArray(data.items) && data.items.length > 0) {
-    for (const item of data.items) {
-      const pId = item.productId || item.id;
-      const dbProd = allProducts.find((p) => p.id === pId);
-      const safeQty = Math.max(1, parseInt(item.quantity, 10) || 1);
-      const verifiedUnitPrice = dbProd ? Number(dbProd.price) : Math.max(0, Number(item.price) || 0);
-      const itemSubtotal = verifiedUnitPrice * safeQty;
-      calculatedAmount += itemSubtotal;
-
-      verifiedItems.push({
-        ...item,
-        id: pId,
-        productId: pId,
-        name: dbProd ? dbProd.name : (item.name || 'Product Item'),
-        price: verifiedUnitPrice,
-        quantity: safeQty,
-      });
+  for (const item of data.items) {
+    const pId = item.productId || item.id;
+    const dbProd = allProducts.find((p) => p.id === pId);
+    if (!dbProd) {
+      throw new Error(`Invalid item: product "${pId}" does not exist in catalog`);
     }
-  } else {
-    calculatedAmount = Math.max(0, Number(data.amount) || 0);
+
+    const safeQty = Math.max(1, Math.min(100, parseInt(item.quantity, 10) || 1));
+    
+    // Inventory / Stock Validation: Prevent overselling & race conditions
+    if (dbProd.stockCount !== undefined && dbProd.stockCount < safeQty) {
+      throw new Error(`Insufficient stock for "${dbProd.name}". Available: ${dbProd.stockCount}, Requested: ${safeQty}`);
+    }
+
+    // Strict DB unit price — completely ignore client-supplied unit price
+    const verifiedUnitPrice = Number(dbProd.price) || 0;
+    const itemSubtotal = verifiedUnitPrice * safeQty;
+    calculatedAmount += itemSubtotal;
+
+    verifiedItems.push({
+      id: pId,
+      productId: pId,
+      name: dbProd.name,
+      price: verifiedUnitPrice,
+      quantity: safeQty,
+      image: dbProd.image || item.image || '',
+    });
   }
 
-  // Validate discount limits server-side
-  if (data.discountPercent && data.discountPercent > 0) {
-    const safeDiscount = Math.min(100, Math.max(0, Number(data.discountPercent)));
-    calculatedAmount = Math.round(calculatedAmount * (1 - safeDiscount / 100));
+  // 3. Server-side coupon / discount validation
+  let appliedDiscountPercent = 0;
+  let appliedCouponCode = '';
+
+  if (data.couponCode && typeof data.couponCode === 'string') {
+    const cleanCode = data.couponCode.trim().toUpperCase();
+    const allOffers = db
+      ? await Offer.find({ isActive: true }).lean()
+      : (readJSONDB().offers || []).filter((o) => o.isActive !== false);
+
+    const validOffer = allOffers.find(
+      (o) => (o.code || '').trim().toUpperCase() === cleanCode
+    );
+
+    if (validOffer) {
+      const discount = Math.min(100, Math.max(0, Number(validOffer.discountPercent || validOffer.discount) || 0));
+      if (discount > 0) {
+        appliedDiscountPercent = discount;
+        appliedCouponCode = cleanCode;
+        calculatedAmount = Math.round(calculatedAmount * (1 - discount / 100));
+      }
+    }
   }
 
-  const finalAmount = calculatedAmount > 0 ? calculatedAmount : (Number(data.amount) || 0);
+  const finalAmount = Math.max(0, calculatedAmount);
 
+  // 4. Force strict initial order status & sanitize order properties
+  const addressVal = String(data.deliveryAddress || data.shippingAddress || data.address || '').trim();
+  const payMethodVal = String(data.paymentMethod || data.payMethod || 'Cash on Delivery').trim();
   const newOrder = {
-    ...data,
     id,
     date: dateStr,
-    items: verifiedItems.length > 0 ? verifiedItems : (data.items || []),
+    userId: data.userId || data.customerId || null,
+    customerId: data.customerId || data.userId || null,
+    customerName: String(data.customerName || 'Customer').trim(),
+    customerEmail: String(data.customerEmail || '').trim().toLowerCase(),
+    customerPhone: String(data.customerPhone || '').trim(),
+    deliveryAddress: addressVal,
+    shippingAddress: addressVal,
+    city: String(data.city || '').trim(),
+    pincode: String(data.pincode || '').trim(),
+    items: verifiedItems,
+    itemSummary: data.itemSummary || verifiedItems.map((i) => `${i.name} (x${i.quantity})`).join(', '),
     amount: finalAmount,
-    status: data.status || 'processing',
-    statusLabel: data.status === 'delivered' ? 'Delivered' : data.status === 'shipped' ? 'Shipped' : 'Processing',
+    discountPercent: appliedDiscountPercent,
+    couponCode: appliedCouponCode,
+    status: 'processing',
+    statusLabel: 'Processing',
+    paymentStatus: 'pending',
+    paymentMethod: payMethodVal,
+    payMethod: payMethodVal,
+    createdAt: new Date().toISOString(),
   };
 
+  let savedOrder = newOrder;
+
+  // 5. Persist to MongoDB Atlas & Atomically Decrement Inventory
   if (db) {
     const created = await Order.create(newOrder);
-    const { _id, __v, ...rest } = created.toObject();
-    return rest;
+    savedOrder = created.toObject();
+    delete savedOrder._id;
+    delete savedOrder.__v;
+
+    // Atomically decrement stock in MongoDB
+    for (const item of verifiedItems) {
+      const updatedProd = await Product.findOneAndUpdate(
+        { id: item.id, stockCount: { $gte: item.quantity } },
+        { $inc: { stockCount: -item.quantity } },
+        { returnDocument: 'after' }
+      );
+      if (updatedProd) {
+        const sc = updatedProd.stockCount;
+        const newStatus = sc <= 0 ? 'out_of_stock' : sc < 5 ? 'low_stock' : 'in_stock';
+        if (updatedProd.stockStatus !== newStatus) {
+          await Product.updateOne({ id: item.id }, { $set: { stockStatus: newStatus } });
+        }
+      }
+    }
+
+    // Clear customer's server cart if authenticated
+    const targetUserId = newOrder.userId || newOrder.customerId;
+    if (targetUserId) {
+      await Cart.deleteOne({ userId: targetUserId }).catch(() => {});
+    }
+  } else if (process.env.MONGODB_URI) {
+    throw new Error('Database connection failed. Unable to place order in MongoDB Atlas.');
   }
 
+  // 6. Update local JSON backup & atomic cache
   const jdb = readJSONDB();
   jdb.orders = [newOrder, ...(jdb.orders || [])];
+  // Decrement stock in local JSON DB as well
+  if (jdb.products) {
+    for (const item of verifiedItems) {
+      const p = jdb.products.find((prod) => prod.id === item.id);
+      if (p && p.stockCount !== undefined) {
+        p.stockCount = Math.max(0, p.stockCount - item.quantity);
+        p.stockStatus = p.stockCount <= 0 ? 'out_of_stock' : p.stockCount < 5 ? 'low_stock' : 'in_stock';
+      }
+    }
+  }
   writeJSONDB(jdb);
-  return newOrder;
+
+  memoryCache.invalidateProducts();
+  memoryCache.invalidateCategories();
+  broadcastCatalogEvent(CATALOG_EVENTS.ORDER_CREATED, { order: savedOrder });
+  return savedOrder;
 }
+
 
 export async function updateOrderStatus(id, status) {
   const statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
@@ -1571,30 +1675,36 @@ export async function createInquiry(data) {
     ...data,
     id,
     status: data.status || 'pending',
+    createdAt: data.createdAt || new Date().toISOString(),
   };
 
   const db = await connectToDatabase();
   if (db) {
-    const created = await Inquiry.create(newInquiry);
-    const { _id, __v, ...rest } = created.toObject();
-    return rest;
+    try {
+      await Inquiry.create(newInquiry);
+    } catch (e) {
+      console.warn('MongoDB Inquiry.create notice:', e.message);
+    }
   }
 
   const jdb = readJSONDB();
-  jdb.inquiries = [newInquiry, ...(jdb.inquiries || [])];
+  jdb.inquiries = [newInquiry, ...(jdb.inquiries || []).filter((i) => i.id !== id)];
   writeJSONDB(jdb);
+
+  broadcastCatalogEvent(CATALOG_EVENTS.INQUIRY_CREATED, { inquiry: newInquiry });
   return newInquiry;
 }
 
 export async function updateInquiryStatus(id, status, adminNotes = '') {
   const db = await connectToDatabase();
   if (db) {
-    const update = { status };
-    if (adminNotes) update.adminNotes = adminNotes;
-    const updated = await Inquiry.findOneAndUpdate({ id }, update, { returnDocument: 'after' }).lean();
-    if (!updated) return null;
-    const { _id, __v, ...rest } = updated;
-    return rest;
+    try {
+      const update = { status };
+      if (adminNotes) update.adminNotes = adminNotes;
+      await Inquiry.findOneAndUpdate({ id }, update);
+    } catch (e) {
+      console.warn('MongoDB Inquiry.update notice:', e.message);
+    }
   }
 
   const jdb = readJSONDB();
@@ -1606,14 +1716,19 @@ export async function updateInquiryStatus(id, status, adminNotes = '') {
     adminNotes: adminNotes || jdb.inquiries[index].adminNotes,
   };
   writeJSONDB(jdb);
+
+  broadcastCatalogEvent(CATALOG_EVENTS.INQUIRY_UPDATED, { inquiry: jdb.inquiries[index] });
   return jdb.inquiries[index];
 }
 
 export async function deleteInquiry(id) {
   const db = await connectToDatabase();
   if (db) {
-    const res = await Inquiry.deleteOne({ id });
-    return res.deletedCount > 0;
+    try {
+      await Inquiry.deleteOne({ id });
+    } catch (e) {
+      console.warn('MongoDB Inquiry.delete notice:', e.message);
+    }
   }
 
   const jdb = readJSONDB();
@@ -1621,6 +1736,8 @@ export async function deleteInquiry(id) {
   jdb.inquiries = (jdb.inquiries || []).filter((i) => i.id !== id);
   const deleted = jdb.inquiries.length < initLen;
   if (deleted) writeJSONDB(jdb);
+
+  broadcastCatalogEvent(CATALOG_EVENTS.INQUIRY_DELETED, { id });
   return deleted;
 }
 
@@ -1641,18 +1758,23 @@ export async function createContactMessage(data) {
     ...data,
     id,
     status: data.status || 'pending',
+    createdAt: data.createdAt || new Date().toISOString(),
   };
 
   const db = await connectToDatabase();
   if (db) {
-    const created = await ContactMessage.create(newMsg);
-    const { _id, __v, ...rest } = created.toObject();
-    return rest;
+    try {
+      await ContactMessage.create(newMsg);
+    } catch (e) {
+      console.warn('MongoDB ContactMessage.create notice:', e.message);
+    }
   }
 
   const jdb = readJSONDB();
-  jdb.contactMessages = [newMsg, ...(jdb.contactMessages || [])];
+  jdb.contactMessages = [newMsg, ...(jdb.contactMessages || []).filter((m) => m.id !== id)];
   writeJSONDB(jdb);
+
+  broadcastCatalogEvent(CATALOG_EVENTS.CONTACT_MESSAGE_CREATED, { message: newMsg });
   return newMsg;
 }
 
@@ -1937,8 +2059,191 @@ export async function deleteCustomerAccount(id) {
   return false;
 }
 
+// ─── WISHLIST PERSISTENCE (MongoDB Atlas + Local Fallback) ──────────────────
+export async function getUserWishlist(userId) {
+  const cleanUser = String(userId || '').trim();
+  if (!cleanUser) return [];
+
+  const db = await connectToDatabase();
+  if (db) {
+    const items = await Wishlist.find({ userId: cleanUser }).sort({ createdAt: -1 }).lean();
+    return items.map(({ _id, __v, ...w }) => w);
+  }
+
+  const jdb = readJSONDB();
+  return (jdb.wishlist || []).filter((w) => w.userId === cleanUser);
+}
+
+export async function addToWishlist(userId, productId) {
+  const cleanUser = String(userId || '').trim();
+  const cleanProd = String(productId || '').trim();
+  if (!cleanUser || !cleanProd) throw new Error('User ID and Product ID are required');
+
+  const prod = await getProductById(cleanProd);
+  if (!prod) throw new Error(`Product "${cleanProd}" not found in catalog`);
+
+  const db = await connectToDatabase();
+  if (db) {
+    const doc = await Wishlist.findOneAndUpdate(
+      { userId: cleanUser, productId: cleanProd },
+      {
+        $setOnInsert: {
+          userId: cleanUser,
+          productId: cleanProd,
+          productName: prod.name || '',
+          productImage: prod.image || '',
+          productPrice: prod.price || 0,
+          productCategory: prod.category || '',
+        },
+      },
+      { upsert: true, returnDocument: 'after' }
+    ).lean();
+    const { _id, __v, ...rest } = doc;
+    return rest;
+  } else if (process.env.MONGODB_URI) {
+    throw new Error('Database connection failed. Unable to save to MongoDB Atlas wishlist.');
+  }
+
+  const jdb = readJSONDB();
+  if (!jdb.wishlist) jdb.wishlist = [];
+  const existing = jdb.wishlist.find((w) => w.userId === cleanUser && w.productId === cleanProd);
+  if (existing) return existing;
+
+  const newDoc = {
+    userId: cleanUser,
+    productId: cleanProd,
+    productName: prod.name || '',
+    productImage: prod.image || '',
+    productPrice: prod.price || 0,
+    productCategory: prod.category || '',
+    createdAt: new Date().toISOString(),
+  };
+  jdb.wishlist.push(newDoc);
+  writeJSONDB(jdb);
+  return newDoc;
+}
+
+export async function removeFromWishlist(userId, productId) {
+  const cleanUser = String(userId || '').trim();
+  const cleanProd = String(productId || '').trim();
+  if (!cleanUser || !cleanProd) return false;
+
+  const db = await connectToDatabase();
+  if (db) {
+    const res = await Wishlist.deleteOne({ userId: cleanUser, productId: cleanProd });
+    return res.deletedCount > 0;
+  } else if (process.env.MONGODB_URI) {
+    throw new Error('Database connection failed. Unable to remove from MongoDB Atlas wishlist.');
+  }
+
+  const jdb = readJSONDB();
+  const initLen = (jdb.wishlist || []).length;
+  jdb.wishlist = (jdb.wishlist || []).filter((w) => !(w.userId === cleanUser && w.productId === cleanProd));
+  writeJSONDB(jdb);
+  return jdb.wishlist.length < initLen;
+}
+
+export async function clearWishlist(userId) {
+  const cleanUser = String(userId || '').trim();
+  if (!cleanUser) return false;
+
+  const db = await connectToDatabase();
+  if (db) {
+    await Wishlist.deleteMany({ userId: cleanUser });
+    return true;
+  }
+
+  const jdb = readJSONDB();
+  jdb.wishlist = (jdb.wishlist || []).filter((w) => w.userId !== cleanUser);
+  writeJSONDB(jdb);
+  return true;
+}
+
+// ─── CART PERSISTENCE (MongoDB Atlas + Local Fallback) ───────────────────────
+export async function getUserCart(userId) {
+  const cleanUser = String(userId || '').trim();
+  if (!cleanUser) return { userId: '', items: [] };
+
+  const db = await connectToDatabase();
+  if (db) {
+    const cart = await Cart.findOne({ userId: cleanUser }).lean();
+    if (cart) {
+      const { _id, __v, ...rest } = cart;
+      return rest;
+    }
+    return { userId: cleanUser, items: [] };
+  }
+
+  const jdb = readJSONDB();
+  const cart = (jdb.carts || []).find((c) => c.userId === cleanUser);
+  return cart || { userId: cleanUser, items: [] };
+}
+
+export async function syncUserCart(userId, items = []) {
+  const cleanUser = String(userId || '').trim();
+  if (!cleanUser) throw new Error('User ID is required to sync cart');
+
+  if (!Array.isArray(items)) throw new Error('Items must be an array');
+
+  // Validate item structure
+  const sanitizedItems = items
+    .filter((it) => it && (it.id || it.productId))
+    .map((it) => ({
+      productId: String(it.productId || it.id).trim(),
+      quantity: Math.max(1, Math.min(99, parseInt(it.quantity, 10) || 1)),
+      selectedColor: String(it.selectedColor || ''),
+      selectedSize: String(it.selectedSize || ''),
+      name: String(it.name || ''),
+      price: typeof it.price === 'number' ? it.price : (parseFloat(it.price) || 0),
+      image: String(it.image || ''),
+      addedAt: it.addedAt ? new Date(it.addedAt) : new Date(),
+    }));
+
+  const db = await connectToDatabase();
+  if (db) {
+    const updated = await Cart.findOneAndUpdate(
+      { userId: cleanUser },
+      { $set: { items: sanitizedItems, updatedAt: new Date() } },
+      { upsert: true, returnDocument: 'after' }
+    ).lean();
+    const { _id, __v, ...rest } = updated;
+    return rest;
+  } else if (process.env.MONGODB_URI) {
+    throw new Error('Database connection failed. Unable to sync cart with MongoDB Atlas.');
+  }
+
+  const jdb = readJSONDB();
+  if (!jdb.carts) jdb.carts = [];
+  const index = jdb.carts.findIndex((c) => c.userId === cleanUser);
+  const cartObj = { userId: cleanUser, items: sanitizedItems, updatedAt: new Date().toISOString() };
+  if (index !== -1) {
+    jdb.carts[index] = cartObj;
+  } else {
+    jdb.carts.push(cartObj);
+  }
+  writeJSONDB(jdb);
+  return cartObj;
+}
+
+export async function clearUserCart(userId) {
+  const cleanUser = String(userId || '').trim();
+  if (!cleanUser) return false;
+
+  const db = await connectToDatabase();
+  if (db) {
+    await Cart.deleteOne({ userId: cleanUser });
+    return true;
+  }
+
+  const jdb = readJSONDB();
+  jdb.carts = (jdb.carts || []).filter((c) => c.userId !== cleanUser);
+  writeJSONDB(jdb);
+  return true;
+}
+
 // ─── ADMIN AUTHENTICATION (Environment Variables + Database Users) ──────────────────
 export async function verifyAdminCredentials(email, password) {
+
   if (!email || !password) return null;
 
   const cleanEmail = email.toLowerCase().trim();

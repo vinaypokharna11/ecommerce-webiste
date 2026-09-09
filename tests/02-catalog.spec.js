@@ -4,7 +4,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Catalog / Shop', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/?tab=catalog');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(1500); // Allow React to hydrate and products to load
   });
 

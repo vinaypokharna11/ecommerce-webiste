@@ -111,12 +111,12 @@ export async function sendOrderConfirmationEmail(order, storeConfig = {}) {
     <head>
       <meta charset="utf-8">
       <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #FAF9FF; color: #15152A; margin: 0; padding: 20px; }
-        .card { max-width: 600px; margin: 0 auto; background: #FFFFFF; border-radius: 24px; border: 1px solid #EAE6FD; overflow: hidden; box-shadow: 0 10px 35px rgba(98,87,255,0.08); }
-        .header { background: linear-gradient(135deg, #6257FF 0%, #EC5AC8 100%); padding: 32px; text-align: center; color: #FFFFFF; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #F6F5F0; color: #171717; margin: 0; padding: 20px; }
+        .card { max-width: 600px; margin: 0 auto; background: #FFFFFF; border-radius: 24px; border: 1px solid #E3DFD5; overflow: hidden; box-shadow: 0 10px 35px rgba(0,0,0,0.06); }
+        .header { background: #171717; padding: 32px; text-align: center; color: #FFFFFF; border-bottom: 3px solid #9FD842; }
         .content { padding: 32px; }
-        .total-box { background: #F5F3FF; border-radius: 16px; padding: 16px; margin: 20px 0; border: 1px solid #EAE6FD; }
-        .btn { display: inline-block; background: #25D366; color: #FFFFFF; text-decoration: none; padding: 12px 24px; border-radius: 14px; font-weight: bold; font-size: 14px; margin-top: 16px; }
+        .total-box { background: #ECE5DC; border-radius: 16px; padding: 16px; margin: 20px 0; border: 1px solid #E3DFD5; }
+        .btn { display: inline-block; background: #9FD842; color: #171717; text-decoration: none; padding: 12px 24px; border-radius: 14px; font-weight: bold; font-size: 14px; margin-top: 16px; }
       </style>
     </head>
     <body>
@@ -185,11 +185,11 @@ export async function sendAdminNewOrderNotification(order, storeConfig = {}) {
   const storeName = escapeHtml(storeConfig.name || 'Nakoda Imitation');
 
   const html = `
-    <div style="font-family: sans-serif; max-width: 550px; margin: 0 auto; padding: 24px; background: #FAF9FF; border-radius: 20px; border: 1px solid #EAE6FD;">
-      <h2 style="color: #6257FF; margin-top: 0;">🛍️ New Order Received: ${escapeHtml(order.id)}</h2>
-      <p style="font-size: 14px; color: #15152A;">A customer has placed an order on <strong>${storeName}</strong>.</p>
+    <div style="font-family: sans-serif; max-width: 550px; margin: 0 auto; padding: 24px; background: #F6F5F0; border-radius: 20px; border: 1px solid #E3DFD5;">
+      <h2 style="color: #171717; margin-top: 0;">🛍️ New Order Received: ${escapeHtml(order.id)}</h2>
+      <p style="font-size: 14px; color: #171717;">A customer has placed an order on <strong>${storeName}</strong>.</p>
       
-      <div style="background: white; padding: 16px; border-radius: 14px; border: 1px solid #EAE6FD; margin: 16px 0;">
+      <div style="background: white; padding: 16px; border-radius: 14px; border: 1px solid #E3DFD5; margin: 16px 0;">
         <p style="margin: 4px 0;"><strong>Customer:</strong> ${escapeHtml(order.customerName)} (${escapeHtml(order.customerPhone || 'No Phone')})</p>
         <p style="margin: 4px 0;"><strong>Email:</strong> ${escapeHtml(order.customerEmail || 'N/A')}</p>
         <p style="margin: 4px 0;"><strong>Address:</strong> ${escapeHtml(order.deliveryAddress || 'N/A')}</p>
@@ -197,7 +197,7 @@ export async function sendAdminNewOrderNotification(order, storeConfig = {}) {
         <p style="margin: 4px 0;"><strong>Payment:</strong> ${escapeHtml(order.payMethod || 'COD')}</p>
       </div>
 
-      <p style="font-size: 12px; color: #8E8EA0;">Log into your Admin Dashboard to manage and fulfill this order.</p>
+      <p style="font-size: 12px; color: #777777;">Log into your Admin Dashboard to manage and fulfill this order.</p>
     </div>
   `;
 
@@ -219,12 +219,12 @@ export async function sendContactConfirmationEmail(ticket, storeConfig = {}) {
     <head>
       <meta charset="utf-8">
       <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #FAF9FF; color: #15152A; margin: 0; padding: 20px; }
-        .card { max-width: 600px; margin: 0 auto; background: #FFFFFF; border-radius: 24px; border: 1px solid #EAE6FD; overflow: hidden; box-shadow: 0 10px 35px rgba(98,87,255,0.08); }
-        .header { background: linear-gradient(135deg, #6257FF 0%, #8B5CF6 100%); padding: 32px; text-align: center; color: #FFFFFF; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #F6F5F0; color: #171717; margin: 0; padding: 20px; }
+        .card { max-width: 600px; margin: 0 auto; background: #FFFFFF; border-radius: 24px; border: 1px solid #E3DFD5; overflow: hidden; box-shadow: 0 10px 35px rgba(0,0,0,0.06); }
+        .header { background: #171717; padding: 32px; text-align: center; color: #FFFFFF; border-bottom: 3px solid #9FD842; }
         .content { padding: 32px; }
-        .info-box { background: #F5F3FF; border-radius: 16px; padding: 18px; margin: 20px 0; border: 1px solid #EAE6FD; }
-        .btn { display: inline-block; background: #25D366; color: #FFFFFF; text-decoration: none; padding: 12px 24px; border-radius: 14px; font-weight: bold; font-size: 14px; margin-top: 16px; }
+        .info-box { background: #ECE5DC; border-radius: 16px; padding: 18px; margin: 20px 0; border: 1px solid #E3DFD5; }
+        .btn { display: inline-block; background: #9FD842; color: #171717; text-decoration: none; padding: 12px 24px; border-radius: 14px; font-weight: bold; font-size: 14px; margin-top: 16px; }
       </style>
     </head>
     <body>
@@ -272,11 +272,11 @@ export async function sendAdminContactNotification(ticket, storeConfig = {}) {
   const storeName = escapeHtml(storeConfig.name || 'Nakoda Imitation');
 
   const html = `
-    <div style="font-family: sans-serif; max-width: 550px; margin: 0 auto; padding: 24px; background: #FAF9FF; border-radius: 20px; border: 1px solid #EAE6FD;">
-      <h2 style="color: #6257FF; margin-top: 0;">📨 New Customer Message: ${escapeHtml(ticket.id)}</h2>
-      <p style="font-size: 14px; color: #15152A;">A customer submitted a contact form on <strong>${storeName}</strong>.</p>
+    <div style="font-family: sans-serif; max-width: 550px; margin: 0 auto; padding: 24px; background: #F6F5F0; border-radius: 20px; border: 1px solid #E3DFD5;">
+      <h2 style="color: #171717; margin-top: 0;">📨 New Customer Message: ${escapeHtml(ticket.id)}</h2>
+      <p style="font-size: 14px; color: #171717;">A customer submitted a contact form on <strong>${storeName}</strong>.</p>
       
-      <div style="background: white; padding: 16px; border-radius: 14px; border: 1px solid #EAE6FD; margin: 16px 0;">
+      <div style="background: white; padding: 16px; border-radius: 14px; border: 1px solid #E3DFD5; margin: 16px 0;">
         <p style="margin: 4px 0;"><strong>Customer:</strong> ${escapeHtml(ticket.name)}</p>
         <p style="margin: 4px 0;"><strong>Email:</strong> ${escapeHtml(ticket.email)}</p>
         <p style="margin: 4px 0;"><strong>Phone:</strong> ${escapeHtml(ticket.phone || 'N/A')}</p>
@@ -285,7 +285,7 @@ export async function sendAdminContactNotification(ticket, storeConfig = {}) {
         <p style="margin: 8px 0 0; color: #4B5563;"><strong>Message:</strong><br/>${escapeHtml(ticket.message)}</p>
       </div>
 
-      <p style="font-size: 12px; color: #8E8EA0;">You can view and reply to this message directly in your Admin Portal.</p>
+      <p style="font-size: 12px; color: #777777;">You can view and reply to this message directly in your Admin Portal.</p>
     </div>
   `;
 
@@ -307,12 +307,12 @@ export async function sendInquiryConfirmationEmail(inquiry, storeConfig = {}) {
     <head>
       <meta charset="utf-8">
       <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #FAF9FF; color: #15152A; margin: 0; padding: 20px; }
-        .card { max-width: 600px; margin: 0 auto; background: #FFFFFF; border-radius: 24px; border: 1px solid #EAE6FD; overflow: hidden; box-shadow: 0 10px 35px rgba(98,87,255,0.08); }
-        .header { background: linear-gradient(135deg, #EC5AC8 0%, #6257FF 100%); padding: 32px; text-align: center; color: #FFFFFF; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #F6F5F0; color: #171717; margin: 0; padding: 20px; }
+        .card { max-width: 600px; margin: 0 auto; background: #FFFFFF; border-radius: 24px; border: 1px solid #E3DFD5; overflow: hidden; box-shadow: 0 10px 35px rgba(0,0,0,0.06); }
+        .header { background: #171717; padding: 32px; text-align: center; color: #FFFFFF; border-bottom: 3px solid #9FD842; }
         .content { padding: 32px; }
-        .info-box { background: #FFF0FB; border-radius: 16px; padding: 18px; margin: 20px 0; border: 1px solid #FCD6F2; }
-        .btn { display: inline-block; background: #25D366; color: #FFFFFF; text-decoration: none; padding: 12px 24px; border-radius: 14px; font-weight: bold; font-size: 14px; margin-top: 16px; }
+        .info-box { background: #ECE5DC; border-radius: 16px; padding: 18px; margin: 20px 0; border: 1px solid #E3DFD5; }
+        .btn { display: inline-block; background: #9FD842; color: #171717; text-decoration: none; padding: 12px 24px; border-radius: 14px; font-weight: bold; font-size: 14px; margin-top: 16px; }
       </style>
     </head>
     <body>
@@ -337,7 +337,7 @@ export async function sendInquiryConfirmationEmail(inquiry, storeConfig = {}) {
           </div>
 
           <div style="text-align: center;">
-            <p style="font-size: 13px; color: #8E8EA0; margin-bottom: 8px;">Want instant discussion or custom samples?</p>
+            <p style="font-size: 13px; color: #777777; margin-bottom: 8px;">Want instant discussion or custom samples?</p>
             <a href="https://wa.me/${whatsapp}?text=Hi%20${encodeURIComponent(storeConfig.name || 'Nakoda Imitation')}!%20I%20have%20inquiry%20reference%20${inquiry.id}" class="btn">
               💬 Discuss on WhatsApp
             </a>
@@ -362,11 +362,11 @@ export async function sendAdminInquiryNotification(inquiry, storeConfig = {}) {
   const storeName = escapeHtml(storeConfig.name || 'Nakoda Imitation');
 
   const html = `
-    <div style="font-family: sans-serif; max-width: 550px; margin: 0 auto; padding: 24px; background: #FAF9FF; border-radius: 20px; border: 1px solid #EAE6FD;">
-      <h2 style="color: #EC5AC8; margin-top: 0;">✨ New Inquiry Received: ${escapeHtml(inquiry.id)}</h2>
-      <p style="font-size: 14px; color: #15152A;">A customer submitted a product or bulk order inquiry on <strong>${storeName}</strong>.</p>
+    <div style="font-family: sans-serif; max-width: 550px; margin: 0 auto; padding: 24px; background: #F6F5F0; border-radius: 20px; border: 1px solid #E3DFD5;">
+      <h2 style="color: #171717; margin-top: 0;">✨ New Inquiry Received: ${escapeHtml(inquiry.id)}</h2>
+      <p style="font-size: 14px; color: #171717;">A customer submitted a product or bulk order inquiry on <strong>${storeName}</strong>.</p>
       
-      <div style="background: white; padding: 16px; border-radius: 14px; border: 1px solid #EAE6FD; margin: 16px 0;">
+      <div style="background: white; padding: 16px; border-radius: 14px; border: 1px solid #E3DFD5; margin: 16px 0;">
         <p style="margin: 4px 0;"><strong>Inquiry Type:</strong> ${escapeHtml(inquiry.inquiryType)}</p>
         <p style="margin: 4px 0;"><strong>Customer:</strong> ${escapeHtml(inquiry.customerName)} (${escapeHtml(inquiry.customerPhone || 'No Phone')})</p>
         <p style="margin: 4px 0;"><strong>Email:</strong> ${escapeHtml(inquiry.customerEmail)}</p>

@@ -1,48 +1,28 @@
 import './globals.css';
-import { Plus_Jakarta_Sans, Manrope } from 'next/font/google';
+import { DM_Sans } from 'next/font/google';
 import { CatalogProvider } from '@/context/CatalogContext';
 import { AuthProvider } from '@/context/AuthContext';
 import { AuthModal } from '@/components/AuthModal';
 import { SmoothScrollProvider } from '@/components/SmoothScrollProvider';
 import { GsapScrollAnimations } from '@/components/GsapScrollAnimations';
 
-const plusJakartaSans = Plus_Jakarta_Sans({
+const dmSans = DM_Sans({
   subsets: ['latin'],
-  weight: ['400', '500', '600', '700', '800'],
-  variable: '--font-plus-jakarta',
-  display: 'swap',
-});
-
-const manrope = Manrope({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700', '800'],
-  variable: '--font-manrope',
+  weight: ['300', '400', '500', '700'],
+  variable: '--font-dm-sans',
   display: 'swap',
 });
 
 export const metadata = {
   title: {
-    default: 'Nakoda Imitation — Premium Jewelry & Lifestyle',
-    template: '%s | Nakoda Imitation',
+    default: 'Nakoda Store — Premium Shopping & Lifestyle',
+    template: '%s | Nakoda Store',
   },
-  description: 'Explore premium imitation jewelry, fashion accessories, and instant WhatsApp ordering at Nakoda Imitation in Bangalore.',
-  keywords: ['Nakoda Imitation', 'imitation jewelry', 'online store', 'Bangalore jewelry', 'fashion accessories', 'WhatsApp order'],
-  authors: [{ name: 'Nakoda Imitation Store' }],
-  creator: 'Nakoda Imitation',
+  description: 'Shop premium bags, jewelry, trolleys, gourmet papad, apparel, undergarments, electronics and more with fast Pan-India delivery and WhatsApp ordering.',
+  keywords: ['online store', 'ecommerce', 'bags', 'jewelry', 'trolley bags', 'papad', 'undergarments', 'fashion', 'electronics', 'Bangalore shopping'],
+  authors: [{ name: 'Nakoda Store' }],
+  creator: 'Nakoda Store',
   metadataBase: new URL('https://nakodaimitation.com'),
-  openGraph: {
-    type: 'website',
-    locale: 'en_IN',
-    url: 'https://nakodaimitation.com',
-    title: 'Nakoda Imitation — Premium Jewelry & Lifestyle',
-    description: 'Premium imitation jewelry, fashion accessories & instant WhatsApp ordering.',
-    siteName: 'Nakoda Imitation',
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'Nakoda Imitation — Premium Jewelry & Lifestyle',
-    description: 'Premium imitation jewelry, fashion accessories & instant WhatsApp ordering.',
-  },
   icons: {
     icon: '/favicon.jpg',
     apple: '/favicon.jpg',
@@ -51,17 +31,21 @@ export const metadata = {
 };
 
 export const viewport = {
-  themeColor: '#9FD842',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  viewportFit: 'cover',
+  themeColor: '#FFFFFF',
 };
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" className={`${plusJakartaSans.variable} ${manrope.variable}`} suppressHydrationWarning>
+    <html lang="en" className={dmSans.variable} suppressHydrationWarning>
       <head>
-        <meta name="theme-color" content="#9FD842" />
+        <meta name="theme-color" content="#FFFFFF" />
       </head>
       <body
-        className="bg-[#F5F5F3] text-[#171717] font-sans antialiased selection:bg-[#9FD842] selection:text-[#171717]"
+        className="bg-[#FBFBFD] text-[#1D1D1F] font-sans antialiased selection:bg-[#0071E3] selection:text-white"
         suppressHydrationWarning
       >
         <SmoothScrollProvider>

@@ -28,7 +28,7 @@ export function LoginForm({
             placeholder="you@example.com"
             autoComplete="username"
             required
-            className="w-full pl-11 pr-4 py-3 rounded-2xl border border-black/10 bg-[#EEEEEC] text-sm text-[#171717] placeholder-[#A0A0A0] focus:outline-none focus:ring-2 focus:ring-[#9FD842] focus:bg-white transition-all font-medium"
+            className="w-full pl-11 pr-4 py-3 rounded-2xl border border-black/[0.06] bg-[#ECE5DC]/60 text-sm text-[#171717] placeholder-[#777777]/70 focus:outline-none focus:ring-2 focus:ring-[#9FD842] focus:bg-white transition-all font-medium"
           />
         </div>
       </div>
@@ -46,7 +46,7 @@ export function LoginForm({
             placeholder="••••••••"
             autoComplete="current-password"
             required
-            className="w-full pl-11 pr-11 py-3 rounded-2xl border border-black/10 bg-[#EEEEEC] text-sm text-[#171717] placeholder-[#A0A0A0] focus:outline-none focus:ring-2 focus:ring-[#9FD842] focus:bg-white transition-all font-medium"
+            className="w-full pl-11 pr-11 py-3 rounded-2xl border border-black/[0.06] bg-[#ECE5DC]/60 text-sm text-[#171717] placeholder-[#777777]/70 focus:outline-none focus:ring-2 focus:ring-[#9FD842] focus:bg-white transition-all font-medium"
           />
           <button
             type="button"

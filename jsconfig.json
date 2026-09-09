@@ -3,10 +3,13 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
-      "@/components/*": ["./src/components/*", "./src/frontend/components/*"],
-      "@/context/*": ["./src/context/*", "./src/frontend/context/*"],
-      "@/utils/*": ["./src/utils/*", "./src/frontend/utils/*"],
-      "@/assets/*": ["./src/assets/*", "./src/frontend/assets/*"],
+      "@/components/*": ["./src/components/*"],
+      "@/context/*": ["./src/context/*"],
+      "@/utils/*": ["./src/utils/*"],
+      "@/services/*": ["./src/services/*"],
+      "@/animations/*": ["./src/animations/*"],
+      "@/server/*": ["./src/server/*"],
+      "@/models/*": ["./src/models/*"],
       "@/backend/*": ["./src/backend/*", "./src/lib/*"],
       "@/database/*": ["./src/database/*", "./src/data/*"],
       "@/frontend/*": ["./src/frontend/*"]

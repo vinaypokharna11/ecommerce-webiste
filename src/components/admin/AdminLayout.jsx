@@ -81,7 +81,7 @@ export const AdminLayout = ({
   };
 
   return (
-    <div className="min-h-screen bg-[#F5F5F3] text-[#171717] flex flex-col font-sans selection:bg-[#9FD842] selection:text-[#171717]">
+    <div className="min-h-screen bg-[#F6F5F0] text-[#171717] flex flex-col font-sans selection:bg-[#9FD842] selection:text-[#171717]">
       
       {/* Background Ambient Glows */}
       <div className="fixed top-0 left-1/3 w-[800px] h-[500px] bg-[#9FD842]/10 rounded-full blur-[150px] pointer-events-none -z-10" />

@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server';
-import { realtimeEmitter } from '@/lib/events';
+import { realtimeEmitter, PUBLIC_CATALOG_EVENT_TYPES } from '@/lib/events';
+import { verifyAdminAuth } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 export async function GET(request) {
+  const admin = verifyAdminAuth(request);
   const encoder = new TextEncoder();
 
   let listener = null;
@@ -20,9 +22,15 @@ export async function GET(request) {
       });
       controller.enqueue(encoder.encode(`data: ${initialPayload}\n\n`));
 
-      // 2. Subscribe to realtime catalog events
+      // 2. Subscribe to realtime catalog events with role-based filtering
       listener = (eventData) => {
         try {
+          // Security filter: If caller is not an authenticated admin, drop non-public events
+          // (e.g. customer inquiries, contact messages containing personal info)
+          if (!admin && !PUBLIC_CATALOG_EVENT_TYPES.has(eventData.type)) {
+            return;
+          }
+
           const chunk = `data: ${JSON.stringify(eventData)}\n\n`;
           controller.enqueue(encoder.encode(chunk));
         } catch (err) {

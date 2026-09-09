@@ -5,7 +5,7 @@ import { LoginContent } from '../login/page';
 
 export default function SignupPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#F5F5F3]" />}>
+    <Suspense fallback={<div className="min-h-screen bg-[#F6F5F0]" />}>
       <LoginContent defaultTab="signup" />
     </Suspense>
   );

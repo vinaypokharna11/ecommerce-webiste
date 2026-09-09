@@ -1,0 +1,839 @@
+'use client';
+
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  ShoppingBag,
+  Trash2,
+  Plus,
+  Minus,
+  Truck,
+  X,
+  User,
+  Phone,
+  Package,
+  ArrowRight,
+  Check,
+  Star,
+  Heart,
+  Eye,
+  Sparkles,
+  Tag,
+  ArrowUpRight,
+} from 'lucide-react';
+import Image from 'next/image';
+import { STORE_CONFIG } from '@/data/mockData';
+import { useAuth } from '@/context/AuthContext';
+import { firePartyPopper } from '@/utils/confetti';
+import { orderService } from '@/services/orderService';
+import { formatPrice } from '@/utils/formatPrice';
+
+const SHIPPING_THRESHOLD = 999;
+
+const VALID_PROMOS = {
+  ELEC20: { discount: 0.20, label: 'Electronics 20% OFF' },
+  FASH30: { discount: 0.30, label: 'Fashion 30% OFF' },
+  HOME15: { discount: 0.15, label: 'Home & Living 15% OFF' },
+  ACC25: { discount: 0.25, label: 'Accessories 25% OFF' },
+  FEET35: { discount: 0.35, label: 'Footwear 35% OFF' },
+  GIFT10: { discount: 0.10, label: 'Gift Hampers 10% OFF' },
+};
+
+// ─── Checkout Modal ───────────────────────────────────────────────────────────
+const CheckoutModal = ({ cartList, subtotal, promoDiscountAmount, shippingFee, total, onClose, onSuccess, user }) => {
+  const [step, setStep] = useState(1);
+  const [payMethod, setPayMethod] = useState('cod');
+  
+  const defaultAddr = user?.addresses?.[0] || {};
+  const [form, setForm] = useState({
+    name: user?.name || defaultAddr.name || '',
+    phone: user?.phone || defaultAddr.phone || '',
+    address: defaultAddr.address || '',
+    city: defaultAddr.city || 'Bangalore',
+    pincode: defaultAddr.pincode || '560001',
+  });
+  const [errors, setErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const validate = () => {
+    const e = {};
+    if (!form.name.trim()) e.name = 'Name is required';
+    if (!form.phone.trim() || !/^\+?[\d\s\-]{7,15}$/.test(form.phone)) e.phone = 'Valid phone is required';
+    if (!form.address.trim()) e.address = 'Address is required';
+    if (!form.city.trim()) e.city = 'City is required';
+    if (!form.pincode.trim() || !/^\d{5,6}$/.test(form.pincode)) e.pincode = 'Valid pincode is required';
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
+  const orderId = `#SE${Date.now().toString().slice(-6)}`;
+
+  const handleNext = () => { if (validate()) setStep(2); };
+
+  const handlePlaceOrder = async () => {
+    setIsSubmitting(true);
+    setStep(3);
+
+    // Trigger mini party popper celebration!
+    firePartyPopper();
+
+    const orderData = {
+      id: orderId,
+      userId: user?.id || user?._id || user?.email || '',
+      customerName: form.name,
+      customerEmail: user?.email || '',
+      customerPhone: form.phone,
+      items: cartList.map(item => ({
+        id: item.id,
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+        image: item.image,
+        selectedColor: item.selectedColor?.name || '',
+        selectedSize: item.selectedSize || '',
+      })),
+      itemSummary: cartList.map(i => `${i.name} (x${i.quantity})`).join(', '),
+      amount: total,
+      status: 'processing',
+      statusLabel: 'Processing',
+      payMethod: payMethod === 'cod' ? 'Cash on Delivery' : 'Online Payment (UPI/Card)',
+      deliveryAddress: `${form.address}, ${form.city} — ${form.pincode}`,
+      date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+    };
+
+    try {
+      await orderService.createOrder(orderData);
+    } catch (err) {
+      console.warn('Order API dispatch warning:', err);
+    } finally {
+      setIsSubmitting(false);
+      setTimeout(() => {
+        onSuccess(orderData);
+        onClose();
+      }, 2000);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+      {/* Backdrop */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={step !== 3 ? onClose : undefined}
+        className="fixed inset-0 bg-black/40 backdrop-blur-sm"
+      />
+
+      {/* Modal sheet */}
+      <motion.div
+        initial={{ opacity: 0, y: 60 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 60 }}
+        transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+        className="relative w-full max-w-lg bg-white rounded-t-[28px] sm:rounded-[32px] border border-black/5 shadow-glass-modal z-10 max-h-[92vh] flex flex-col overflow-hidden"
+      >
+        {/* Modal Header */}
+        <div className="p-4 sm:p-5 border-b border-black/[0.06] flex items-center justify-between flex-shrink-0">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-full bg-[#F5F5F7] flex items-center justify-center text-[#1D1D1F]">
+              <Package className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="text-sm sm:text-base font-extrabold text-[#1D1D1F]">
+                {step === 1 ? 'Shipping Details' : step === 2 ? 'Review & Pay' : 'Order Placed! 🎉'}
+              </h3>
+              <p className="text-[10px] sm:text-[11px] text-[#777777]">
+                {step === 1 ? `Logged in as ${user?.email || 'Customer'}` : `Step ${step} of 3`}
+              </p>
+            </div>
+          </div>
+          {step !== 3 && (
+            <button onClick={onClose} className="w-8 h-8 rounded-full bg-[#F5F5F7] hover:bg-[#E5E5EA] flex items-center justify-center text-[#1D1D1F] transition-colors cursor-pointer">
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+
+        {/* ── Step 1: Address Form ── */}
+        {step === 1 && (
+          <div className="p-4 sm:p-6 overflow-y-auto space-y-3.5 sm:space-y-4 flex-1">
+            <div>
+              <label className="text-xs font-bold text-[#1D1D1F] block mb-1">Full Name</label>
+              <input
+                type="text"
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                placeholder="John Doe"
+                className="w-full px-4 py-2.5 rounded-full bg-[#F5F5F7]/60 border border-black/5 text-xs sm:text-sm text-[#1D1D1F] outline-none focus:ring-2 focus:ring-[#1D1D1F] focus:bg-white transition-all"
+              />
+              {errors.name && <p className="text-[11px] text-red-500 mt-1">{errors.name}</p>}
+            </div>
+
+            <div>
+              <label className="text-xs font-bold text-[#1D1D1F] block mb-1">Phone Number (WhatsApp)</label>
+              <input
+                type="tel"
+                value={form.phone}
+                onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                placeholder="+91 98765 43210"
+                className="w-full px-4 py-2.5 rounded-full bg-[#F5F5F7]/60 border border-black/5 text-xs sm:text-sm text-[#1D1D1F] outline-none focus:ring-2 focus:ring-[#1D1D1F] focus:bg-white transition-all"
+              />
+              {errors.phone && <p className="text-[11px] text-red-500 mt-1">{errors.phone}</p>}
+            </div>
+
+            <div>
+              <label className="text-xs font-bold text-[#1D1D1F] block mb-1">Street Address</label>
+              <textarea
+                value={form.address}
+                onChange={(e) => setForm({ ...form, address: e.target.value })}
+                rows={2}
+                placeholder="Flat / House No., Apartment name, Street"
+                className="w-full px-4 py-2.5 rounded-2xl bg-[#F5F5F7]/60 border border-black/5 text-xs sm:text-sm text-[#1D1D1F] outline-none focus:ring-2 focus:ring-[#1D1D1F] focus:bg-white resize-none transition-all"
+              />
+              {errors.address && <p className="text-[11px] text-red-500 mt-1">{errors.address}</p>}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-bold text-[#1D1D1F] block mb-1">City</label>
+                <input
+                  type="text"
+                  value={form.city}
+                  onChange={(e) => setForm({ ...form, city: e.target.value })}
+                  placeholder="Bangalore"
+                  className="w-full px-4 py-2.5 rounded-full bg-[#F5F5F7]/60 border border-black/5 text-xs sm:text-sm text-[#1D1D1F] outline-none focus:ring-2 focus:ring-[#1D1D1F] focus:bg-white transition-all"
+                />
+                {errors.city && <p className="text-[11px] text-red-500 mt-1">{errors.city}</p>}
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-[#1D1D1F] block mb-1">PIN Code</label>
+                <input
+                  type="text"
+                  value={form.pincode}
+                  onChange={(e) => setForm({ ...form, pincode: e.target.value })}
+                  placeholder="560001"
+                  className="w-full px-4 py-2.5 rounded-full bg-[#F5F5F7]/60 border border-black/5 text-xs sm:text-sm text-[#1D1D1F] outline-none focus:ring-2 focus:ring-[#1D1D1F] focus:bg-white transition-all"
+                />
+                {errors.pincode && <p className="text-[11px] text-red-500 mt-1">{errors.pincode}</p>}
+              </div>
+            </div>
+
+            <button
+              onClick={handleNext}
+              className="w-full mt-4 py-3.5 rounded-full bg-[#1D1D1F] text-white font-extrabold text-sm shadow-sm flex items-center justify-center gap-2 active:scale-95 transition-all"
+            >
+              <span>Continue to Payment</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
+        {/* ── Step 2: Payment Method & Review ── */}
+        {step === 2 && (
+          <div className="p-6 overflow-y-auto space-y-5 flex-1">
+            <div className="p-3.5 rounded-2xl bg-[#F5F5F7]/80 border border-black/5 flex items-start justify-between gap-3 text-xs">
+              <div>
+                <span className="font-bold text-[#1D1D1F]">Delivering to:</span>
+                <p className="text-[#777777] mt-0.5">{form.name} • {form.phone}</p>
+                <p className="text-[#777777]">{form.address}, {form.city} — {form.pincode}</p>
+              </div>
+              <button onClick={() => setStep(1)} className="text-[#0071E3] font-bold hover:underline flex-shrink-0">
+                Edit
+              </button>
+            </div>
+
+            <div>
+              <label className="text-xs font-bold text-[#1D1D1F] block mb-2">Select Payment Method</label>
+              <div className="space-y-2">
+                {[
+                  { id: 'cod', title: 'Cash on Delivery (COD)', desc: 'Pay when your package arrives at your door' },
+                  { id: 'upi', title: 'UPI / Card / NetBanking', desc: 'Instant confirmation via QR / Gateway' },
+                ].map((m) => (
+                  <label
+                    key={m.id}
+                    onClick={() => setPayMethod(m.id)}
+                    className={`flex items-start gap-3 p-3.5 rounded-2xl border cursor-pointer transition-all ${
+                      payMethod === m.id
+                        ? 'border-[#1D1D1F] bg-[#EBF5FF]/30'
+                        : 'border-black/5 bg-[#F5F5F7]/40 hover:bg-[#F5F5F7]'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      checked={payMethod === m.id}
+                      onChange={() => setPayMethod(m.id)}
+                      className="mt-0.5 accent-[#1D1D1F]"
+                    />
+                    <div>
+                      <span className="text-xs font-bold text-[#1D1D1F] block">{m.title}</span>
+                      <span className="text-[11px] text-[#777777]">{m.desc}</span>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-[#F5F5F7]/60 border border-black/5 space-y-2 text-xs">
+              <div className="flex justify-between text-[#777777]">
+                <span>Items Subtotal</span>
+                <span className="font-bold text-[#1D1D1F]">{formatPrice(subtotal, STORE_CONFIG.currency)}</span>
+              </div>
+              {promoDiscountAmount > 0 && (
+                <div className="flex justify-between text-[#0071E3]">
+                  <span>Discount</span>
+                  <span className="font-bold">−{formatPrice(promoDiscountAmount, STORE_CONFIG.currency)}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-[#777777]">
+                <span>Delivery</span>
+                <span className="font-bold text-[#1D1D1F]">{shippingFee === 0 ? 'FREE' : formatPrice(shippingFee, STORE_CONFIG.currency)}</span>
+              </div>
+              <div className="pt-2 border-t border-black/10 flex justify-between text-sm font-extrabold text-[#1D1D1F]">
+                <span>Total Payable</span>
+                <span>{formatPrice(total, STORE_CONFIG.currency)}</span>
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => setStep(1)}
+                className="flex-1 py-3 rounded-full bg-[#F5F5F7] text-[#1D1D1F] font-bold text-xs hover:bg-[#E5E5EA] transition-colors"
+              >
+                Back
+              </button>
+              <button
+                onClick={handlePlaceOrder}
+                disabled={isSubmitting}
+                className="flex-2 py-3.5 rounded-full bg-[#1D1D1F] text-white font-extrabold text-sm shadow-sm flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-60"
+              >
+                {isSubmitting ? (
+                  <div className="w-5 h-5 border-2 border-[#1D1D1F] border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <span>Confirm & Place Order</span>
+                    <Check className="w-4 h-4" />
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── Step 3: Success Animation ── */}
+        {step === 3 && (
+          <div className="p-8 text-center space-y-4 flex flex-col items-center justify-center my-auto">
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: 'spring', damping: 15 }}
+              className="w-16 h-16 rounded-full bg-[#34C759] text-white flex items-center justify-center shadow-lg"
+            >
+              <Check className="w-8 h-8 stroke-[3]" />
+            </motion.div>
+
+            <h3 className="text-xl font-extrabold text-[#1D1D1F]">Order Placed Successfully! 🎉</h3>
+            <p className="text-xs text-[#777777] max-w-xs leading-relaxed">
+              Order <strong className="text-[#1D1D1F]">{orderId}</strong> has been saved. We will notify you on WhatsApp when it ships!
+            </p>
+          </div>
+        )}
+      </motion.div>
+    </div>
+  );
+};
+
+// ─── Main Cart Page ───────────────────────────────────────────────────────────
+export const CartPage = ({
+  cartItems = {},
+  wishlist = {},
+  products = [],
+  onUpdateQuantity,
+  onAddToCart,
+  onToggleFavorite,
+  onQuickView,
+  onExploreCatalog,
+  onPlaceOrder,
+}) => {
+  const { user, isAuthenticated, openAuthModal } = useAuth();
+  const [promoCode, setPromoCode] = useState('');
+  const [appliedPromo, setAppliedPromo] = useState(null);
+  const [promoError, setPromoError] = useState('');
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [orderPlaced, setOrderPlaced] = useState(false);
+  const [viewTab, setViewTab] = useState('cart'); // 'cart' | 'wishlist'
+
+  const cartList = Object.values(cartItems).filter((item) => item.quantity > 0);
+  const subtotal = cartList.reduce((sum, item) => sum + (item.price || 0) * item.quantity, 0);
+
+  const promoDiscountAmount = appliedPromo && VALID_PROMOS[appliedPromo]
+    ? Math.round(subtotal * VALID_PROMOS[appliedPromo].discount)
+    : 0;
+
+  const shippingFee = subtotal >= SHIPPING_THRESHOLD || subtotal === 0 ? 0 : 99;
+  const total = Math.max(0, subtotal - promoDiscountAmount + shippingFee);
+  const amountToFreeShipping = Math.max(0, SHIPPING_THRESHOLD - subtotal);
+  const freeShippingProgress = Math.min(100, Math.round((subtotal / SHIPPING_THRESHOLD) * 100));
+
+  // Wishlist products resolution
+  const wishlistProducts = Object.keys(wishlist)
+    .filter((id) => wishlist[id])
+    .map((id) => products.find((p) => p.id === id))
+    .filter(Boolean);
+
+  // Special featured products for bottom section
+  const specialProducts = products
+    .filter((p) => p.isPopular || p.badgeType === 'special' || p.discountPercent >= 30)
+    .slice(0, 4);
+
+  const handleApplyPromo = () => {
+    const code = promoCode.trim().toUpperCase();
+    if (!code) return;
+    if (VALID_PROMOS[code]) {
+      setAppliedPromo(code);
+      setPromoError('');
+    } else {
+      setPromoError('Invalid promo code. Try ELEC20, FASH30, HOME15, ACC25');
+    }
+  };
+
+  const handleCheckoutClick = () => {
+    if (!isAuthenticated) {
+      openAuthModal(() => {
+        setCheckoutOpen(true);
+      });
+    } else {
+      setCheckoutOpen(true);
+    }
+  };
+
+  const handleMoveWishlistToCart = (product) => {
+    if (onAddToCart) onAddToCart(product);
+    if (onToggleFavorite) onToggleFavorite(product);
+  };
+
+  return (
+    <section className="pt-18 sm:pt-24 pb-28 sm:pb-20 px-3.5 sm:px-8 lg:px-12 w-full max-w-[1440px] mx-auto min-h-[85vh] bg-[#FBFBFD] text-[#1D1D1F]">
+      {/* Header with Apple Style Toggle Pill */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+        <div>
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[#1D1D1F] tracking-tight font-sans">
+            {viewTab === 'cart' ? `Shopping Cart (${cartList.reduce((acc, i) => acc + i.quantity, 0)})` : `Saved Wishlist (${wishlistProducts.length})`}
+          </h1>
+        </div>
+
+        {/* Apple Style Pill Toggle */}
+        <div className="flex items-center bg-[#F5F5F7] p-1 rounded-full border border-black/[0.06] self-start sm:self-auto shadow-xs">
+          <button
+            onClick={() => setViewTab('cart')}
+            className={`px-4 py-2 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+              viewTab === 'cart'
+                ? 'bg-white text-[#1D1D1F] shadow-sm'
+                : 'text-[#6E6E73] hover:text-[#1D1D1F]'
+            }`}
+          >
+            <span>🛍️ Cart</span>
+            <span className="px-1.5 py-0.2 bg-[#1D1D1F] text-white rounded-full text-[10px]">
+              {cartList.reduce((acc, i) => acc + i.quantity, 0)}
+            </span>
+          </button>
+
+          <button
+            onClick={() => setViewTab('wishlist')}
+            className={`px-4 py-2 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+              viewTab === 'wishlist'
+                ? 'bg-white text-[#1D1D1F] shadow-sm'
+                : 'text-[#6E6E73] hover:text-[#1D1D1F]'
+            }`}
+          >
+            <span>💖 Wishlist</span>
+            {wishlistProducts.length > 0 && (
+              <span className="px-1.5 py-0.2 bg-rose-500 text-white rounded-full text-[10px]">
+                {wishlistProducts.length}
+              </span>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* ─── TAB 1: CART VIEW ────────────────────────────────────────── */}
+      {viewTab === 'cart' && (
+        <>
+          {cartList.length === 0 && !orderPlaced ? (
+            <div className="bg-white/95 backdrop-blur-md rounded-[32px] border border-black/[0.06] p-10 text-center shadow-sm mb-12 max-w-xl mx-auto">
+              <div className="w-20 h-20 rounded-full bg-[#F5F5F7] flex items-center justify-center text-[#777777] mx-auto mb-4">
+                <ShoppingBag className="w-10 h-10 text-[#1D1D1F]" />
+              </div>
+              <h2 className="text-xl font-extrabold text-[#1D1D1F]">Your Cart is Empty</h2>
+              <p className="text-xs sm:text-sm text-[#666666] mt-1 max-w-sm mx-auto">
+                Looks like you haven&apos;t added any items to your shopping bag yet.
+              </p>
+              <button
+                onClick={onExploreCatalog}
+                className="mt-6 px-6 py-3 rounded-full bg-[#1D1D1F] hover:bg-black text-white font-extrabold text-xs shadow-sm active:scale-95 transition-all inline-flex items-center gap-2"
+              >
+                <span>Explore Products</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            <>
+              {/* Free Shipping Tracker */}
+              <div className="bg-white/95 backdrop-blur-md rounded-[24px] border border-black/[0.06] p-4 sm:p-5 shadow-sm mb-6">
+                <div className="flex items-center justify-between text-xs font-bold text-[#1D1D1F] mb-2">
+                  <div className="flex items-center gap-2">
+                    <Truck className="w-4 h-4 text-[#0071E3]" />
+                    <span>
+                      {amountToFreeShipping === 0
+                        ? '🎉 You qualified for FREE Delivery!'
+                        : `Add ${STORE_CONFIG.currency}${amountToFreeShipping} more to get FREE Delivery`}
+                    </span>
+                  </div>
+                  <span className="text-[#777777]">{freeShippingProgress}%</span>
+                </div>
+                <div className="w-full h-2 bg-[#F5F5F7] rounded-full overflow-hidden">
+                  <motion.div
+                    className="h-full bg-[#0071E3] rounded-full"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${freeShippingProgress}%` }}
+                    transition={{ duration: 0.5 }}
+                  />
+                </div>
+              </div>
+
+              {/* Layout Grid */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-start mb-12">
+                {/* LEFT: Items List */}
+                <div className="lg:col-span-7 space-y-3">
+                  <AnimatePresence>
+                    {cartList.map((item) => (
+                      <motion.div
+                        key={item.id}
+                        layout
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        className="bg-white/95 backdrop-blur-md rounded-2xl sm:rounded-[24px] border border-black/[0.06] p-3 sm:p-4 shadow-sm flex gap-3 sm:gap-4 items-center"
+                      >
+                        <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl sm:rounded-2xl bg-[#F5F5F7] overflow-hidden shrink-0 relative">
+                          <Image
+                            src={item.image || '/assets/images/prod_headphones.jpg'}
+                            alt={item.name}
+                            fill
+                            sizes="80px"
+                            className="object-cover"
+                          />
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          <span className="text-[10px] font-bold text-[#777777] uppercase tracking-wider">{item.categoryName}</span>
+                          <h3 className="text-xs sm:text-sm font-bold text-[#1D1D1F] line-clamp-1 mt-0.5">{item.name}</h3>
+                          {item.selectedSize && <span className="text-[11px] text-[#777777] bg-[#F5F5F7] px-2.5 py-0.5 rounded-full inline-block mt-1 mr-1 font-medium">Size: {item.selectedSize}</span>}
+
+                          <div className="flex items-center justify-between mt-3 gap-2 flex-wrap">
+                            <span className="text-sm sm:text-base font-extrabold text-[#1D1D1F]">
+                              {formatPrice(item.price * item.quantity, STORE_CONFIG.currency)}
+                            </span>
+
+                            <div className="flex items-center gap-2">
+                              <div className="flex items-center bg-[#F5F5F7] rounded-full p-1 shadow-inner">
+                                <button
+                                  onClick={() => onUpdateQuantity(item.id, item.quantity - 1)}
+                                  className="w-6 h-6 rounded-full bg-white text-[#1D1D1F] flex items-center justify-center hover:bg-black hover:text-white transition-colors"
+                                >
+                                  <Minus className="w-3 h-3" />
+                                </button>
+                                <span className="text-xs font-bold text-[#1D1D1F] px-2">
+                                  {item.quantity}
+                                </span>
+                                <button
+                                  onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
+                                  className="w-6 h-6 rounded-full bg-[#1D1D1F] text-white flex items-center justify-center font-bold hover:bg-[#000000] transition-colors"
+                                >
+                                  <Plus className="w-3 h-3" />
+                                </button>
+                              </div>
+
+                              <button
+                                onClick={() => onUpdateQuantity(item.id, 0)}
+                                className="w-7 h-7 rounded-full bg-[#F5F5F7] hover:bg-rose-50 text-[#777777] hover:text-rose-500 flex items-center justify-center transition-colors"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
+                </div>
+
+                {/* RIGHT: Order Summary Card */}
+                <div className="lg:col-span-5 sticky top-24 space-y-4">
+                  <div className="bg-white/95 backdrop-blur-md rounded-[24px] border border-black/[0.06] p-4 shadow-sm">
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={promoCode}
+                        onChange={(e) => { setPromoCode(e.target.value.toUpperCase()); setPromoError(''); }}
+                        placeholder="Promo Code (e.g. FASH30)"
+                        className="flex-1 px-4 py-2.5 rounded-full bg-[#F5F5F7]/70 border border-black/5 text-xs font-bold text-[#1D1D1F] placeholder:text-[#888888] outline-none focus:ring-2 focus:ring-[#1D1D1F] focus:bg-white transition-all"
+                      />
+                      <button
+                        onClick={handleApplyPromo}
+                        className="px-5 py-2.5 rounded-full bg-[#1D1D1F] text-white font-bold text-xs hover:bg-black transition-all cursor-pointer"
+                      >
+                        Apply
+                      </button>
+                    </div>
+                    {promoError && <p className="text-[11px] text-red-500 mt-1.5 font-medium">{promoError}</p>}
+                    {appliedPromo && (
+                      <div className="mt-2 flex items-center justify-between text-xs font-bold bg-[#EBF5FF] text-[#0071E3] rounded-full px-3 py-1">
+                        <span>{VALID_PROMOS[appliedPromo].label}</span>
+                        <button onClick={() => { setAppliedPromo(null); setPromoCode(''); }}>
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="bg-white/95 backdrop-blur-md rounded-[26px] border border-black/[0.06] p-5 sm:p-6 shadow-sm space-y-3">
+                    <h3 className="text-base font-extrabold text-[#1D1D1F]">Order Summary</h3>
+
+                    <div className="space-y-2.5 text-xs">
+                      <div className="flex justify-between text-[#666666]">
+                        <span>Subtotal</span>
+                        <span className="font-bold text-[#1D1D1F]">{formatPrice(subtotal, STORE_CONFIG.currency)}</span>
+                      </div>
+                      {promoDiscountAmount > 0 && (
+                        <div className="flex justify-between text-[#0071E3]">
+                          <span>Discount</span>
+                          <span className="font-bold">−{formatPrice(promoDiscountAmount, STORE_CONFIG.currency)}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between text-[#666666]">
+                        <span>Delivery</span>
+                        <span className="font-bold text-[#1D1D1F]">{shippingFee === 0 ? 'FREE' : formatPrice(shippingFee, STORE_CONFIG.currency)}</span>
+                      </div>
+                      <div className="pt-2.5 border-t border-black/[0.06] flex justify-between text-base font-extrabold text-[#1D1D1F]">
+                        <span>Total</span>
+                        <span>{formatPrice(total, STORE_CONFIG.currency)}</span>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={handleCheckoutClick}
+                      className="w-full mt-3 py-3.5 rounded-full bg-[#1D1D1F] hover:bg-black text-white font-extrabold text-sm shadow-sm flex items-center justify-center gap-2 active:scale-95 transition-all cursor-pointer"
+                    >
+                      <span>Proceed to Checkout</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+        </>
+      )}
+
+      {/* ─── TAB 2: EMBEDDED WISHLIST VIEW ─────────────────────────── */}
+      {viewTab === 'wishlist' && (
+        <div className="mb-12">
+          {wishlistProducts.length === 0 ? (
+            <div className="bg-white/95 backdrop-blur-md rounded-[32px] border border-black/[0.06] p-10 text-center shadow-sm max-w-xl mx-auto">
+              <div className="w-16 h-16 rounded-full bg-rose-50 text-rose-500 flex items-center justify-center mx-auto mb-3">
+                <Heart className="w-8 h-8" />
+              </div>
+              <h3 className="text-lg font-extrabold text-[#1D1D1F]">Your Wishlist is Empty</h3>
+              <p className="text-xs text-[#666666] mt-1 max-w-xs mx-auto">
+                Explore our collections and tap the heart icon on any product to save it for later.
+              </p>
+              <button
+                onClick={onExploreCatalog}
+                className="mt-5 px-6 py-2.5 rounded-full bg-[#1D1D1F] text-white font-extrabold text-xs hover:bg-black active:scale-95 transition-all inline-flex items-center gap-2 cursor-pointer"
+              >
+                <span>Browse Products</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {wishlistProducts.map((prod) => (
+                <div
+                  key={prod.id}
+                  className="bg-white/95 backdrop-blur-md rounded-[24px] border border-black/[0.06] p-4 shadow-sm flex gap-4 items-center justify-between"
+                >
+                  <div className="w-16 h-16 rounded-2xl bg-[#F5F5F7] relative overflow-hidden flex-shrink-0">
+                    <Image
+                      src={prod.image || '/assets/images/prod_headphones.jpg'}
+                      alt={prod.name}
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-xs font-bold text-[#1D1D1F] truncate">{prod.name}</h4>
+                    <span className="text-xs font-extrabold text-[#1D1D1F] block mt-0.5">
+                      {formatPrice(prod.price, STORE_CONFIG.currency)}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => handleMoveWishlistToCart(prod)}
+                      className="px-3 py-1.5 rounded-full bg-[#1D1D1F] hover:bg-black text-white font-extrabold text-[11px] shadow-sm active:scale-95 transition-all flex items-center gap-1 cursor-pointer"
+                    >
+                      <ShoppingBag className="w-3 h-3" />
+                      <span>Move to Bag</span>
+                    </button>
+                    <button
+                      onClick={() => onToggleFavorite && onToggleFavorite(prod)}
+                      className="w-7 h-7 rounded-full bg-[#F5F5F7] text-[#777777] hover:text-rose-500 flex items-center justify-center transition-colors cursor-pointer"
+                      title="Remove"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ─── 4. SPECIAL PRODUCTS & EXCLUSIVE OFFERS AT THE END OF CART ─── */}
+      <div className="pt-8 border-t border-black/10">
+        <div className="flex items-center justify-between mb-5">
+          <div>
+            <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-[#EBF5FF] text-[#0071E3] text-[11px] font-extrabold uppercase tracking-wide mb-1">
+              <Sparkles className="w-3 h-3" />
+              <span>Special Recommendations ⭐</span>
+            </div>
+            <h3 className="text-lg sm:text-xl font-extrabold text-[#1D1D1F] tracking-tight">
+              Exclusive Add-Ons You May Love
+            </h3>
+          </div>
+
+          <button
+            onClick={onExploreCatalog}
+            className="text-xs font-bold text-[#1D1D1F] hover:underline flex items-center gap-1"
+          >
+            <span>Explore All</span>
+            <ArrowRight className="w-3 h-3" />
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          {specialProducts.map((prod) => {
+            const isFav = !!wishlist[prod.id];
+            const inCartQty = cartItems[prod.id]?.quantity || 0;
+            const imgSrc = typeof prod.image === 'string' ? prod.image : prod.image?.src || prod.image || '/assets/images/prod_headphones.jpg';
+
+            return (
+              <motion.div
+                key={prod.id}
+                whileHover={{ y: -4 }}
+                onClick={() => onQuickView && onQuickView(prod)}
+                className="bg-white/95 backdrop-blur-md rounded-[24px] border border-black/[0.06] p-3 sm:p-4 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between group cursor-pointer"
+              >
+                <div>
+                  <div className="relative w-full aspect-square rounded-[20px] overflow-hidden mb-2.5 bg-transparent flex items-center justify-center">
+                    <Image
+                      src={imgSrc}
+                      alt={prod.name}
+                      fill
+                      sizes="(max-width: 768px) 50vw, 25vw"
+                      className="object-cover rounded-[20px] group-hover:scale-108 transition-transform duration-300"
+                    />
+                    
+                    {/* Badge */}
+                    {prod.badge && (
+                      <span className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-white/90 text-[#1D1D1F] border border-black/5 text-[9px] font-extrabold shadow-sm z-10">
+                        {prod.badge}
+                      </span>
+                    )}
+
+                    {/* Heart / Wishlist Like Button */}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (onToggleFavorite) onToggleFavorite(prod);
+                      }}
+                      className="absolute top-2 right-2 z-10 w-7 h-7 rounded-full bg-white/90 backdrop-blur-md border border-white/80 flex items-center justify-center shadow-sm hover:scale-110 active:scale-90 transition-all duration-200 cursor-pointer"
+                      aria-label={isFav ? 'Remove from wishlist' : 'Save to wishlist'}
+                    >
+                      <Heart
+                        className={`w-3.5 h-3.5 transition-colors ${
+                          isFav
+                            ? 'text-red-500 fill-red-500 stroke-red-500'
+                            : 'text-[#1D1D1F] hover:text-red-500'
+                        }`}
+                      />
+                    </button>
+
+                    {/* Quick View Hover Badge */}
+                    <div className="absolute bottom-2 inset-x-2 hidden sm:flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-white/95 backdrop-blur-md text-[#1D1D1F] text-[10px] font-bold shadow-sm border border-black/5">
+                        <Eye className="w-3 h-3 text-[#0071E3]" />
+                        <span>Quick View</span>
+                      </span>
+                    </div>
+                  </div>
+
+                  <span className="text-[10px] font-bold text-[#777777] uppercase tracking-wider block">{prod.categoryName || 'Product'}</span>
+                  <h4 className="text-xs font-bold text-[#1D1D1F] line-clamp-1 group-hover:text-[#0071E3] transition-colors mt-0.5">
+                    {prod.name}
+                  </h4>
+                </div>
+
+                <div className="pt-2.5 mt-2 border-t border-black/[0.06] flex items-center justify-between gap-1">
+                  <span className="text-xs sm:text-sm font-extrabold text-[#1D1D1F]">
+                    {formatPrice(prod.price, STORE_CONFIG.currency)}
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (onAddToCart) onAddToCart(prod);
+                    }}
+                    className="px-3 py-1.5 rounded-full bg-[#1D1D1F] hover:bg-black text-white font-extrabold text-[11px] shadow-sm active:scale-95 transition-all flex items-center gap-1 cursor-pointer"
+                  >
+                    <Plus className="w-3 h-3 stroke-[3]" />
+                    <span>{inCartQty > 0 ? `Add (${inCartQty})` : 'Add'}</span>
+                  </button>
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
+      </div>
+
+      <AnimatePresence>
+        {checkoutOpen && (
+          <CheckoutModal
+            cartList={cartList}
+            subtotal={subtotal}
+            promoDiscountAmount={promoDiscountAmount}
+            shippingFee={shippingFee}
+            total={total}
+            user={user}
+            onClose={() => setCheckoutOpen(false)}
+            onSuccess={(orderData) => {
+              setCheckoutOpen(false);
+              setOrderPlaced(true);
+              if (onPlaceOrder && orderData) onPlaceOrder(orderData);
+              cartList.forEach(item => onUpdateQuantity(item.id, 0));
+            }}
+          />
+        )}
+      </AnimatePresence>
+    </section>
+  );
+};
+
+export default CartPage;

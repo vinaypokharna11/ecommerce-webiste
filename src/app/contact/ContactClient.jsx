@@ -72,7 +72,7 @@ export default function ContactClient() {
   };
 
   return (
-    <div className="relative min-h-screen bg-[#F5F5F3] text-[#171717] flex flex-col font-sans overflow-x-hidden selection:bg-[#9FD842] selection:text-[#171717]">
+    <div className="relative min-h-screen bg-[#0A0804] text-[#F0EAE0] flex flex-col font-sans overflow-x-hidden selection:bg-[#C9A84C] selection:text-[#0A0804]">
 
       <Navbar activeTab="contact" onNavClick={handleNavClick} />
 

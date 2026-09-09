@@ -5,7 +5,7 @@ test.describe('Homepage', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
     // Wait for page to hydrate
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
   });
 
   test('page title contains store name', async ({ page }) => {

@@ -15,6 +15,8 @@ function AdminPageContent() {
   const [isAuthenticated, setIsAuthenticated] = useState(null); // null = checking, true, false
   const [adminUser, setAdminUser] = useState(null);
   const [isSessionExpired, setIsSessionExpired] = useState(false);
+  const isAuthenticatedRef = React.useRef(isAuthenticated);
+  isAuthenticatedRef.current = isAuthenticated;
 
   useEffect(() => {
     let isMounted = true;
@@ -22,8 +24,15 @@ function AdminPageContent() {
     async function checkAuth(isPeriodic = false) {
       try {
         const token = localStorage.getItem('nakoda_admin_token') || localStorage.getItem('shopease_admin_token');
+        if (!token) {
+          if (isMounted) {
+            setIsAuthenticated(false);
+          }
+          return;
+        }
+
         const res = await fetch('/api/admin/auth', {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          headers: { Authorization: `Bearer ${token}` },
           credentials: 'include',
         });
         const data = await res.json();
@@ -36,7 +45,7 @@ function AdminPageContent() {
             // Token expired or invalid
             localStorage.removeItem('nakoda_admin_token');
             localStorage.removeItem('shopease_admin_token');
-            if (isPeriodic || isAuthenticated === true) {
+            if (isPeriodic || isAuthenticatedRef.current === true) {
               setIsSessionExpired(true);
             }
             setIsAuthenticated(false);
@@ -60,7 +69,7 @@ function AdminPageContent() {
       isMounted = false;
       clearInterval(interval);
     };
-  }, [isAuthenticated]);
+  }, []); // Clean single mount check
 
   const handleLogout = async () => {
     try {
@@ -78,7 +87,7 @@ function AdminPageContent() {
   // Loading state
   if (isAuthenticated === null) {
     return (
-      <div className="min-h-screen bg-[#F5F5F3] flex flex-col items-center justify-center gap-3 font-sans">
+      <div className="min-h-screen bg-[#F6F5F0] flex flex-col items-center justify-center gap-3 font-sans">
         <div className="w-10 h-10 border-3 border-[#171717] border-t-[#9FD842] rounded-full animate-spin" />
         <p className="text-xs font-bold text-[#171717]">Verifying Administrator Session...</p>
       </div>
@@ -88,7 +97,7 @@ function AdminPageContent() {
   // Not authenticated gate
   if (isAuthenticated === false) {
     return (
-      <div className="min-h-screen bg-[#F5F5F3] flex items-center justify-center p-4 font-sans selection:bg-[#9FD842] selection:text-[#171717]">
+      <div className="min-h-screen bg-[#F6F5F0] flex items-center justify-center p-4 font-sans selection:bg-[#9FD842] selection:text-[#171717]">
         <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-[#9FD842]/10 rounded-full blur-[140px] pointer-events-none -z-10" />
 
         <motion.div
@@ -143,7 +152,7 @@ function AdminPageContent() {
 
   // Authenticated Admin Dashboard
   return (
-    <div className="relative min-h-screen bg-[#F5F5F3]">
+    <div className="relative min-h-screen bg-[#F6F5F0]">
       <AdminLayout
         onExitAdmin={() => router.push('/')}
         onLogout={handleLogout}
@@ -159,7 +168,7 @@ export default function AdminPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-[#F5F5F3] flex flex-col items-center justify-center gap-3 font-sans">
+        <div className="min-h-screen bg-[#F6F5F0] flex flex-col items-center justify-center gap-3 font-sans">
           <div className="w-10 h-10 border-3 border-[#171717] border-t-[#9FD842] rounded-full animate-spin" />
           <p className="text-xs font-bold text-[#171717]">Loading Administrator Portal...</p>
         </div>

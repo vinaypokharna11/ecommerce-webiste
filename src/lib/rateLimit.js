@@ -1,17 +1,23 @@
 /**
- * In-Memory Sliding Window Rate Limiter
+ * In-Memory Sliding Window Rate Limiter & Account Brute-Force Protection
  * Protects authentication and sensitive API endpoints from brute-force & denial-of-service attacks.
  */
 
 const rateLimitStore = new Map();
+const accountLockoutStore = new Map();
 
-// Periodic cleanup of expired rate limit buckets every 5 minutes
+// Periodic cleanup of expired rate limit and lockout buckets every 5 minutes
 if (typeof setInterval !== 'undefined') {
   setInterval(() => {
     const now = Date.now();
     for (const [key, data] of rateLimitStore.entries()) {
       if (now > data.resetTime) {
         rateLimitStore.delete(key);
+      }
+    }
+    for (const [key, data] of accountLockoutStore.entries()) {
+      if (now > data.resetTime) {
+        accountLockoutStore.delete(key);
       }
     }
   }, 5 * 60 * 1000);
@@ -62,17 +68,76 @@ export function checkRateLimit(key, maxAttempts = 5, windowMs = 60 * 1000) {
 }
 
 /**
- * Extracts client IP from Next.js Request headers.
+ * Checks whether an account/email is currently locked out due to repeated failed logins.
+ */
+export function checkAccountLockout(email, maxAttempts = 5) {
+  if (!email || typeof email !== 'string') return { isLocked: false, retryAfterSec: 0 };
+  const key = `acc:${email.toLowerCase().trim()}`;
+  const now = Date.now();
+  const record = accountLockoutStore.get(key);
+
+  if (!record || now > record.resetTime) {
+    return { isLocked: false, retryAfterSec: 0 };
+  }
+
+  if (record.count >= maxAttempts) {
+    const retryAfterSec = Math.max(1, Math.ceil((record.resetTime - now) / 1000));
+    return { isLocked: true, retryAfterSec };
+  }
+
+  return { isLocked: false, retryAfterSec: 0 };
+}
+
+/**
+ * Records a failed login attempt against an account.
+ */
+export function recordFailedLogin(email, lockoutWindowMs = 5 * 60 * 1000) {
+  if (!email || typeof email !== 'string') return;
+  const key = `acc:${email.toLowerCase().trim()}`;
+  const now = Date.now();
+  const record = accountLockoutStore.get(key);
+
+  if (!record || now > record.resetTime) {
+    accountLockoutStore.set(key, { count: 1, resetTime: now + lockoutWindowMs });
+  } else {
+    record.count += 1;
+  }
+}
+
+/**
+ * Clears account lockout record upon successful authentication.
+ */
+export function resetAccountLockout(email) {
+  if (!email || typeof email !== 'string') return;
+  const key = `acc:${email.toLowerCase().trim()}`;
+  accountLockoutStore.delete(key);
+}
+
+const IPV4_REGEX = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+const IPV6_REGEX = /^([0-9a-fA-F]{1,4}:){1,7}[0-9a-fA-F]{1,4}$/;
+
+function sanitizeIp(ip) {
+  if (!ip || typeof ip !== 'string') return '127.0.0.1';
+  const clean = ip.trim();
+  if (IPV4_REGEX.test(clean) || IPV6_REGEX.test(clean) || clean === '::1') {
+    return clean;
+  }
+  return '127.0.0.1';
+}
+
+/**
+ * Extracts client IP from Next.js Request headers with strict format sanitization.
  */
 export function getClientIp(request) {
   if (!request || !request.headers) return '127.0.0.1';
   const forwarded = request.headers.get('x-forwarded-for');
   if (forwarded) {
-    return forwarded.split(',')[0].trim();
+    const firstIp = forwarded.split(',')[0].trim();
+    return sanitizeIp(firstIp);
   }
   const realIp = request.headers.get('x-real-ip');
   if (realIp) {
-    return realIp.trim();
+    return sanitizeIp(realIp.trim());
   }
   return '127.0.0.1';
 }

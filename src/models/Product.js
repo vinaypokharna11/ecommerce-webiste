@@ -32,4 +32,10 @@ const ProductSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Indexes for query performance
+ProductSchema.index({ category: 1, stockStatus: 1 });
+ProductSchema.index({ createdAt: -1 });
+ProductSchema.index({ name: 'text', categoryName: 'text', tags: 'text' });
+
 export default mongoose.models.Product || mongoose.model('Product', ProductSchema);
+

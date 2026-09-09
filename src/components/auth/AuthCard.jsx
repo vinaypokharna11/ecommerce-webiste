@@ -39,7 +39,7 @@ export function AuthCard({
       initial={{ opacity: 0, y: 15, scale: 0.98 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ duration: 0.35 }}
-      className="w-full max-w-md bg-white rounded-[32px] border border-black/5 p-6 sm:p-8 shadow-[0_20px_60px_rgba(0,0,0,0.06)] relative z-10"
+      className="w-full max-w-md bg-white/95 backdrop-blur-md rounded-[32px] border border-black/[0.08] p-6 sm:p-8 shadow-[0_20px_60px_rgba(0,0,0,0.06)] relative z-10"
     >
       {/* Brand Icon Header */}
       <div className="text-center mb-6">

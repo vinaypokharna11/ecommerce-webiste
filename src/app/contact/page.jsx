@@ -8,7 +8,7 @@ export const metadata = {
 
 export default function ContactRoutePage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#FAF9FF]" />}>
+    <Suspense fallback={<div className="min-h-screen bg-[#0A0804]" />}>
       <ContactClient />
     </Suspense>
   );

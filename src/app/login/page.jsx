@@ -38,6 +38,13 @@ export function LoginContent({ defaultTab = 'login' }) {
     }
   }, [isAuthenticated, user, router, searchParams]);
 
+  // Synchronize activeTab when query param changes (e.g. /login?tab=signup)
+  useEffect(() => {
+    if (paramTab === 'signup' || paramTab === 'login') {
+      setActiveTab(paramTab);
+    }
+  }, [paramTab]);
+
   // Handle Tab Switch
   const handleTabChange = (newTab) => {
     setActiveTab(newTab);
@@ -127,7 +134,7 @@ export function LoginContent({ defaultTab = 'login' }) {
   };
 
   return (
-    <div className="min-h-screen bg-[#F5F5F3] text-[#171717] flex flex-col justify-between relative overflow-hidden font-sans selection:bg-[#9FD842] selection:text-[#171717]">
+    <div className="min-h-screen bg-[#F6F5F0] text-[#171717] flex flex-col justify-between relative overflow-hidden font-sans selection:bg-[#9FD842] selection:text-[#171717]">
       {/* Ambient Glows */}
       <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[900px] h-[500px] bg-[#9FD842]/10 rounded-full blur-[140px] pointer-events-none -z-10" />
       <div className="fixed bottom-0 right-0 w-[600px] h-[600px] bg-[#8EC731]/10 rounded-full blur-[140px] pointer-events-none -z-10" />
@@ -172,7 +179,7 @@ export function LoginContent({ defaultTab = 'login' }) {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#F5F5F3]" />}>
+    <Suspense fallback={<div className="min-h-screen bg-[#F6F5F0]" />}>
       <LoginContent defaultTab="login" />
     </Suspense>
   );

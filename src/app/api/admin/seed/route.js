@@ -11,6 +11,11 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request) {
   try {
+    const admin = verifyAdminAuth(request);
+    if (!admin) {
+      return unauthorizedResponse('Administrative access required to inspect database seed template');
+    }
+
     const template = getMasterSeedTemplate();
     return NextResponse.json({
       success: true,

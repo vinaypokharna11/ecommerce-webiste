@@ -1,7 +1,14 @@
 import { NextResponse } from 'next/server';
 import { verifyAdminCredentials } from '@/lib/db';
 import { signAdminToken, ADMIN_COOKIE_MAX_AGE } from '@/lib/auth';
-import { checkRateLimit, getClientIp, rateLimitExceededResponse } from '@/lib/rateLimit';
+import {
+  checkRateLimit,
+  getClientIp,
+  rateLimitExceededResponse,
+  checkAccountLockout,
+  recordFailedLogin,
+  resetAccountLockout,
+} from '@/lib/rateLimit';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,13 +29,26 @@ export async function POST(request) {
       );
     }
 
+    // Check account-level lockout to prevent distributed brute-force against admin account
+    const accountLock = checkAccountLockout(email, 5);
+    if (accountLock.isLocked) {
+      return rateLimitExceededResponse(
+        accountLock.retryAfterSec,
+        'Admin account temporarily locked due to repeated failed attempts. Please try again later.'
+      );
+    }
+
     const user = await verifyAdminCredentials(email, password);
     if (!user) {
+      recordFailedLogin(email);
       return NextResponse.json(
         { success: false, error: 'Invalid admin credentials' },
         { status: 401 }
       );
     }
+
+    // Reset failed counter upon successful login
+    resetAccountLockout(email);
 
     // Sign JWT token with 12 hours expiration
     const token = signAdminToken({

@@ -61,11 +61,7 @@ function InquireContent() {
   };
 
   return (
-    <div className="relative min-h-screen bg-[#FAF9FF] text-[#15152A] flex flex-col font-sans overflow-x-hidden selection:bg-[#6257FF] selection:text-white">
-      {/* Ambient background glows */}
-      <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[600px] ambient-glow-lavender rounded-full blur-[140px] pointer-events-none -z-20 opacity-70" />
-      <div className="fixed top-[400px] -right-40 w-[600px] h-[600px] ambient-glow-pink rounded-full blur-[140px] pointer-events-none -z-20 opacity-50" />
-
+    <div className="relative min-h-screen bg-[#F6F5F0] text-[#171717] flex flex-col font-sans overflow-x-hidden selection:bg-[#9FD842] selection:text-[#171717]">
       <Navbar activeTab="inquire" onNavClick={handleNavClick} />
 
       <main className="flex-1 w-full">
@@ -85,7 +81,7 @@ function InquireContent() {
 
 export default function InquireRoutePage() {
   return (
-    <React.Suspense fallback={<div className="min-h-screen bg-[#FAF9FF]" />}>
+    <React.Suspense fallback={<div className="min-h-screen bg-[#F6F5F0]" />}>
       <InquireContent />
     </React.Suspense>
   );

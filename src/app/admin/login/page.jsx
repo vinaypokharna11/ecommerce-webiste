@@ -96,7 +96,7 @@ export default function AdminLoginPage() {
 
   if (isCheckingAuth) {
     return (
-      <div className="min-h-screen bg-[#F5F5F3] flex flex-col items-center justify-center gap-3 font-sans">
+      <div className="min-h-screen bg-[#F6F5F0] flex flex-col items-center justify-center gap-3 font-sans">
         <div className="w-10 h-10 border-3 border-[#171717] border-t-[#9FD842] rounded-full animate-spin" />
         <p className="text-xs font-bold text-[#171717]">Checking active admin session...</p>
       </div>
@@ -104,7 +104,7 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F5F3] text-[#171717] flex flex-col justify-between relative overflow-hidden font-sans selection:bg-[#9FD842] selection:text-[#171717]">
+    <div className="min-h-screen bg-[#F6F5F0] text-[#171717] flex flex-col justify-between relative overflow-hidden font-sans selection:bg-[#9FD842] selection:text-[#171717]">
       {/* Ambient Organic Glows */}
       <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-[#9FD842]/10 rounded-full blur-[140px] pointer-events-none -z-10" />
       <div className="fixed bottom-0 right-0 w-[500px] h-[500px] bg-[#8EC731]/10 rounded-full blur-[140px] pointer-events-none -z-10" />

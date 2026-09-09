@@ -1,4 +1,5 @@
 import { STORE_CONFIG } from '../data/mockData';
+import { formatPrice } from './formatPrice';
 
 /**
  * Returns the configured WhatsApp number from environment variables or store config.
@@ -44,7 +45,7 @@ export const createProductWhatsAppUrl = (product, selectedVariant = null, select
   const currency = STORE_CONFIG.currency || '₹';
   
   let text = `Hi ${storeName}! 👋\n\nI am interested in buying *${product.name}* from your online catalog.\n`;
-  text += `• *Price:* ${currency}${Number(product.price || 0).toLocaleString()}\n`;
+  text += `• *Price:* ${formatPrice(product.price, currency)}\n`;
   
   if (selectedVariant) {
     text += `• *Selected Size/Variant:* ${selectedVariant}\n`;
@@ -71,11 +72,11 @@ export const createCartWhatsAppUrl = (cartItems, totalAmount, overrideNumber = n
     text += `   Quantity: ${item.quantity}\n`;
     if (item.selectedSize) text += `   Size: ${item.selectedSize}\n`;
     if (item.selectedColor) text += `   Color: ${item.selectedColor}\n`;
-    text += `   Price: ${currency}${Number(item.price || 0).toLocaleString()} × ${item.quantity} = ${currency}${itemTotal.toLocaleString()}\n\n`;
+    text += `   Price: ${formatPrice(item.price, currency)} × ${item.quantity} = ${formatPrice(itemTotal, currency)}\n\n`;
   });
 
   text += `────────────────────\n`;
-  text += `*💰 TOTAL ORDER VALUE: ${currency}${Number(totalAmount || 0).toLocaleString()}*\n\n`;
+  text += `*💰 TOTAL ORDER VALUE: ${formatPrice(totalAmount, currency)}*\n\n`;
   text += `Please let me know the payment and delivery/pickup options. Thank you!`;
 
   return buildWhatsAppUrl(text, overrideNumber);

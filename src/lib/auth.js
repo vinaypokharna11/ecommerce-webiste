@@ -18,6 +18,40 @@ function getJwtSecret() {
 export const ADMIN_TOKEN_EXPIRY = '12h';
 export const ADMIN_COOKIE_MAX_AGE = 12 * 60 * 60; // 12 hours in seconds (43,200s)
 
+let revokedTokens = global.__revokedTokens;
+if (!revokedTokens) {
+  revokedTokens = new Map(); // token -> expiryMs
+  global.__revokedTokens = revokedTokens;
+}
+
+// Clean up expired revoked tokens periodically
+if (typeof setInterval !== 'undefined') {
+  setInterval(() => {
+    const now = Date.now();
+    for (const [token, expiry] of revokedTokens.entries()) {
+      if (now > expiry) {
+        revokedTokens.delete(token);
+      }
+    }
+  }, 15 * 60 * 1000);
+}
+
+export function revokeToken(token) {
+  if (!token || typeof token !== 'string') return;
+  try {
+    const decoded = jwt.decode(token);
+    const expiryMs = decoded && decoded.exp ? decoded.exp * 1000 : Date.now() + 24 * 60 * 60 * 1000;
+    revokedTokens.set(token, expiryMs);
+  } catch (e) {
+    revokedTokens.set(token, Date.now() + 24 * 60 * 60 * 1000);
+  }
+}
+
+export function isTokenRevoked(token) {
+  if (!token) return false;
+  return revokedTokens.has(token);
+}
+
 export function signToken(payload, expiresIn = '30d') {
   return jwt.sign(payload, getJwtSecret(), { expiresIn });
 }
@@ -27,6 +61,9 @@ export function signAdminToken(payload, expiresIn = ADMIN_TOKEN_EXPIRY) {
 }
 
 export function verifyToken(token) {
+  if (!token || isTokenRevoked(token)) {
+    return null;
+  }
   try {
     return jwt.verify(token, getJwtSecret());
   } catch (error) {

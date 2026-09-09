@@ -5,7 +5,7 @@ import { LogIn, UserPlus } from 'lucide-react';
 
 export function AuthTabs({ activeTab, onTabChange }) {
   return (
-    <div className="flex bg-[#EEEEEC] p-1 rounded-full border border-black/5 mb-5 shadow-inner">
+    <div className="flex bg-[#ECE5DC] p-1 rounded-full border border-black/[0.06] mb-5 shadow-inner">
       <button
         type="button"
         onClick={() => onTabChange('login')}

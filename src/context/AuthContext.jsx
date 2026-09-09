@@ -1,26 +1,49 @@
 'use client';
 
+// ============================================================
+// IMPORTS
+// ============================================================
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { authService } from '@/services/authService';
 
+// ============================================================
+// CONTEXT CREATION
+// ============================================================
 const AuthContext = createContext(null);
 
+/**
+ * AuthProvider
+ *
+ * Manages customer session state, checkout login interception modals,
+ * and profile synchronization.
+ */
 export const AuthProvider = ({ children }) => {
+  // ============================================================
+  // STATE
+  // ============================================================
   const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Auth modal management for checkout trigger
+  // Auth modal management for checkout interception & guest wishlist prompt
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authCallback, setAuthCallback] = useState(null);
+  const [authCancelCallback, setAuthCancelCallback] = useState(null);
+  const [authModalConfig, setAuthModalConfig] = useState({
+    title: '',
+    subtitle: '',
+    defaultTab: 'login',
+  });
 
-  // Check customer session on mount
+  // ============================================================
+  // SESSION INITIALIZATION
+  // ============================================================
   const checkAuth = useCallback(async () => {
     try {
       setIsLoading(true);
-      const res = await fetch('/api/auth/me');
-      const data = await res.json();
+      const data = await authService.getSession();
 
-      if (res.ok && data.authenticated && data.user) {
+      if (data.authenticated && data.user) {
         setUser(data.user);
         setIsAuthenticated(true);
       } else {
@@ -28,7 +51,6 @@ export const AuthProvider = ({ children }) => {
         setIsAuthenticated(false);
       }
     } catch (err) {
-      console.warn('Customer auth check failed', err);
       setUser(null);
       setIsAuthenticated(false);
     } finally {
@@ -40,80 +62,88 @@ export const AuthProvider = ({ children }) => {
     checkAuth();
   }, [checkAuth]);
 
-  // Universal Login (Customer or Admin)
-  const login = async (email, password) => {
-    const res = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: email.trim(), password: password.trim() }),
-    });
+  // ============================================================
+  // AUTHENTICATION ACTIONS
+  // ============================================================
 
-    const data = await res.json();
-    if (res.ok && data.success) {
-      if (data.isAdmin || data.role === 'admin' || data.role === 'superadmin') {
-        if (data.token) {
-          localStorage.setItem('nakoda_admin_token', data.token);
-          localStorage.setItem('shopease_admin_token', data.token);
+  /**
+   * Universal Login (Customer or Admin)
+   */
+  const login = async (email, password) => {
+    try {
+      const data = await authService.login(email.trim(), password.trim());
+
+      if (data.success) {
+        if (data.isAdmin || data.role === 'admin' || data.role === 'superadmin') {
+          if (data.token) {
+            localStorage.setItem('nakoda_admin_token', data.token);
+            localStorage.setItem('shopease_admin_token', data.token);
+          }
+          setAuthCancelCallback(null);
+          setIsAuthModalOpen(false);
+          return { success: true, isAdmin: true, redirectTo: '/admin', user: data.user };
+        }
+
+        setUser(data.user);
+        setIsAuthenticated(true);
+        setAuthCancelCallback(null);
+        if (authCallback) {
+          authCallback(data.user);
+          setAuthCallback(null);
         }
         setIsAuthModalOpen(false);
-        return { success: true, isAdmin: true, redirectTo: '/admin', user: data.user };
+        return { success: true, isAdmin: false, user: data.user };
       }
 
-      setUser(data.user);
-      setIsAuthenticated(true);
-      if (authCallback) {
-        authCallback(data.user);
-        setAuthCallback(null);
-      }
-      setIsAuthModalOpen(false);
-      return { success: true, isAdmin: false, user: data.user };
+      return { success: false, error: data.error || 'Invalid credentials' };
+    } catch (err) {
+      return { success: false, error: err.message || 'Login failed' };
     }
-
-    return { success: false, error: data.error || 'Invalid credentials' };
   };
 
-  // Customer Signup
+  /**
+   * Customer Signup
+   */
   const signup = async (formData) => {
-    const res = await fetch('/api/auth/signup', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(formData),
-    });
+    try {
+      const data = await authService.signup(formData);
 
-    const data = await res.json();
-    if (res.ok && data.success) {
-      setUser(data.user);
-      setIsAuthenticated(true);
-      if (authCallback) {
-        authCallback(data.user);
-        setAuthCallback(null);
+      if (data.success) {
+        setUser(data.user);
+        setIsAuthenticated(true);
+        setAuthCancelCallback(null);
+        if (authCallback) {
+          authCallback(data.user);
+          setAuthCallback(null);
+        }
+        setIsAuthModalOpen(false);
+        return { success: true, user: data.user };
       }
-      setIsAuthModalOpen(false);
-      return { success: true, user: data.user };
-    }
 
-    return { success: false, error: data.error || 'Failed to create account' };
+      return { success: false, error: data.error || 'Failed to create account' };
+    } catch (err) {
+      return { success: false, error: err.message || 'Signup failed' };
+    }
   };
 
-  // Customer Logout
+  /**
+   * Customer Logout
+   */
   const logout = async () => {
     try {
-      await fetch('/api/auth/logout', { method: 'POST' });
+      await authService.logout();
     } catch (e) {}
     setUser(null);
     setIsAuthenticated(false);
   };
 
-  // Update Profile
-  const updateProfile = async (data) => {
+  /**
+   * Customer Profile Update
+   */
+  const updateProfile = async (profileData) => {
     try {
-      const res = await fetch('/api/auth/profile', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-      const result = await res.json();
-      if (res.ok && result.success) {
+      const result = await authService.updateProfile(profileData);
+      if (result.success) {
         setUser(result.user);
         return { success: true, user: result.user };
       }
@@ -123,14 +153,32 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const openAuthModal = (callback = null) => {
+  // ============================================================
+  // MODAL CONTROLS
+  // ============================================================
+  const openAuthModal = (callback = null, options = {}) => {
     setAuthCallback(() => callback);
+    setAuthCancelCallback(() => (typeof options?.onCancel === 'function' ? options.onCancel : null));
+    setAuthModalConfig({
+      title: options?.title || '',
+      subtitle: options?.subtitle || '',
+      defaultTab: options?.defaultTab || 'login',
+    });
     setIsAuthModalOpen(true);
   };
 
   const closeAuthModal = () => {
+    if (authCancelCallback) {
+      try {
+        authCancelCallback();
+      } catch (e) {
+        console.error('Error in auth cancel callback:', e);
+      }
+    }
     setIsAuthModalOpen(false);
     setAuthCallback(null);
+    setAuthCancelCallback(null);
+    setAuthModalConfig({ title: '', subtitle: '', defaultTab: 'login' });
   };
 
   return (
@@ -145,6 +193,7 @@ export const AuthProvider = ({ children }) => {
         updateProfile,
         checkAuth,
         isAuthModalOpen,
+        authModalConfig,
         openAuthModal,
         closeAuthModal,
       }}
@@ -161,3 +210,5 @@ export const useAuth = () => {
   }
   return context;
 };
+
+export default AuthContext;

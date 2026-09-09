@@ -4,65 +4,21 @@ import React, { useState, useCallback, useMemo, useRef, useEffect, Suspense } fr
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Navbar } from '@/components/Navbar';
 import { HeroSection } from '@/components/HeroSection';
-import { FeatureBenefits } from '@/components/FeatureBenefits';
 import { Categories } from '@/components/Categories';
 import { PopularProducts } from '@/components/PopularProducts';
-import dynamic from 'next/dynamic';
+import { FeatureBenefits } from '@/components/FeatureBenefits';
 import { PromoBanner } from '@/components/PromoBanner';
 import { RecentlyViewed } from '@/components/RecentlyViewed';
+import { CatalogPage } from '@/components/CatalogPage';
+import { OffersPage } from '@/components/OffersPage';
+import { CartPage } from '@/components/CartPage';
+import { ProfilePage } from '@/components/ProfilePage';
+import { ContactInquirePage } from '@/components/ContactInquirePage';
+import { QuickViewModal } from '@/components/QuickViewModal';
 import { FloatingCartBar } from '@/components/FloatingCartBar';
 import { Footer } from '@/components/Footer';
 import { Toast } from '@/components/Toast';
-
-// Code-split and lazy-load non-initial storefront tabs
-const CatalogPage = dynamic(() => import('@/components/CatalogPage').then((m) => m.CatalogPage), {
-  loading: () => (
-    <div className="min-h-[60vh] flex flex-col items-center justify-center gap-3">
-      <div className="w-10 h-10 border-3 border-[#9FD842] border-t-transparent rounded-full animate-spin" />
-      <span className="text-xs font-bold text-[#666666]">Loading catalog...</span>
-    </div>
-  ),
-});
-
-const OffersPage = dynamic(() => import('@/components/OffersPage').then((m) => m.OffersPage), {
-  loading: () => (
-    <div className="min-h-[60vh] flex flex-col items-center justify-center gap-3">
-      <div className="w-10 h-10 border-3 border-[#9FD842] border-t-transparent rounded-full animate-spin" />
-      <span className="text-xs font-bold text-[#666666]">Loading offers...</span>
-    </div>
-  ),
-});
-
-const CartPage = dynamic(() => import('@/components/CartPage').then((m) => m.CartPage), {
-  loading: () => (
-    <div className="min-h-[60vh] flex flex-col items-center justify-center gap-3">
-      <div className="w-10 h-10 border-3 border-[#9FD842] border-t-transparent rounded-full animate-spin" />
-      <span className="text-xs font-bold text-[#666666]">Loading bag...</span>
-    </div>
-  ),
-});
-
-const ProfilePage = dynamic(() => import('@/components/ProfilePage').then((m) => m.ProfilePage), {
-  loading: () => (
-    <div className="min-h-[60vh] flex flex-col items-center justify-center gap-3">
-      <div className="w-10 h-10 border-3 border-[#9FD842] border-t-transparent rounded-full animate-spin" />
-      <span className="text-xs font-bold text-[#666666]">Loading profile...</span>
-    </div>
-  ),
-});
-
-const ContactInquirePage = dynamic(() => import('@/components/ContactInquirePage').then((m) => m.ContactInquirePage), {
-  loading: () => (
-    <div className="min-h-[60vh] flex flex-col items-center justify-center gap-3">
-      <div className="w-10 h-10 border-3 border-[#9FD842] border-t-transparent rounded-full animate-spin" />
-      <span className="text-xs font-bold text-[#666666]">Loading contact form...</span>
-    </div>
-  ),
-});
-
-const QuickViewModal = dynamic(() => import('@/components/QuickViewModal').then((m) => m.QuickViewModal), {
-  ssr: false,
-});
+import { BrandLoadingScreen } from '@/components/common/BrandLoadingScreen';
 import { useCatalog } from '@/context/CatalogContext';
 import { useAuth } from '@/context/AuthContext';
 import { createHelpWhatsAppUrl } from '@/utils/whatsapp';
@@ -72,7 +28,7 @@ function StorefrontContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { products, storeConfig, catalogStats } = useCatalog();
-  const { user } = useAuth();
+  const { user, openAuthModal } = useAuth();
 
   const tabParam = searchParams.get('tab');
   const categoryParam = searchParams.get('category');
@@ -87,19 +43,61 @@ function StorefrontContent() {
   const [orders, setOrders] = useState([]);
   const [isClientStorageLoaded, setIsClientStorageLoaded] = useState(false);
 
-  // Cart & Wishlist state initialized completely EMPTY for clean start
+  // Brand Loading Screen & Navbar Morph Animation state
+  const [isBrandLoading, setIsBrandLoading] = useState(true);
+  const [isLogoHidden, setIsLogoHidden] = useState(true);
+
+  // Synchronize activeTab whenever searchParams changes (e.g. Back/Forward navigation, direct links)
+  useEffect(() => {
+    const validTabs = ['home', 'catalog', 'offers', 'contact', 'cart', 'profile'];
+    const currentTab = tabParam && validTabs.includes(tabParam) ? tabParam : 'home';
+    setActiveTab(currentTab);
+    if (categoryParam) {
+      setSelectedCategory(categoryParam);
+    }
+  }, [tabParam, categoryParam]);
+
+  // Synchronize activeTab on browser Back/Forward (popstate event)
+  useEffect(() => {
+    const handlePopState = () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const tab = urlParams.get('tab');
+      const validTabs = ['home', 'catalog', 'offers', 'contact', 'cart', 'profile'];
+      setActiveTab(tab && validTabs.includes(tab) ? tab : 'home');
+      const cat = urlParams.get('category');
+      if (cat) setSelectedCategory(cat);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  // Cart & Wishlist state: strictly isolated per user session
   const [cartItems, setCartItems] = useState({});
   const [wishlist, setWishlist] = useState({});
   const [recentlyViewedIds, setRecentlyViewedIds] = useState([]);
 
-  // Load persistent user activity from localStorage on mount
+  // Track previous user to detect login, logout, or account switches
+  const prevUserRef = useRef(user);
+  const isCartSyncedWithBackendRef = useRef(false);
+
+  // Clean mount: load recently viewed & orders; clean up any legacy un-scoped carts
   useEffect(() => {
     try {
-      const savedCart = localStorage.getItem('nakoda_cart_v2');
-      if (savedCart) setCartItems(JSON.parse(savedCart));
-
-      const savedWishlist = localStorage.getItem('nakoda_wishlist_v2');
-      if (savedWishlist) setWishlist(JSON.parse(savedWishlist));
+      // Remove all legacy un-scoped storage to ensure cart and wishlist start 100% empty by default
+      const keysToPurge = [
+        'nakoda_cart_v2',
+        'nakoda_wishlist_v2',
+        'nakoda_cart',
+        'nakoda_wishlist',
+        'shopease_cart',
+        'shopease_cart_v1',
+        'shopease_wishlist',
+        'cart',
+        'cartItems',
+        'wishlist',
+      ];
+      keysToPurge.forEach((k) => localStorage.removeItem(k));
 
       const savedRecent = localStorage.getItem('nakoda_recent_v2');
       if (savedRecent) setRecentlyViewedIds(JSON.parse(savedRecent));
@@ -107,27 +105,11 @@ function StorefrontContent() {
       const savedOrders = localStorage.getItem('nakoda_orders_v2');
       if (savedOrders) setOrders(JSON.parse(savedOrders));
     } catch (e) {
-      console.warn('Failed to load user state from storage', e);
+      console.warn('Failed to load user activity storage', e);
     } finally {
       setIsClientStorageLoaded(true);
     }
   }, []);
-
-  // Save cart on user activity
-  useEffect(() => {
-    if (!isClientStorageLoaded) return;
-    try {
-      localStorage.setItem('nakoda_cart_v2', JSON.stringify(cartItems));
-    } catch (e) {}
-  }, [cartItems, isClientStorageLoaded]);
-
-  // Save wishlist on user activity
-  useEffect(() => {
-    if (!isClientStorageLoaded) return;
-    try {
-      localStorage.setItem('nakoda_wishlist_v2', JSON.stringify(wishlist));
-    } catch (e) {}
-  }, [wishlist, isClientStorageLoaded]);
 
   // Save recently viewed on user activity
   useEffect(() => {
@@ -145,8 +127,136 @@ function StorefrontContent() {
     } catch (e) {}
   }, [orders, isClientStorageLoaded]);
 
+  // ─── USER TRANSITION & LOGOUT CLEANUP ──────────────────────────────────────────
+  useEffect(() => {
+    const prevUserId = prevUserRef.current ? (prevUserRef.current.id || prevUserRef.current._id || prevUserRef.current.email) : null;
+    const currentUserId = user ? (user.id || user._id || user.email) : null;
+
+    if (prevUserId && !currentUserId) {
+      // ─── LOGOUT BEHAVIOR: Wipe in-memory cart and wishlist state completely ───
+      setCartItems({});
+      setWishlist({});
+      isCartSyncedWithBackendRef.current = false;
+      try {
+        localStorage.removeItem('nakoda_cart_v2');
+        localStorage.removeItem('nakoda_wishlist_v2');
+        localStorage.removeItem(`nakoda_cart_${prevUserId}`);
+        localStorage.removeItem(`nakoda_wishlist_${prevUserId}`);
+      } catch (e) {}
+    } else if (prevUserId !== currentUserId && currentUserId) {
+      // ─── USER SWITCH / LOGIN: Reset in-memory states before fetching new user data ───
+      setCartItems({});
+      setWishlist({});
+      isCartSyncedWithBackendRef.current = false;
+    }
+
+    prevUserRef.current = user;
+  }, [user]);
+
+  // ─── SYNCHRONIZE WISHLIST AND CART FROM BACKEND (AUTHENTICATED ONLY) ───────────
+  useEffect(() => {
+    if (!user) {
+      // Guest users do not have persistent backend cart/wishlist
+      isCartSyncedWithBackendRef.current = false;
+      return;
+    }
+
+    let isMounted = true;
+
+    // 1. Fetch persistent wishlist belonging ONLY to this user
+    fetch('/api/wishlist')
+      .then((res) => res.json())
+      .then((data) => {
+        if (!isMounted) return;
+        if (data.success && Array.isArray(data.wishlist)) {
+          const freshWishlist = {};
+          data.wishlist.forEach((item) => {
+            if (item.productId) freshWishlist[item.productId] = true;
+          });
+          setWishlist(freshWishlist);
+        } else {
+          setWishlist({});
+        }
+      })
+      .catch(() => {
+        if (isMounted) setWishlist({});
+      });
+
+    // 2. Fetch persistent cart belonging ONLY to this user
+    fetch('/api/cart')
+      .then((res) => res.json())
+      .then((data) => {
+        if (!isMounted) return;
+        if (data.success && data.cart && Array.isArray(data.cart.items)) {
+          const freshCart = {};
+          data.cart.items.forEach((it) => {
+            if (it.productId) {
+              const catalogProd = (products || []).find((p) => p.id === it.productId);
+              freshCart[it.productId] = {
+                ...(catalogProd || {}),
+                id: it.productId,
+                productId: it.productId,
+                name: catalogProd ? catalogProd.name : (it.name || 'Product'),
+                price: typeof it.price === 'number' && it.price > 0 ? it.price : (catalogProd ? catalogProd.price : 0),
+                image: catalogProd ? catalogProd.image : (it.image || ''),
+                quantity: Math.max(1, Math.min(99, it.quantity || 1)),
+                selectedColor: it.selectedColor || '',
+                selectedSize: it.selectedSize || '',
+              };
+            }
+          });
+          setCartItems(freshCart);
+        } else {
+          setCartItems({});
+        }
+        isCartSyncedWithBackendRef.current = true;
+      })
+      .catch(() => {
+        if (isMounted) isCartSyncedWithBackendRef.current = true;
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user, products]);
+
+  // ─── SYNCHRONIZE CART CHANGES TO MONGODB ATLAS (AUTHENTICATED ONLY) ───────────
+  const cartSyncTimeoutRef = useRef(null);
+  useEffect(() => {
+    // Only synchronize after the initial cart fetch from the server is complete
+    if (!user || !isCartSyncedWithBackendRef.current) return;
+
+    if (cartSyncTimeoutRef.current) clearTimeout(cartSyncTimeoutRef.current);
+    cartSyncTimeoutRef.current = setTimeout(() => {
+      const itemsList = Object.entries(cartItems)
+        .filter(([_, item]) => item && item.quantity > 0)
+        .map(([id, item]) => ({
+          productId: id,
+          quantity: Math.max(1, Math.min(99, item.quantity || 1)),
+          selectedColor: item.selectedColor || '',
+          selectedSize: item.selectedSize || '',
+          name: item.name || '',
+          price: item.price || 0,
+          image: item.image || '',
+        }));
+
+      fetch('/api/cart', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items: itemsList }),
+      }).catch((err) => {
+        console.warn('Cart background synchronization failed:', err);
+      });
+    }, 800);
+
+    return () => {
+      if (cartSyncTimeoutRef.current) clearTimeout(cartSyncTimeoutRef.current);
+    };
+  }, [cartItems, user]);
+
   const [toasts, setToasts] = useState([]);
   const lastToastRef = useRef({ key: '', ts: 0 });
+
 
   const recordRecentlyViewed = useCallback((productId) => {
     if (!productId) return;
@@ -233,18 +343,36 @@ function StorefrontContent() {
     setQuickViewProduct(product);
   };
 
-  // Add to cart handler
+  // Add to cart handler with stock verification and snapshot preservation
   const handleAddToCart = (product) => {
-    if (product?.id) recordRecentlyViewed(product.id);
-    const qtyToAdd = product.quantity || 1;
+    if (!product || !product.id) return;
+    recordRecentlyViewed(product.id);
+    const qtyToAdd = Math.max(1, parseInt(product.quantity, 10) || 1);
+
+    // Stock limit verification
+    const stockLimit = typeof product.stockCount === 'number' ? product.stockCount : 99;
+    if (product.stockStatus === 'out_of_stock' || (typeof product.stockCount === 'number' && product.stockCount <= 0)) {
+      addToast('error', 'Out of Stock ⚠️', `${product.name} is currently out of stock.`);
+      return;
+    }
+
     setCartItems((prev) => {
       const existing = prev[product.id];
       const currentQty = existing ? existing.quantity : 0;
+      const newQty = Math.min(stockLimit, currentQty + qtyToAdd);
+
       return {
         ...prev,
         [product.id]: {
           ...product,
-          quantity: currentQty + qtyToAdd,
+          id: product.id,
+          productId: product.id,
+          name: product.name || existing?.name || 'Product',
+          price: typeof product.price === 'number' ? product.price : (existing?.price || 0),
+          image: product.image || existing?.image || '',
+          quantity: newQty,
+          selectedColor: product.selectedColor || existing?.selectedColor || '',
+          selectedSize: product.selectedSize || existing?.selectedSize || '',
         },
       };
     });
@@ -256,7 +384,7 @@ function StorefrontContent() {
     );
   };
 
-  // Update quantity handler
+  // Update quantity handler with stock limit protection and item removal
   const handleUpdateQuantity = (productId, newQuantity) => {
     setCartItems((prev) => {
       const current = prev[productId];
@@ -269,17 +397,20 @@ function StorefrontContent() {
         return next;
       }
 
+      const stockLimit = typeof current.stockCount === 'number' ? current.stockCount : 99;
+      const cappedQty = Math.min(stockLimit, Math.max(1, newQuantity));
+
       return {
         ...prev,
         [productId]: {
           ...current,
-          quantity: newQuantity,
+          quantity: cappedQty,
         },
       };
     });
   };
 
-  // Wishlist favorite toggle (handles both full product object and ID string)
+  // Wishlist favorite toggle (handles guest prompting, auto-revert, authenticated persistence & rollback)
   const handleToggleFavorite = (productOrId) => {
     const productId = typeof productOrId === 'string' ? productOrId : productOrId?.id;
     if (!productId) return;
@@ -288,13 +419,75 @@ function StorefrontContent() {
       : products.find((p) => p.id === productId);
     const productName = foundProduct?.name || 'Item';
 
-    const isCurrentlyFav = !!wishlist[productId];
-    if (isCurrentlyFav) {
-      addToast('info', 'Removed from Wishlist 💔', `${productName} was removed from favorites.`);
-    } else {
-      addToast('success', 'Saved to Wishlist ❤️', `${productName} added to your favorites.`);
+    // ─── GUEST USER BEHAVIOR ───
+    if (!user) {
+      // 1. Temporarily show the product as selected/liked in the UI
+      setWishlist((prev) => ({ ...prev, [productId]: true }));
+
+      // 2. Clearly tell the user that they need to log in or create an account
+      addToast(
+        'info',
+        'Sign in required 🔒',
+        'Please sign in or create an account to save products to your wishlist.'
+      );
+
+      // 3. Immediately open the Login/Signup popup/modal
+      openAuthModal(
+        // On successful login / signup:
+        async (loggedInUser) => {
+          // Product remains in wishlist UI
+          setWishlist((prev) => ({ ...prev, [productId]: true }));
+          // Save permanently to the newly authenticated user's DB wishlist
+          try {
+            const res = await fetch('/api/wishlist', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ productId }),
+            });
+            const data = await res.json();
+            if (data.success) {
+              addToast('success', 'Saved to Wishlist ❤️', `${productName} added to your wishlist.`);
+            } else {
+              // Revert if API fails
+              setWishlist((prev) => {
+                const next = { ...prev };
+                delete next[productId];
+                return next;
+              });
+              addToast('error', 'Error', data.error || 'Failed to save to wishlist.');
+            }
+          } catch (e) {
+            setWishlist((prev) => {
+              const next = { ...prev };
+              delete next[productId];
+              return next;
+            });
+            addToast('error', 'Error', 'Failed to connect to wishlist service.');
+          }
+        },
+        // Modal options & Cancel handler:
+        {
+          title: 'Save to your Wishlist ❤️',
+          subtitle: 'Please sign in or create an account to save products to your wishlist.',
+          defaultTab: 'login',
+          onCancel: () => {
+            // Automatically remove the temporary wishlist/heart state.
+            // The product should return to its normal unliked state.
+            setWishlist((prev) => {
+              const next = { ...prev };
+              delete next[productId];
+              return next;
+            });
+          },
+        }
+      );
+      return;
     }
 
+    // ─── AUTHENTICATED USER BEHAVIOR ───
+    const isCurrentlyFav = !!wishlist[productId];
+
+    // Optimistic UI update
     setWishlist((prev) => {
       const next = { ...prev };
       if (isCurrentlyFav) {
@@ -304,7 +497,52 @@ function StorefrontContent() {
       }
       return next;
     });
+
+    if (isCurrentlyFav) {
+      addToast('info', 'Removed from Wishlist 💔', `${productName} was removed from favorites.`);
+      fetch(`/api/wishlist?productId=${encodeURIComponent(productId)}`, { method: 'DELETE' })
+        .then((res) => res.json())
+        .then((data) => {
+          if (!data.success) {
+            // Revert optimistic update on failure
+            setWishlist((prev) => ({ ...prev, [productId]: true }));
+            addToast('error', 'Error', 'Failed to remove from wishlist. Changes reverted.');
+          }
+        })
+        .catch(() => {
+          setWishlist((prev) => ({ ...prev, [productId]: true }));
+          addToast('error', 'Error', 'Connection failed. Changes reverted.');
+        });
+    } else {
+      addToast('success', 'Saved to Wishlist ❤️', `${productName} added to your favorites.`);
+      fetch('/api/wishlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ productId }),
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (!data.success) {
+            // Revert optimistic update on failure
+            setWishlist((prev) => {
+              const next = { ...prev };
+              delete next[productId];
+              return next;
+            });
+            addToast('error', 'Error', data.error || 'Failed to add to wishlist. Changes reverted.');
+          }
+        })
+        .catch(() => {
+          setWishlist((prev) => {
+            const next = { ...prev };
+            delete next[productId];
+            return next;
+          });
+          addToast('error', 'Error', 'Connection failed. Changes reverted.');
+        });
+    }
   };
+
 
   // Order placement from Cart
   const handlePlaceOrder = (orderData) => {
@@ -364,14 +602,25 @@ function StorefrontContent() {
   };
 
   return (
-    <div className="relative min-h-screen bg-[#F5F5F3] text-[#171717] flex flex-col font-sans overflow-x-hidden selection:bg-[#9FD842] selection:text-[#171717]">
+    <div className="relative min-h-screen bg-[#FBFBFD] text-[#1D1D1F] flex flex-col font-sans overflow-x-hidden selection:bg-[#0071E3] selection:text-white">
       
-      {/* Floating Navigation Header */}
+      {/* Brand Loading Screen with Navbar Morph Animation */}
+      {isBrandLoading && (
+        <BrandLoadingScreen
+          onLanded={() => setIsLogoHidden(false)}
+          onComplete={() => setIsBrandLoading(false)}
+        />
+      )}
+
+      {/* Primary Navigation Header */}
       <Navbar
         cartCount={totalCartCount}
+        wishlistCount={Object.keys(wishlist).length}
         activeTab={activeTab}
         onNavClick={handleNavClick}
+        onExploreClick={handleExploreCatalog}
         user={user}
+        isLogoHidden={isLogoHidden}
       />
 
       {/* Main Content Area: Home, Catalog, Offers, Contact, Cart, Profile */}
@@ -379,11 +628,16 @@ function StorefrontContent() {
         {activeTab === 'home' && (
           <>
             <HeroSection 
-              onExploreClick={() => handleExploreCatalog('all')}
+              onExploreClick={handleExploreCatalog}
+              onNavClick={handleNavClick}
+              cartCount={totalCartCount}
+              user={user}
+              activeTab={activeTab}
             />
             <Categories
               selectedCategory={selectedCategory}
               onCategoryClick={handleCategoryClick}
+              onExploreCatalog={handleExploreCatalog}
             />
             <PopularProducts
               cartItems={cartItems}
@@ -398,8 +652,6 @@ function StorefrontContent() {
             />
             <FeatureBenefits />
             <PromoBanner onCheckOffers={() => handleNavClick('offers', 'Offers')} />
-            
-            {/* 1. Recently Viewed Section at the End of Home Page */}
             <RecentlyViewed
               products={products}
               recentlyViewedIds={recentlyViewedIds}
@@ -493,7 +745,7 @@ function StorefrontContent() {
 
 export default function StorefrontPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#F5F5F3]" />}>
+    <Suspense fallback={<div className="min-h-screen bg-[#FBFBFD]" />}>
       <StorefrontContent />
     </Suspense>
   );
