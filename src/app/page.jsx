@@ -22,6 +22,7 @@ import { BrandLoadingScreen } from '@/components/common/BrandLoadingScreen';
 import { useCatalog } from '@/context/CatalogContext';
 import { useAuth } from '@/context/AuthContext';
 import { createHelpWhatsAppUrl } from '@/utils/whatsapp';
+import { getProductSizes } from '@/utils/productOptions';
 import { motion } from 'framer-motion';
 
 function StorefrontContent() {
@@ -327,10 +328,10 @@ function StorefrontContent() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Category click interaction on Home page (filters inline without switching tab)
+  // Category click interaction on Home page (navigates to catalog filtered by category)
   const handleCategoryClick = (category) => {
-    const catId = category?.id || 'all';
-    setSelectedCategory((prev) => (prev === catId ? 'all' : catId));
+    const catId = typeof category === 'string' ? category : (category?.id || 'all');
+    handleExploreCatalog(catId);
   };
 
   const handleResetCategory = () => {
@@ -356,6 +357,10 @@ function StorefrontContent() {
       return;
     }
 
+    // Determine initial default size if product has sizes (clothing & shoes)
+    const availableSizes = getProductSizes(product);
+    const defaultSize = product.selectedSize || product.selectedVariant || (availableSizes.length > 0 ? availableSizes[0] : '');
+
     setCartItems((prev) => {
       const existing = prev[product.id];
       const currentQty = existing ? existing.quantity : 0;
@@ -372,7 +377,7 @@ function StorefrontContent() {
           image: product.image || existing?.image || '',
           quantity: newQty,
           selectedColor: product.selectedColor || existing?.selectedColor || '',
-          selectedSize: product.selectedSize || existing?.selectedSize || '',
+          selectedSize: product.selectedSize || product.selectedVariant || existing?.selectedSize || defaultSize || '',
         },
       };
     });
@@ -408,6 +413,23 @@ function StorefrontContent() {
         },
       };
     });
+  };
+
+  // Update size handler for cart items
+  const handleUpdateSize = (productId, newSize) => {
+    setCartItems((prev) => {
+      const current = prev[productId];
+      if (!current) return prev;
+
+      return {
+        ...prev,
+        [productId]: {
+          ...current,
+          selectedSize: newSize,
+        },
+      };
+    });
+    addToast('info', 'Size Updated 📏', `Size set to ${newSize}.`);
   };
 
   // Wishlist favorite toggle (handles guest prompting, auto-revert, authenticated persistence & rollback)
@@ -563,8 +585,8 @@ function StorefrontContent() {
       : '/?tab=catalog';
     if (typeof window !== 'undefined') {
       window.history.pushState({ tab: 'catalog', category: categoryId }, '', newUrl);
+      window.scrollTo(0, 0);
     }
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   // Footer navigation
@@ -696,6 +718,7 @@ function StorefrontContent() {
             wishlist={wishlist}
             products={products}
             onUpdateQuantity={handleUpdateQuantity}
+            onUpdateSize={handleUpdateSize}
             onAddToCart={handleAddToCart}
             onToggleFavorite={handleToggleFavorite}
             onQuickView={handleQuickView}

@@ -61,12 +61,6 @@ export const PromoBanner = ({ onCheckOffers }) => {
                   fill
                   className="object-cover"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-                <div className="absolute bottom-3 sm:bottom-4 left-3 sm:left-4 right-3 sm:right-4 text-center">
-                  <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-white bg-black/70 backdrop-blur-md px-2.5 sm:px-3 py-1 rounded-full border border-white/20 inline-block truncate max-w-full">
-                    Code: NAKODA20 (20% OFF)
-                  </span>
-                </div>
               </div>
             </div>
 

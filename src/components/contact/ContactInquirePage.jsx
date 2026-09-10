@@ -12,9 +12,6 @@ import {
   Sparkles,
   CheckCircle2,
   HelpCircle,
-  Copy,
-  Check,
-  ExternalLink,
   ChevronDown
 } from 'lucide-react';
 import { useCatalog } from '@/context/CatalogContext';
@@ -444,49 +441,29 @@ export const ContactInquirePage = ({
 
                 <div className="space-y-2.5 sm:space-y-3 mb-4">
                   {/* Direct Email */}
-                  <div className="p-3 sm:p-3.5 rounded-xl sm:rounded-2xl bg-[#F5F5F7]/60 border border-black/5 flex items-center justify-between gap-2.5 sm:gap-3">
-                    <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-                      <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-[#0071E3]/20 text-[#0071E3] flex items-center justify-center shrink-0">
-                        <Mail className="w-4 h-4" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-[10px] font-bold text-[#777777] uppercase tracking-wider">Email Us Directly</p>
-                        <a href={`mailto:${storeConfig.email || 'vinaypokharna36@gmail.com'}`} className="text-xs sm:text-sm font-extrabold text-[#1D1D1F] hover:text-[#0071E3] truncate block">
-                          {storeConfig.email || 'vinaypokharna36@gmail.com'}
-                        </a>
-                      </div>
+                  <div className="p-3 sm:p-3.5 rounded-xl sm:rounded-2xl bg-[#F5F5F7]/60 border border-black/5 flex items-center gap-2.5 sm:gap-3">
+                    <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-[#0071E3]/20 text-[#0071E3] flex items-center justify-center shrink-0">
+                      <Mail className="w-4 h-4" />
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => handleCopy(storeConfig.email || 'vinaypokharna36@gmail.com', 'Email Address')}
-                      className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-white hover:bg-[#0071E3]/15 text-[#0071E3] border border-black/5 shrink-0 transition-colors"
-                      title="Copy Email"
-                    >
-                      {copiedField === 'Email Address' ? <Check className="w-3.5 h-3.5 text-[#0071E3]" /> : <Copy className="w-3.5 h-3.5" />}
-                    </button>
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-bold text-[#777777] uppercase tracking-wider">Email Us Directly</p>
+                      <a href={`mailto:${storeConfig.email || 'vinaypokharna36@gmail.com'}`} className="text-xs sm:text-sm font-extrabold text-[#1D1D1F] hover:text-[#0071E3] truncate block">
+                        {storeConfig.email || 'vinaypokharna36@gmail.com'}
+                      </a>
+                    </div>
                   </div>
 
                   {/* Direct Phone Call */}
-                  <div className="p-3 sm:p-3.5 rounded-xl sm:rounded-2xl bg-[#F5F5F7]/60 border border-black/5 flex items-center justify-between gap-2.5 sm:gap-3">
-                    <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-                      <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-[#0071E3]/20 text-[#0071E3] flex items-center justify-center shrink-0">
-                        <Phone className="w-4 h-4" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-[10px] font-bold text-[#777777] uppercase tracking-wider">Store Call Desk</p>
-                        <a href={`tel:${storeConfig.whatsappNumber || '9879451341'}`} className="text-xs sm:text-sm font-extrabold text-[#1D1D1F] hover:text-[#0071E3] truncate block">
-                          {storeConfig.whatsappDisplay || '+91 98794 51341'}
-                        </a>
-                      </div>
+                  <div className="p-3 sm:p-3.5 rounded-xl sm:rounded-2xl bg-[#F5F5F7]/60 border border-black/5 flex items-center gap-2.5 sm:gap-3">
+                    <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-[#0071E3]/20 text-[#0071E3] flex items-center justify-center shrink-0">
+                      <Phone className="w-4 h-4" />
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => handleCopy(storeConfig.whatsappDisplay || '+91 98794 51341', 'Phone Number')}
-                      className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-white hover:bg-[#0071E3]/15 text-[#0071E3] border border-black/5 shrink-0 transition-colors"
-                      title="Copy Phone Number"
-                    >
-                      {copiedField === 'Phone Number' ? <Check className="w-3.5 h-3.5 text-[#0071E3]" /> : <Copy className="w-3.5 h-3.5" />}
-                    </button>
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-bold text-[#777777] uppercase tracking-wider">Store Call Desk</p>
+                      <a href={`tel:${storeConfig.whatsappNumber || '9879451341'}`} className="text-xs sm:text-sm font-extrabold text-[#1D1D1F] hover:text-[#0071E3] truncate block">
+                        {storeConfig.whatsappDisplay || '+91 98794 51341'}
+                      </a>
+                    </div>
                   </div>
 
                   {/* Retail Store Address */}
@@ -498,11 +475,11 @@ export const ContactInquirePage = ({
                       <div className="min-w-0">
                         <p className="text-[10px] font-bold text-[#777777] uppercase tracking-wider">Store Visit</p>
                         <p className="text-xs sm:text-sm font-extrabold text-[#1D1D1F] mt-0.5 leading-snug">
-                          {storeConfig.address || 'Shop #14, Main Market Road, Bangalore'}
+                          {storeConfig?.address || '6, Honey Complex, Opposite Gunjan Cinema, Koparli Road, Gunjan, G.I.D.C, Vapi, Gujarat 396195'}
                         </p>
                         <p className="text-[10px] sm:text-[11px] text-[#777777] mt-0.5 flex items-center gap-1.5">
                           <Clock className="w-3 h-3 text-[#0071E3]" />
-                          <span>{storeConfig.hours || 'Mon - Sun: 9:30 AM – 9:30 PM'}</span>
+                          <span>{storeConfig?.hours || 'Mon - Sun: 9:30 AM – 9:30 PM'}</span>
                         </p>
                       </div>
                     </div>
@@ -513,24 +490,12 @@ export const ContactInquirePage = ({
                 <div className="flex-1 min-h-[200px] sm:min-h-[240px] h-52 sm:h-64 lg:h-auto w-full rounded-xl sm:rounded-2xl overflow-hidden border border-black/5 relative shadow-inner bg-[#F5F5F7]/30 group">
                   <iframe
                     title="Store Location Google Map"
-                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3887.9854452140884!2d77.6384!3d12.9719!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3bae1681a8b9f36f%3A0x6b1f2b6e70a0e0a!2sIndiranagar%2C%20Bengaluru%2C%20Karnataka!5e0!3m2!1sen!2sin!4v1680000000000!5m2!1sen!2sin"
+                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3741.056156715697!2d72.9165531!3d20.3745874!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3be0ce344bde1f5f%3A0xc2c580adb5f98745!2sGunjan%20Char%20Rasta%2C%20Housing%20Sector%2C%20GIDC%2C%20Vapi%2C%20Gujarat%20396191!5e0!3m2!1sen!2sin!4v1725930000000!5m2!1sen!2sin"
                     className="w-full h-full min-h-[200px] border-0"
                     loading="lazy"
                     allowFullScreen
                     referrerPolicy="no-referrer-when-downgrade"
                   />
-                  <div className="absolute bottom-2.5 right-2.5 sm:bottom-3 sm:right-3 pointer-events-auto">
-                    <a
-                      href={STORE_LOCATION_DETAILS.googleMapsUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-lg sm:rounded-xl bg-white/95 backdrop-blur-md hover:bg-white text-[#1D1D1F] font-bold text-[11px] sm:text-xs flex items-center gap-1.5 shadow-md border border-black/5 transition-all hover:scale-105 active:scale-95"
-                    >
-                      <MapPin className="w-3.5 h-3.5 text-[#0071E3]" />
-                      <span>Open Map</span>
-                      <ExternalLink className="w-3 h-3 text-[#777777]" />
-                    </a>
-                  </div>
                 </div>
               </div>
             </div>
@@ -796,7 +761,7 @@ export const ContactInquirePage = ({
                     </label>
                     <textarea
                       rows={3}
-                      placeholder="e.g. Need customized box packaging, delivery to Bangalore, specific polish finishes..."
+                      placeholder="e.g. Need customized box packaging, delivery to Vapi, specific polish finishes..."
                       value={inquiryForm.notes}
                       onChange={(e) => setInquiryForm({ ...inquiryForm, notes: e.target.value })}
                       className="w-full px-3.5 sm:px-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl bg-[#F5F5F7]/60 border border-black/5 text-xs sm:text-sm text-[#1D1D1F] focus:bg-white focus:border-[#0071E3] focus:outline-none focus:ring-2 focus:ring-[#0071E3]/30 resize-none placeholder:text-[#888888] transition-all"

@@ -6,6 +6,7 @@ import { Heart, Star, ShoppingBag, Plus, Minus, MessageCircle, Eye } from 'lucid
 import Image from 'next/image';
 import { STORE_CONFIG } from '@/data/mockData';
 import { formatPrice } from '@/utils/formatPrice';
+import { getProductSizes } from '@/utils/productOptions';
 
 export const ProductCardComponent = ({ 
   product, 
@@ -18,6 +19,7 @@ export const ProductCardComponent = ({
   onWhatsAppInquiry,
 }) => {
   const isOutOfStock = product.stockStatus === 'out_of_stock';
+  const sizes = getProductSizes(product);
 
   return (
     <motion.article
@@ -114,6 +116,23 @@ export const ProductCardComponent = ({
               ({product.reviews || 80})
             </span>
           </div>
+
+          {/* Sizes Preview (Clothing & Shoes Only) */}
+          {sizes.length > 0 && (
+            <div className="flex items-center gap-1 flex-wrap mb-2">
+              {sizes.slice(0, 4).map((sz) => (
+                <span
+                  key={sz}
+                  className="text-[10px] font-sans font-medium px-1.5 py-0.5 rounded text-[#1D1D1F] bg-[#F5F5F7] border border-black/[0.04]"
+                >
+                  {sz}
+                </span>
+              ))}
+              {sizes.length > 4 && (
+                <span className="text-[9px] text-[#86868B] font-semibold">+{sizes.length - 4}</span>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Price & Action Row */}

@@ -14,6 +14,14 @@ export const Categories = ({
   // Filter out the 'all' category for the visual category cards
   const displayCategories = CATALOG_CATEGORIES.filter((c) => c.id !== 'all');
 
+  const handleCardClick = (catId) => {
+    if (onCategoryClick) {
+      onCategoryClick(catId);
+    } else if (onExploreCatalog) {
+      onExploreCatalog(catId);
+    }
+  };
+
   return (
     <section
       id="categories-section"
@@ -21,7 +29,7 @@ export const Categories = ({
       className="relative w-full bg-[#FBFBFD] py-12 sm:py-20 lg:py-24 px-3.5 sm:px-8 lg:px-12 border-t border-black/[0.05]"
     >
       <div className="max-w-[1440px] mx-auto space-y-8 sm:space-y-12">
-        
+
         {/* Apple Style Section Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-3 sm:gap-4">
           <div className="space-y-2 sm:space-y-3">
@@ -34,6 +42,7 @@ export const Categories = ({
           </div>
 
           <button
+            type="button"
             onClick={() => onExploreCatalog && onExploreCatalog('all')}
             className="inline-flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-semibold text-[#0071E3] hover:text-[#0077ED] transition-colors self-start md:self-auto group cursor-pointer"
           >
@@ -54,12 +63,20 @@ export const Categories = ({
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.4, delay: idx * 0.05 }}
-                onClick={() => onCategoryClick && onCategoryClick(cat.id)}
-                className={`group relative aspect-[4/5] rounded-2xl sm:rounded-3xl overflow-hidden bg-white border cursor-pointer transition-all duration-300 ${
-                  isSelected
-                    ? 'border-[#1D1D1F] ring-2 ring-[#1D1D1F] shadow-lg'
-                    : 'border-black/[0.06] shadow-[0_2px_14px_rgba(0,0,0,0.04)] hover:shadow-[0_16px_36px_rgba(0,0,0,0.09)] hover:-translate-y-1'
-                }`}
+                onClick={() => handleCardClick(cat.id)}
+                role="button"
+                tabIndex={0}
+                aria-label={`Explore ${cat.name} collection`}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleCardClick(cat.id);
+                  }
+                }}
+                className={`group relative aspect-[4/5] rounded-2xl sm:rounded-3xl overflow-hidden bg-white border cursor-pointer select-none transition-all duration-300 active:scale-[0.98] ${isSelected
+                  ? 'border-[#1D1D1F] ring-2 ring-[#1D1D1F] shadow-lg'
+                  : 'border-black/[0.06] shadow-[0_2px_14px_rgba(0,0,0,0.04)] hover:shadow-[0_16px_36px_rgba(0,0,0,0.09)] hover:-translate-y-1'
+                  }`}
               >
                 {/* Background Category Image */}
                 <Image
@@ -71,19 +88,19 @@ export const Categories = ({
                 />
 
                 {/* Soft Apple Gradient Overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent pointer-events-none z-1" />
 
                 {/* Top Corner Icon/Pill */}
-                <div className="absolute top-2.5 sm:top-3.5 right-2.5 sm:right-3.5 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white/90 backdrop-blur-md flex items-center justify-center text-[#1D1D1F] group-hover:bg-[#1D1D1F] group-hover:text-white transition-colors shadow-sm">
+                <div className="absolute top-2.5 sm:top-3.5 right-2.5 sm:right-3.5 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white/90 backdrop-blur-md flex items-center justify-center text-[#1D1D1F] group-hover:bg-[#1D1D1F] group-hover:text-white transition-colors shadow-sm z-10">
                   <ArrowUpRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 </div>
 
-                {/* Bottom Details */}
-                <div className="absolute bottom-0 inset-x-0 p-3 sm:p-5 text-white flex flex-col justify-end">
-                  <span className="text-[9px] sm:text-[10px] font-sans font-semibold tracking-wider uppercase text-white/80 mb-0.5 sm:mb-1 block">
-                    {cat.count} Items
-                  </span>
-                  <h3 className="text-xs sm:text-base lg:text-lg font-bold tracking-tight text-white leading-tight font-sans line-clamp-1">
+                {/* Bottom Details: Category Title in clean bright white */}
+                <div className="absolute bottom-0 inset-x-0 p-3 sm:p-5 flex flex-col justify-end z-10 pointer-events-none">
+                  <h3 
+                    style={{ color: '#FFFFFF' }}
+                    className="text-sm sm:text-base lg:text-lg font-bold tracking-tight !text-white text-white leading-tight font-sans line-clamp-1 drop-shadow-md"
+                  >
                     {cat.name}
                   </h3>
                 </div>

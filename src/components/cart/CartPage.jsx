@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ShoppingBag,
@@ -20,13 +20,17 @@ import {
   Sparkles,
   Tag,
   ArrowUpRight,
+  MessageCircle,
 } from 'lucide-react';
 import Image from 'next/image';
 import { STORE_CONFIG } from '@/data/mockData';
 import { useAuth } from '@/context/AuthContext';
+import { useCatalog } from '@/context/CatalogContext';
 import { firePartyPopper } from '@/utils/confetti';
 import { orderService } from '@/services/orderService';
 import { formatPrice } from '@/utils/formatPrice';
+import { createCartWhatsAppUrl } from '@/utils/whatsapp';
+import { getProductSizes } from '@/utils/productOptions';
 
 const SHIPPING_THRESHOLD = 999;
 
@@ -40,7 +44,7 @@ const VALID_PROMOS = {
 };
 
 // ─── Checkout Modal ───────────────────────────────────────────────────────────
-const CheckoutModal = ({ cartList, subtotal, promoDiscountAmount, shippingFee, total, onClose, onSuccess, user }) => {
+const CheckoutModal = ({ cartList, products = [], subtotal, promoDiscountAmount, shippingFee, total, onClose, onSuccess, user }) => {
   const [step, setStep] = useState(1);
   const [payMethod, setPayMethod] = useState('cod');
   
@@ -49,8 +53,8 @@ const CheckoutModal = ({ cartList, subtotal, promoDiscountAmount, shippingFee, t
     name: user?.name || defaultAddr.name || '',
     phone: user?.phone || defaultAddr.phone || '',
     address: defaultAddr.address || '',
-    city: defaultAddr.city || 'Bangalore',
-    pincode: defaultAddr.pincode || '560001',
+    city: defaultAddr.city || 'Vapi',
+    pincode: defaultAddr.pincode || '396195',
   });
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -83,16 +87,26 @@ const CheckoutModal = ({ cartList, subtotal, promoDiscountAmount, shippingFee, t
       customerName: form.name,
       customerEmail: user?.email || '',
       customerPhone: form.phone,
-      items: cartList.map(item => ({
-        id: item.id,
-        name: item.name,
-        price: item.price,
-        quantity: item.quantity,
-        image: item.image,
-        selectedColor: item.selectedColor?.name || '',
-        selectedSize: item.selectedSize || '',
-      })),
-      itemSummary: cartList.map(i => `${i.name} (x${i.quantity})`).join(', '),
+      items: cartList.map(item => {
+        const fullProduct = products?.find((p) => p.id === item.id || p.id === item.productId) || item;
+        const availableSizes = getProductSizes(fullProduct);
+        const itemSize = (availableSizes.length > 0) ? (item.selectedSize || availableSizes[0]) : '';
+        return {
+          id: item.id,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+          image: item.image,
+          selectedColor: item.selectedColor?.name || '',
+          selectedSize: itemSize,
+        };
+      }),
+      itemSummary: cartList.map(i => {
+        const fullProduct = products?.find((p) => p.id === i.id || p.id === i.productId) || i;
+        const availableSizes = getProductSizes(fullProduct);
+        const itemSize = (availableSizes.length > 0) ? (i.selectedSize || availableSizes[0]) : '';
+        return `${i.name}${itemSize ? ` (Size: ${itemSize})` : ''} (x${i.quantity})`;
+      }).join(', '),
       amount: total,
       status: 'processing',
       statusLabel: 'Processing',
@@ -114,15 +128,48 @@ const CheckoutModal = ({ cartList, subtotal, promoDiscountAmount, shippingFee, t
     }
   };
 
+  // Lock background window and document scroll while checkout modal is open
+  useEffect(() => {
+    const scrollY = window.scrollY;
+    const origBodyPosition = document.body.style.position;
+    const origBodyTop = document.body.style.top;
+    const origBodyWidth = document.body.style.width;
+    const origBodyOverflow = document.body.style.overflow;
+    const origHtmlOverflow = document.documentElement.style.overflow;
+
+    document.documentElement.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.width = '100%';
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && step !== 3) {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.documentElement.style.overflow = origHtmlOverflow || '';
+      document.body.style.position = origBodyPosition || '';
+      document.body.style.top = origBodyTop || '';
+      document.body.style.width = origBodyWidth || '';
+      document.body.style.overflow = origBodyOverflow || '';
+      window.scrollTo(0, scrollY);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onClose, step]);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 overscroll-none touch-none sm:touch-auto">
       {/* Backdrop */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         onClick={step !== 3 ? onClose : undefined}
-        className="fixed inset-0 bg-black/40 backdrop-blur-sm"
+        className="fixed inset-0 bg-black/40 backdrop-blur-sm touch-none overscroll-none"
       />
 
       {/* Modal sheet */}
@@ -131,10 +178,10 @@ const CheckoutModal = ({ cartList, subtotal, promoDiscountAmount, shippingFee, t
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 60 }}
         transition={{ type: 'spring', damping: 28, stiffness: 300 }}
-        className="relative w-full max-w-lg bg-white rounded-t-[28px] sm:rounded-[32px] border border-black/5 shadow-glass-modal z-10 max-h-[92vh] flex flex-col overflow-hidden"
+        className="relative w-full max-w-lg bg-white rounded-t-[28px] sm:rounded-[32px] border border-black/5 shadow-glass-modal z-10 max-h-[90vh] sm:max-h-[86vh] flex flex-col overflow-hidden overscroll-contain"
       >
         {/* Modal Header */}
-        <div className="p-4 sm:p-5 border-b border-black/[0.06] flex items-center justify-between flex-shrink-0">
+        <div className="p-4 sm:p-5 border-b border-black/[0.06] flex items-center justify-between flex-shrink-0 bg-white">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-full bg-[#F5F5F7] flex items-center justify-center text-[#1D1D1F]">
               <Package className="w-4 h-4" />
@@ -157,174 +204,217 @@ const CheckoutModal = ({ cartList, subtotal, promoDiscountAmount, shippingFee, t
 
         {/* ── Step 1: Address Form ── */}
         {step === 1 && (
-          <div className="p-4 sm:p-6 overflow-y-auto space-y-3.5 sm:space-y-4 flex-1">
-            <div>
-              <label className="text-xs font-bold text-[#1D1D1F] block mb-1">Full Name</label>
-              <input
-                type="text"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                placeholder="John Doe"
-                className="w-full px-4 py-2.5 rounded-full bg-[#F5F5F7]/60 border border-black/5 text-xs sm:text-sm text-[#1D1D1F] outline-none focus:ring-2 focus:ring-[#1D1D1F] focus:bg-white transition-all"
-              />
-              {errors.name && <p className="text-[11px] text-red-500 mt-1">{errors.name}</p>}
-            </div>
-
-            <div>
-              <label className="text-xs font-bold text-[#1D1D1F] block mb-1">Phone Number (WhatsApp)</label>
-              <input
-                type="tel"
-                value={form.phone}
-                onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                placeholder="+91 98765 43210"
-                className="w-full px-4 py-2.5 rounded-full bg-[#F5F5F7]/60 border border-black/5 text-xs sm:text-sm text-[#1D1D1F] outline-none focus:ring-2 focus:ring-[#1D1D1F] focus:bg-white transition-all"
-              />
-              {errors.phone && <p className="text-[11px] text-red-500 mt-1">{errors.phone}</p>}
-            </div>
-
-            <div>
-              <label className="text-xs font-bold text-[#1D1D1F] block mb-1">Street Address</label>
-              <textarea
-                value={form.address}
-                onChange={(e) => setForm({ ...form, address: e.target.value })}
-                rows={2}
-                placeholder="Flat / House No., Apartment name, Street"
-                className="w-full px-4 py-2.5 rounded-2xl bg-[#F5F5F7]/60 border border-black/5 text-xs sm:text-sm text-[#1D1D1F] outline-none focus:ring-2 focus:ring-[#1D1D1F] focus:bg-white resize-none transition-all"
-              />
-              {errors.address && <p className="text-[11px] text-red-500 mt-1">{errors.address}</p>}
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <>
+            <div className="p-4 sm:p-6 overflow-y-auto overscroll-contain space-y-3.5 sm:space-y-4 flex-1 min-h-0">
               <div>
-                <label className="text-xs font-bold text-[#1D1D1F] block mb-1">City</label>
+                <label className="text-xs font-bold text-[#1D1D1F] block mb-1">Full Name</label>
                 <input
                   type="text"
-                  value={form.city}
-                  onChange={(e) => setForm({ ...form, city: e.target.value })}
-                  placeholder="Bangalore"
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  placeholder="John Doe"
                   className="w-full px-4 py-2.5 rounded-full bg-[#F5F5F7]/60 border border-black/5 text-xs sm:text-sm text-[#1D1D1F] outline-none focus:ring-2 focus:ring-[#1D1D1F] focus:bg-white transition-all"
                 />
-                {errors.city && <p className="text-[11px] text-red-500 mt-1">{errors.city}</p>}
+                {errors.name && <p className="text-[11px] text-red-500 mt-1">{errors.name}</p>}
               </div>
 
               <div>
-                <label className="text-xs font-bold text-[#1D1D1F] block mb-1">PIN Code</label>
+                <label className="text-xs font-bold text-[#1D1D1F] block mb-1">Phone Number (WhatsApp)</label>
                 <input
-                  type="text"
-                  value={form.pincode}
-                  onChange={(e) => setForm({ ...form, pincode: e.target.value })}
-                  placeholder="560001"
+                  type="tel"
+                  value={form.phone}
+                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                  placeholder="+91 98765 43210"
                   className="w-full px-4 py-2.5 rounded-full bg-[#F5F5F7]/60 border border-black/5 text-xs sm:text-sm text-[#1D1D1F] outline-none focus:ring-2 focus:ring-[#1D1D1F] focus:bg-white transition-all"
                 />
-                {errors.pincode && <p className="text-[11px] text-red-500 mt-1">{errors.pincode}</p>}
+                {errors.phone && <p className="text-[11px] text-red-500 mt-1">{errors.phone}</p>}
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-[#1D1D1F] block mb-1">Street Address</label>
+                <textarea
+                  value={form.address}
+                  onChange={(e) => setForm({ ...form, address: e.target.value })}
+                  rows={2}
+                  placeholder="Flat / House No., Apartment name, Street"
+                  className="w-full px-4 py-2.5 rounded-2xl bg-[#F5F5F7]/60 border border-black/5 text-xs sm:text-sm text-[#1D1D1F] outline-none focus:ring-2 focus:ring-[#1D1D1F] focus:bg-white resize-none transition-all"
+                />
+                {errors.address && <p className="text-[11px] text-red-500 mt-1">{errors.address}</p>}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-bold text-[#1D1D1F] block mb-1">City</label>
+                  <input
+                    type="text"
+                    value={form.city}
+                    onChange={(e) => setForm({ ...form, city: e.target.value })}
+                    placeholder="Vapi"
+                    className="w-full px-4 py-2.5 rounded-full bg-[#F5F5F7]/60 border border-black/5 text-xs sm:text-sm text-[#1D1D1F] outline-none focus:ring-2 focus:ring-[#1D1D1F] focus:bg-white transition-all"
+                  />
+                  {errors.city && <p className="text-[11px] text-red-500 mt-1">{errors.city}</p>}
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-[#1D1D1F] block mb-1">PIN Code</label>
+                  <input
+                    type="text"
+                    value={form.pincode}
+                    onChange={(e) => setForm({ ...form, pincode: e.target.value })}
+                    placeholder="396195"
+                    className="w-full px-4 py-2.5 rounded-full bg-[#F5F5F7]/60 border border-black/5 text-xs sm:text-sm text-[#1D1D1F] outline-none focus:ring-2 focus:ring-[#1D1D1F] focus:bg-white transition-all"
+                  />
+                  {errors.pincode && <p className="text-[11px] text-red-500 mt-1">{errors.pincode}</p>}
+                </div>
               </div>
             </div>
 
-            <button
-              onClick={handleNext}
-              className="w-full mt-4 py-3.5 rounded-full bg-[#1D1D1F] text-white font-extrabold text-sm shadow-sm flex items-center justify-center gap-2 active:scale-95 transition-all"
-            >
-              <span>Continue to Payment</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
-          </div>
+            {/* Pinned Action Footer */}
+            <div className="p-4 sm:p-5 border-t border-black/[0.06] bg-white flex-shrink-0">
+              <button
+                onClick={handleNext}
+                className="w-full py-3.5 rounded-full bg-[#1D1D1F] hover:bg-black text-white font-extrabold text-sm shadow-sm flex items-center justify-center gap-2 active:scale-95 transition-all cursor-pointer"
+              >
+                <span>Continue to Payment</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+          </>
         )}
 
         {/* ── Step 2: Payment Method & Review ── */}
         {step === 2 && (
-          <div className="p-6 overflow-y-auto space-y-5 flex-1">
-            <div className="p-3.5 rounded-2xl bg-[#F5F5F7]/80 border border-black/5 flex items-start justify-between gap-3 text-xs">
-              <div>
-                <span className="font-bold text-[#1D1D1F]">Delivering to:</span>
-                <p className="text-[#777777] mt-0.5">{form.name} • {form.phone}</p>
-                <p className="text-[#777777]">{form.address}, {form.city} — {form.pincode}</p>
-              </div>
-              <button onClick={() => setStep(1)} className="text-[#0071E3] font-bold hover:underline flex-shrink-0">
-                Edit
-              </button>
-            </div>
-
-            <div>
-              <label className="text-xs font-bold text-[#1D1D1F] block mb-2">Select Payment Method</label>
-              <div className="space-y-2">
-                {[
-                  { id: 'cod', title: 'Cash on Delivery (COD)', desc: 'Pay when your package arrives at your door' },
-                  { id: 'upi', title: 'UPI / Card / NetBanking', desc: 'Instant confirmation via QR / Gateway' },
-                ].map((m) => (
-                  <label
-                    key={m.id}
-                    onClick={() => setPayMethod(m.id)}
-                    className={`flex items-start gap-3 p-3.5 rounded-2xl border cursor-pointer transition-all ${
-                      payMethod === m.id
-                        ? 'border-[#1D1D1F] bg-[#EBF5FF]/30'
-                        : 'border-black/5 bg-[#F5F5F7]/40 hover:bg-[#F5F5F7]'
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="paymentMethod"
-                      checked={payMethod === m.id}
-                      onChange={() => setPayMethod(m.id)}
-                      className="mt-0.5 accent-[#1D1D1F]"
-                    />
-                    <div>
-                      <span className="text-xs font-bold text-[#1D1D1F] block">{m.title}</span>
-                      <span className="text-[11px] text-[#777777]">{m.desc}</span>
-                    </div>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            <div className="p-4 rounded-2xl bg-[#F5F5F7]/60 border border-black/5 space-y-2 text-xs">
-              <div className="flex justify-between text-[#777777]">
-                <span>Items Subtotal</span>
-                <span className="font-bold text-[#1D1D1F]">{formatPrice(subtotal, STORE_CONFIG.currency)}</span>
-              </div>
-              {promoDiscountAmount > 0 && (
-                <div className="flex justify-between text-[#0071E3]">
-                  <span>Discount</span>
-                  <span className="font-bold">−{formatPrice(promoDiscountAmount, STORE_CONFIG.currency)}</span>
+          <>
+            <div className="p-4 sm:p-6 overflow-y-auto overscroll-contain space-y-4 sm:space-y-5 flex-1 min-h-0">
+              {/* Order Items Review with Size */}
+              <div className="p-3.5 rounded-2xl bg-[#F5F5F7]/80 border border-black/5 space-y-2">
+                <span className="text-xs font-bold text-[#1D1D1F] block">
+                  Order Items ({cartList.length})
+                </span>
+                <div className="divide-y divide-black/5 space-y-1.5">
+                  {cartList.map((item) => {
+                    const fullProduct = products?.find((p) => p.id === item.id || p.id === item.productId) || item;
+                    const availableSizes = getProductSizes(fullProduct);
+                    const itemSize = (availableSizes.length > 0) ? (item.selectedSize || availableSizes[0]) : '';
+                    return (
+                      <div key={item.id} className="pt-1.5 flex items-center justify-between text-xs">
+                        <div className="min-w-0 pr-2">
+                          <p className="font-bold text-[#1D1D1F] truncate">{item.name}</p>
+                          <div className="flex items-center gap-1.5 text-[11px] text-[#777777] mt-0.5 flex-wrap">
+                            <span>Qty: {item.quantity}</span>
+                            {itemSize && (
+                              <span className="bg-white px-2 py-0.5 rounded-full border border-black/5 font-semibold text-[#1D1D1F]">
+                                Size: {itemSize}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <span className="font-extrabold text-[#1D1D1F] shrink-0">
+                          {formatPrice((item.price || 0) * item.quantity, STORE_CONFIG.currency)}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
-              )}
-              <div className="flex justify-between text-[#777777]">
-                <span>Delivery</span>
-                <span className="font-bold text-[#1D1D1F]">{shippingFee === 0 ? 'FREE' : formatPrice(shippingFee, STORE_CONFIG.currency)}</span>
               </div>
-              <div className="pt-2 border-t border-black/10 flex justify-between text-sm font-extrabold text-[#1D1D1F]">
-                <span>Total Payable</span>
-                <span>{formatPrice(total, STORE_CONFIG.currency)}</span>
+
+              {/* Delivering To Address Card */}
+              <div className="p-3.5 rounded-2xl bg-[#F5F5F7]/80 border border-black/5 flex items-start justify-between gap-3 text-xs">
+                <div>
+                  <span className="font-bold text-[#1D1D1F]">Delivering to:</span>
+                  <p className="text-[#777777] mt-0.5">{form.name} • {form.phone}</p>
+                  <p className="text-[#777777]">{form.address}, {form.city} — {form.pincode}</p>
+                </div>
+                <button onClick={() => setStep(1)} className="text-[#0071E3] font-bold hover:underline flex-shrink-0 cursor-pointer">
+                  Edit
+                </button>
+              </div>
+
+              {/* Select Payment Method */}
+              <div>
+                <label className="text-xs font-bold text-[#1D1D1F] block mb-2">Select Payment Method</label>
+                <div className="space-y-2">
+                  {[
+                    { id: 'cod', title: 'Cash on Delivery (COD)', desc: 'Pay when your package arrives at your door' },
+                    { id: 'upi', title: 'UPI / Card / NetBanking', desc: 'Instant confirmation via QR / Gateway' },
+                  ].map((m) => (
+                    <label
+                      key={m.id}
+                      onClick={() => setPayMethod(m.id)}
+                      className={`flex items-start gap-3 p-3.5 rounded-2xl border cursor-pointer transition-all ${
+                        payMethod === m.id
+                          ? 'border-[#1D1D1F] bg-[#EBF5FF]/30'
+                          : 'border-black/5 bg-[#F5F5F7]/40 hover:bg-[#F5F5F7]'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="paymentMethod"
+                        checked={payMethod === m.id}
+                        onChange={() => setPayMethod(m.id)}
+                        className="mt-0.5 accent-[#1D1D1F]"
+                      />
+                      <div>
+                        <span className="text-xs font-bold text-[#1D1D1F] block">{m.title}</span>
+                        <span className="text-[11px] text-[#777777]">{m.desc}</span>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Price Breakdown */}
+              <div className="p-4 rounded-2xl bg-[#F5F5F7]/60 border border-black/5 space-y-2 text-xs">
+                <div className="flex justify-between text-[#777777]">
+                  <span>Items Subtotal</span>
+                  <span className="font-bold text-[#1D1D1F]">{formatPrice(subtotal, STORE_CONFIG.currency)}</span>
+                </div>
+                {promoDiscountAmount > 0 && (
+                  <div className="flex justify-between text-[#0071E3]">
+                    <span>Discount</span>
+                    <span className="font-bold">−{formatPrice(promoDiscountAmount, STORE_CONFIG.currency)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-[#777777]">
+                  <span>Delivery</span>
+                  <span className="font-bold text-[#1D1D1F]">{shippingFee === 0 ? 'FREE' : formatPrice(shippingFee, STORE_CONFIG.currency)}</span>
+                </div>
+                <div className="pt-2 border-t border-black/10 flex justify-between text-sm font-extrabold text-[#1D1D1F]">
+                  <span>Total Payable</span>
+                  <span>{formatPrice(total, STORE_CONFIG.currency)}</span>
+                </div>
               </div>
             </div>
 
-            <div className="flex gap-2">
+            {/* Pinned Action Footer */}
+            <div className="p-4 sm:p-5 border-t border-black/[0.06] bg-white flex items-center gap-2.5 flex-shrink-0">
               <button
                 onClick={() => setStep(1)}
-                className="flex-1 py-3 rounded-full bg-[#F5F5F7] text-[#1D1D1F] font-bold text-xs hover:bg-[#E5E5EA] transition-colors"
+                className="px-5 py-3.5 rounded-full bg-[#F5F5F7] text-[#1D1D1F] font-bold text-xs hover:bg-[#E5E5EA] transition-colors cursor-pointer"
               >
                 Back
               </button>
               <button
                 onClick={handlePlaceOrder}
                 disabled={isSubmitting}
-                className="flex-2 py-3.5 rounded-full bg-[#1D1D1F] text-white font-extrabold text-sm shadow-sm flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-60"
+                className="flex-1 py-3.5 rounded-full bg-[#1D1D1F] hover:bg-black text-white font-extrabold text-sm shadow-sm flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-60 cursor-pointer"
               >
                 {isSubmitting ? (
-                  <div className="w-5 h-5 border-2 border-[#1D1D1F] border-t-transparent rounded-full animate-spin" />
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 ) : (
                   <>
-                    <span>Confirm & Place Order</span>
-                    <Check className="w-4 h-4" />
+                    <span>Confirm & Place Order ({formatPrice(total, STORE_CONFIG.currency)})</span>
+                    <Check className="w-4 h-4 stroke-[3]" />
                   </>
                 )}
               </button>
             </div>
-          </div>
+          </>
         )}
 
         {/* ── Step 3: Success Animation ── */}
         {step === 3 && (
-          <div className="p-8 text-center space-y-4 flex flex-col items-center justify-center my-auto">
+          <div className="p-8 text-center space-y-4 flex flex-col items-center justify-center my-auto flex-1">
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
@@ -351,12 +441,14 @@ export const CartPage = ({
   wishlist = {},
   products = [],
   onUpdateQuantity,
+  onUpdateSize,
   onAddToCart,
   onToggleFavorite,
   onQuickView,
   onExploreCatalog,
   onPlaceOrder,
 }) => {
+  const { storeConfig } = useCatalog();
   const { user, isAuthenticated, openAuthModal } = useAuth();
   const [promoCode, setPromoCode] = useState('');
   const [appliedPromo, setAppliedPromo] = useState(null);
@@ -508,29 +600,61 @@ export const CartPage = ({
                 {/* LEFT: Items List */}
                 <div className="lg:col-span-7 space-y-3">
                   <AnimatePresence>
-                    {cartList.map((item) => (
-                      <motion.div
-                        key={item.id}
-                        layout
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.95 }}
-                        className="bg-white/95 backdrop-blur-md rounded-2xl sm:rounded-[24px] border border-black/[0.06] p-3 sm:p-4 shadow-sm flex gap-3 sm:gap-4 items-center"
-                      >
-                        <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl sm:rounded-2xl bg-[#F5F5F7] overflow-hidden shrink-0 relative">
-                          <Image
-                            src={item.image || '/assets/images/prod_headphones.jpg'}
-                            alt={item.name}
-                            fill
-                            sizes="80px"
-                            className="object-cover"
-                          />
-                        </div>
+                    {cartList.map((item) => {
+                      const fullProduct = products?.find((p) => p.id === item.id || p.id === item.productId) || item;
+                      const availableSizes = getProductSizes(fullProduct);
+                      const activeSize = item.selectedSize || (availableSizes.length > 0 ? availableSizes[0] : null);
 
-                        <div className="flex-1 min-w-0">
-                          <span className="text-[10px] font-bold text-[#777777] uppercase tracking-wider">{item.categoryName}</span>
-                          <h3 className="text-xs sm:text-sm font-bold text-[#1D1D1F] line-clamp-1 mt-0.5">{item.name}</h3>
-                          {item.selectedSize && <span className="text-[11px] text-[#777777] bg-[#F5F5F7] px-2.5 py-0.5 rounded-full inline-block mt-1 mr-1 font-medium">Size: {item.selectedSize}</span>}
+                      return (
+                        <motion.div
+                          key={item.id}
+                          layout
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, scale: 0.95 }}
+                          className="bg-white/95 backdrop-blur-md rounded-2xl sm:rounded-[24px] border border-black/[0.06] p-3 sm:p-4 shadow-sm flex gap-3 sm:gap-4 items-center"
+                        >
+                          <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl sm:rounded-2xl bg-[#F5F5F7] overflow-hidden shrink-0 relative">
+                            <Image
+                              src={item.image || '/assets/images/prod_headphones.jpg'}
+                              alt={item.name}
+                              fill
+                              sizes="80px"
+                              className="object-cover"
+                            />
+                          </div>
+
+                          <div className="flex-1 min-w-0">
+                            <span className="text-[10px] font-bold text-[#777777] uppercase tracking-wider">{item.categoryName}</span>
+                            <h3 className="text-xs sm:text-sm font-bold text-[#1D1D1F] line-clamp-1 mt-0.5">{item.name}</h3>
+
+                            {/* Size Option Selector (Only for Clothing & Shoes) */}
+                            {availableSizes.length > 0 && (
+                              <div className="mt-2 flex items-center gap-1.5 flex-wrap">
+                                <span className="text-[11px] font-bold text-[#777777] uppercase tracking-wider">
+                                  Size:
+                                </span>
+                                <div className="flex flex-wrap items-center gap-1">
+                                  {availableSizes.map((sz) => {
+                                    const isSelected = activeSize === sz;
+                                    return (
+                                      <button
+                                        key={sz}
+                                        type="button"
+                                        onClick={() => onUpdateSize && onUpdateSize(item.id, sz)}
+                                        className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold transition-all cursor-pointer ${
+                                          isSelected
+                                            ? 'bg-[#1D1D1F] text-white shadow-xs scale-105'
+                                            : 'bg-[#F5F5F7] text-[#555555] hover:bg-[#E8E8ED] hover:text-[#1D1D1F] border border-black/5'
+                                        }`}
+                                      >
+                                        {sz}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
 
                           <div className="flex items-center justify-between mt-3 gap-2 flex-wrap">
                             <span className="text-sm sm:text-base font-extrabold text-[#1D1D1F]">
@@ -566,7 +690,8 @@ export const CartPage = ({
                           </div>
                         </div>
                       </motion.div>
-                    ))}
+                      );
+                    })}
                   </AnimatePresence>
                 </div>
 
@@ -630,6 +755,16 @@ export const CartPage = ({
                       <span>Proceed to Checkout</span>
                       <ArrowRight className="w-4 h-4" />
                     </button>
+
+                    <a
+                      href={createCartWhatsAppUrl(cartList, total, storeConfig?.whatsappNumber)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full mt-2 py-3 rounded-full bg-[#25D366] hover:bg-[#20bd5a] text-white font-extrabold text-xs shadow-sm flex items-center justify-center gap-2 active:scale-95 transition-all cursor-pointer"
+                    >
+                      <MessageCircle className="w-4 h-4" />
+                      <span>Order on WhatsApp (Instant)</span>
+                    </a>
                   </div>
                 </div>
               </div>
@@ -704,119 +839,12 @@ export const CartPage = ({
         </div>
       )}
 
-      {/* ─── 4. SPECIAL PRODUCTS & EXCLUSIVE OFFERS AT THE END OF CART ─── */}
-      <div className="pt-8 border-t border-black/10">
-        <div className="flex items-center justify-between mb-5">
-          <div>
-            <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-[#EBF5FF] text-[#0071E3] text-[11px] font-extrabold uppercase tracking-wide mb-1">
-              <Sparkles className="w-3 h-3" />
-              <span>Special Recommendations ⭐</span>
-            </div>
-            <h3 className="text-lg sm:text-xl font-extrabold text-[#1D1D1F] tracking-tight">
-              Exclusive Add-Ons You May Love
-            </h3>
-          </div>
-
-          <button
-            onClick={onExploreCatalog}
-            className="text-xs font-bold text-[#1D1D1F] hover:underline flex items-center gap-1"
-          >
-            <span>Explore All</span>
-            <ArrowRight className="w-3 h-3" />
-          </button>
-        </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          {specialProducts.map((prod) => {
-            const isFav = !!wishlist[prod.id];
-            const inCartQty = cartItems[prod.id]?.quantity || 0;
-            const imgSrc = typeof prod.image === 'string' ? prod.image : prod.image?.src || prod.image || '/assets/images/prod_headphones.jpg';
-
-            return (
-              <motion.div
-                key={prod.id}
-                whileHover={{ y: -4 }}
-                onClick={() => onQuickView && onQuickView(prod)}
-                className="bg-white/95 backdrop-blur-md rounded-[24px] border border-black/[0.06] p-3 sm:p-4 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between group cursor-pointer"
-              >
-                <div>
-                  <div className="relative w-full aspect-square rounded-[20px] overflow-hidden mb-2.5 bg-transparent flex items-center justify-center">
-                    <Image
-                      src={imgSrc}
-                      alt={prod.name}
-                      fill
-                      sizes="(max-width: 768px) 50vw, 25vw"
-                      className="object-cover rounded-[20px] group-hover:scale-108 transition-transform duration-300"
-                    />
-                    
-                    {/* Badge */}
-                    {prod.badge && (
-                      <span className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-white/90 text-[#1D1D1F] border border-black/5 text-[9px] font-extrabold shadow-sm z-10">
-                        {prod.badge}
-                      </span>
-                    )}
-
-                    {/* Heart / Wishlist Like Button */}
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (onToggleFavorite) onToggleFavorite(prod);
-                      }}
-                      className="absolute top-2 right-2 z-10 w-7 h-7 rounded-full bg-white/90 backdrop-blur-md border border-white/80 flex items-center justify-center shadow-sm hover:scale-110 active:scale-90 transition-all duration-200 cursor-pointer"
-                      aria-label={isFav ? 'Remove from wishlist' : 'Save to wishlist'}
-                    >
-                      <Heart
-                        className={`w-3.5 h-3.5 transition-colors ${
-                          isFav
-                            ? 'text-red-500 fill-red-500 stroke-red-500'
-                            : 'text-[#1D1D1F] hover:text-red-500'
-                        }`}
-                      />
-                    </button>
-
-                    {/* Quick View Hover Badge */}
-                    <div className="absolute bottom-2 inset-x-2 hidden sm:flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10">
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-white/95 backdrop-blur-md text-[#1D1D1F] text-[10px] font-bold shadow-sm border border-black/5">
-                        <Eye className="w-3 h-3 text-[#0071E3]" />
-                        <span>Quick View</span>
-                      </span>
-                    </div>
-                  </div>
-
-                  <span className="text-[10px] font-bold text-[#777777] uppercase tracking-wider block">{prod.categoryName || 'Product'}</span>
-                  <h4 className="text-xs font-bold text-[#1D1D1F] line-clamp-1 group-hover:text-[#0071E3] transition-colors mt-0.5">
-                    {prod.name}
-                  </h4>
-                </div>
-
-                <div className="pt-2.5 mt-2 border-t border-black/[0.06] flex items-center justify-between gap-1">
-                  <span className="text-xs sm:text-sm font-extrabold text-[#1D1D1F]">
-                    {formatPrice(prod.price, STORE_CONFIG.currency)}
-                  </span>
-
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (onAddToCart) onAddToCart(prod);
-                    }}
-                    className="px-3 py-1.5 rounded-full bg-[#1D1D1F] hover:bg-black text-white font-extrabold text-[11px] shadow-sm active:scale-95 transition-all flex items-center gap-1 cursor-pointer"
-                  >
-                    <Plus className="w-3 h-3 stroke-[3]" />
-                    <span>{inCartQty > 0 ? `Add (${inCartQty})` : 'Add'}</span>
-                  </button>
-                </div>
-              </motion.div>
-            );
-          })}
-        </div>
-      </div>
 
       <AnimatePresence>
         {checkoutOpen && (
           <CheckoutModal
             cartList={cartList}
+            products={products}
             subtotal={subtotal}
             promoDiscountAmount={promoDiscountAmount}
             shippingFee={shippingFee}

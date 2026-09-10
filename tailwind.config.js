@@ -54,6 +54,13 @@ export default {
         'glass-modal': '0 24px 60px -10px rgba(0, 0, 0, 0.15)',
         'float-bottom': '0 -4px 28px -4px rgba(0, 0, 0, 0.06)',
       },
+      screens: {
+        xs: '480px',
+      },
+      spacing: {
+        '3.5': '0.875rem',
+        '4.5': '1.125rem',
+      },
       borderRadius: {
         'sm-control': '14px',
         'btn': '18px',

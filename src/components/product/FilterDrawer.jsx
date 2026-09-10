@@ -1,18 +1,60 @@
-import React from 'react';
+'use client';
+
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, SlidersHorizontal, Check, RotateCcw, Star } from 'lucide-react';
+import { SlidersHorizontal, X, Check, Search, RotateCcw } from 'lucide-react';
+import { useCatalog } from '@/context/CatalogContext';
 import { CATALOG_CATEGORIES, STORE_CONFIG } from '@/data/mockData';
 import { formatPrice } from '@/utils/formatPrice';
 
 export const FilterDrawer = ({
   isOpen,
   onClose,
-  filters,
+  filters = {
+    category: 'all',
+    maxPrice: 15000,
+    inStockOnly: false,
+    minDiscount: 0,
+    minRating: 0,
+  },
   onUpdateFilters,
   onResetFilters,
-  totalResultsCount
+  totalResultsCount = 20,
 }) => {
-  if (!isOpen) return null;
+  const { products, storefrontCategories } = useCatalog();
+  const [categorySearch, setCategorySearch] = useState('');
+
+  // Compute category counts dynamically based on active products, falling back to CATALOG_CATEGORIES
+  const categoriesWithCounts = useMemo(() => {
+    const rawCategories =
+      storefrontCategories && storefrontCategories.length > 0
+        ? storefrontCategories
+        : CATALOG_CATEGORIES;
+
+    const counts = { all: products?.length || 20 };
+    if (products && products.length > 0) {
+      products.forEach((p) => {
+        const catId = p.category?.toLowerCase();
+        if (catId) {
+          counts[catId] = (counts[catId] || 0) + 1;
+        }
+      });
+    }
+
+    return rawCategories.map((c) => ({
+      ...c,
+      count: c.id === 'all' ? (products?.length || 20) : (counts[c.id.toLowerCase()] ?? c.count ?? 0),
+    }));
+  }, [products, storefrontCategories]);
+
+  // Filtered categories based on search input inside Category section
+  const filteredCategories = useMemo(() => {
+    if (!categorySearch.trim()) return categoriesWithCounts;
+    const q = categorySearch.toLowerCase().trim();
+    return categoriesWithCounts.filter((c) =>
+      c.name.toLowerCase().includes(q)
+    );
+  }, [categoriesWithCounts, categorySearch]);
 
   const discountOptions = [
     { label: 'Any', value: 0 },
@@ -22,195 +64,419 @@ export const FilterDrawer = ({
     { label: '40%+ OFF', value: 40 },
   ];
 
-  const ratingOptions = [
-    { label: 'All Ratings', value: 0 },
-    { label: '4.0★ & Above', value: 4.0 },
-    { label: '4.5★ & Above', value: 4.5 },
-    { label: '4.8★ & Above', value: 4.8 },
-  ];
+  // Active filter pills calculation
+  const activePills = useMemo(() => {
+    const pills = [];
+
+    // Category pill
+    if (filters.category && filters.category !== 'all') {
+      const match = categoriesWithCounts.find((c) => c.id === filters.category);
+      pills.push({
+        id: 'category',
+        label: match ? match.name : filters.category,
+        onRemove: () => onUpdateFilters({ category: 'all' }),
+      });
+    }
+
+    // Max price pill
+    if (filters.maxPrice < 15000) {
+      pills.push({
+        id: 'maxPrice',
+        label: `≤ ${formatPrice(filters.maxPrice, STORE_CONFIG?.currency || '₹')}`,
+        onRemove: () => onUpdateFilters({ maxPrice: 15000 }),
+      });
+    }
+
+    // In-stock pill
+    if (filters.inStockOnly) {
+      pills.push({
+        id: 'inStock',
+        label: 'In Stock Only',
+        onRemove: () => onUpdateFilters({ inStockOnly: false }),
+      });
+    }
+
+    // Discount pill
+    if (filters.minDiscount > 0) {
+      pills.push({
+        id: 'discount',
+        label: `${filters.minDiscount}%+ OFF`,
+        onRemove: () => onUpdateFilters({ minDiscount: 0 }),
+      });
+    }
+
+    return pills;
+  }, [filters, categoriesWithCounts, onUpdateFilters]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const scrollY = window.scrollY;
+    const origBodyPosition = document.body.style.position;
+    const origBodyTop = document.body.style.top;
+    const origBodyWidth = document.body.style.width;
+    const origBodyOverflow = document.body.style.overflow;
+    const origHtmlOverflow = document.documentElement.style.overflow;
+
+    document.documentElement.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.width = '100%';
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.documentElement.style.overflow = origHtmlOverflow || '';
+      document.body.style.position = origBodyPosition || '';
+      document.body.style.top = origBodyTop || '';
+      document.body.style.width = origBodyWidth || '';
+      document.body.style.overflow = origBodyOverflow || '';
+      window.scrollTo(0, scrollY);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose]);
+
+  if (!isOpen) return null;
+
+  // Price slider percentage for linear-gradient track
+  const minPrice = 500;
+  const maxPriceRange = 15000;
+  const pricePercent = Math.min(
+    100,
+    Math.max(0, ((filters.maxPrice - minPrice) / (maxPriceRange - minPrice)) * 100)
+  );
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex justify-end">
+      <div className="fixed inset-0 z-50 flex flex-col justify-end sm:justify-center sm:items-center font-sans">
         {/* Backdrop */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
           onClick={onClose}
-          className="fixed inset-0 bg-black/40 backdrop-blur-xs"
+          className="fixed inset-0 bg-black/40 backdrop-blur-xs cursor-pointer"
         />
 
-        {/* Drawer Window (Floating Glass Panel) */}
+        {/* Filter Panel (Slide-up Bottom Sheet on Mobile, Centered Card on Desktop) */}
         <motion.aside
-          initial={{ x: '100%' }}
-          animate={{ x: 0 }}
-          exit={{ x: '100%' }}
-          transition={{ type: 'spring', damping: 28, stiffness: 300 }}
-          className="relative w-full max-w-full sm:max-w-md bg-white/98 backdrop-blur-2xl h-full shadow-2xl border-l border-black/[0.08] z-10 flex flex-col justify-between overflow-hidden"
+          initial={{ y: '100%', opacity: 0.6 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: '100%', opacity: 0 }}
+          transition={{ type: 'spring', damping: 28, stiffness: 320 }}
+          className="relative w-full max-w-full sm:max-w-[460px] max-h-[90vh] sm:max-h-[85vh] bg-white rounded-t-[16px] sm:rounded-[16px] border-t sm:border border-[#E8EBF0] shadow-2xl z-10 flex flex-col overflow-hidden overscroll-contain"
           aria-label="Filter products"
         >
-          {/* Drawer Header */}
-          <div className="p-4 sm:p-6 border-b border-black/[0.06] flex items-center justify-between">
+          {/* Mobile Handle Pill */}
+          <div className="pt-2.5 pb-1 flex justify-center sm:hidden shrink-0">
+            <div className="w-10 h-1 rounded-full bg-[#E5E7EB]" />
+          </div>
+
+          {/* 1. Header Bar */}
+          <div className="px-5 py-4 border-b border-[#F0F2F5] flex items-center justify-between shrink-0">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-[#F5F5F7] flex items-center justify-center text-[#1D1D1F]">
-                <SlidersHorizontal className="w-4 h-4 text-[#0071E3]" />
+              <div className="w-8 h-8 rounded-lg bg-[#F0F2F5] flex items-center justify-center text-[#1A1E2C] shrink-0">
+                <SlidersHorizontal className="w-4 h-4 text-[#1A1E2C] stroke-[1.75]" />
               </div>
               <div>
-                <h3 className="text-base font-extrabold text-[#1D1D1F]">Filters</h3>
-                <p className="text-xs text-[#777777]">Refine catalog products</p>
+                <h3 className="text-[17px] font-semibold text-[#1A1E2C] leading-tight">Filters</h3>
+                <p className="text-[12px] text-[#8A94A6] leading-tight mt-0.5">Refine catalog products</p>
               </div>
             </div>
 
+            {/* Close Button: Dark circle #1E2433 (32x32px) with white × */}
             <button
+              type="button"
               onClick={onClose}
-              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-[#F5F5F7] hover:bg-[#E8E8ED] flex items-center justify-center text-[#1D1D1F] transition-colors cursor-pointer"
-              aria-label="Close filter drawer"
+              className="w-8 h-8 rounded-full bg-[#1E2433] hover:bg-[#2A3245] text-white flex items-center justify-center transition-all cursor-pointer shadow-xs active:scale-90"
+              aria-label="Close filters"
             >
-              <X className="w-4 h-4" />
+              <X className="w-4 h-4 text-white stroke-[2.2]" />
             </button>
           </div>
 
-          {/* Drawer Content */}
-          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 sm:space-y-6">
-            
-            {/* Category Filter */}
-            <div>
-              <label className="text-xs font-bold text-[#1D1D1F] block mb-2.5 uppercase tracking-wider">
-                Category
-              </label>
-              <div className="grid grid-cols-1 xs:grid-cols-2 gap-2">
-                {CATALOG_CATEGORIES.map((cat) => (
+          {/* 2. Active Filter Pills Row (Slides in when active) */}
+          <AnimatePresence>
+            {activePills.length > 0 && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.18 }}
+                className="overflow-hidden border-b border-[#F0F2F5] bg-[#F9FAFB]/70 shrink-0"
+              >
+                <div className="px-5 py-2.5 flex items-center gap-2 overflow-x-auto scrollbar-none">
+                  {activePills.map((pill) => (
+                    <motion.button
+                      key={pill.id}
+                      initial={{ scale: 0.85, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0.85, opacity: 0 }}
+                      transition={{ duration: 0.15 }}
+                      type="button"
+                      onClick={pill.onRemove}
+                      className="inline-flex items-center gap-1.5 pl-3 pr-2 py-1 rounded-full bg-[#1E2433] hover:bg-[#2A3245] text-white text-[13px] font-medium shrink-0 transition-colors shadow-xs active:scale-95 cursor-pointer"
+                    >
+                      <span>{pill.label}</span>
+                      <X className="w-3 h-3 text-white/80 hover:text-white stroke-[2.5]" />
+                    </motion.button>
+                  ))}
                   <button
-                    key={cat.id}
-                    onClick={() => onUpdateFilters({ category: cat.id })}
-                    className={`px-3 sm:px-3.5 py-2.5 rounded-2xl text-xs font-semibold flex items-center justify-between transition-all active:scale-95 cursor-pointer ${
-                      filters.category === cat.id
-                        ? 'bg-[#1D1D1F] text-white shadow-xs'
-                        : 'bg-[#F5F5F7] text-[#1D1D1F] hover:bg-[#E8E8ED]'
-                    }`}
+                    type="button"
+                    onClick={onResetFilters}
+                    className="text-[11px] font-semibold text-[#8A94A6] hover:text-[#1A1E2C] px-2 py-1 shrink-0 transition-colors cursor-pointer"
                   >
-                    <span className="truncate mr-1">{cat.name}</span>
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full shrink-0 ${
-                      filters.category === cat.id ? 'bg-white/20 text-white' : 'bg-white text-[#777777]'
-                    }`}>
-                      {cat.count}
-                    </span>
+                    Clear all
                   </button>
-                ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Scrollable Body Content */}
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 py-5 space-y-6">
+
+            {/* 3. Category Section */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between pb-1">
+                <span className="text-[11px] font-medium uppercase text-[#8A94A6] tracking-[0.6px]">
+                  CATEGORY
+                </span>
+
+                {/* Reset & Search controls (Image 2 style) */}
+                <div className="flex items-center gap-3">
+                  {filters.category !== 'all' && (
+                    <button
+                      type="button"
+                      onClick={() => onUpdateFilters({ category: 'all' })}
+                      className="text-[11px] font-medium text-[#8A94A6] hover:text-[#1A1E2C] transition-colors cursor-pointer"
+                    >
+                      Reset
+                    </button>
+                  )}
+                  <div className="relative">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-[#8A94A6]" />
+                    <input
+                      type="text"
+                      value={categorySearch}
+                      onChange={(e) => setCategorySearch(e.target.value)}
+                      placeholder="Search category..."
+                      className="w-32 xs:w-36 pl-7 pr-2.5 py-1 text-[11px] rounded-lg bg-[#F9FAFB] border border-[#E8EBF0] text-[#1A1E2C] placeholder:text-[#9BA3AF] focus:bg-white focus:outline-none focus:border-[#1E2433] transition-colors"
+                    />
+                    {categorySearch && (
+                      <button
+                        type="button"
+                        onClick={() => setCategorySearch('')}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-[#8A94A6] hover:text-[#1A1E2C]"
+                      >
+                        <X className="w-2.5 h-2.5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Category Rows (44px height, 1px divider) */}
+              <div className="rounded-xl border border-[#F0F2F5] overflow-hidden divide-y divide-[#F0F2F5] bg-white">
+                {filteredCategories.map((cat) => {
+                  const isChecked = filters.category === cat.id;
+
+                  return (
+                    <div
+                      key={cat.id}
+                      onClick={() => onUpdateFilters({ category: cat.id })}
+                      className={`h-[44px] px-3.5 flex items-center justify-between cursor-pointer transition-colors ${
+                        isChecked ? 'bg-[#F9FAFB]' : 'hover:bg-[#F9FAFB]/60'
+                      }`}
+                    >
+                      {/* Left: Square Checkbox + Category Name */}
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div
+                          className={`w-[18px] h-[18px] rounded-[4px] flex items-center justify-center transition-all ${
+                            isChecked
+                              ? 'bg-[#1E2433] border border-[#1E2433]'
+                              : 'border-[1.5px] border-[#D1D5DB] bg-white'
+                          }`}
+                        >
+                          {isChecked && (
+                            <motion.div
+                              initial={{ scale: 0.6, opacity: 0 }}
+                              animate={{ scale: 1, opacity: 1 }}
+                              transition={{ type: 'spring', damping: 15, stiffness: 450 }}
+                            >
+                              <Check className="w-3 h-3 text-white stroke-[2.8]" />
+                            </motion.div>
+                          )}
+                        </div>
+                        <span className="text-[14px] text-[#1A1E2C] truncate font-normal">
+                          {cat.name}
+                        </span>
+                      </div>
+
+                      {/* Right: Count Number */}
+                      <span className="text-[13px] text-[#9BA3AF] font-normal shrink-0 pl-2">
+                        {cat.count}
+                      </span>
+                    </div>
+                  );
+                })}
+
+                {filteredCategories.length === 0 && (
+                  <div className="py-6 text-center text-[12px] text-[#9BA3AF]">
+                    No categories match &quot;{categorySearch}&quot;
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* Price Range Slider */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="text-xs font-bold text-[#1D1D1F] uppercase tracking-wider">
-                  Max Price
-                </label>
-                <span className="text-xs font-bold text-[#1D1D1F] bg-[#F5F5F7] px-2.5 py-1 rounded-full border border-black/[0.05]">
-                  {formatPrice(filters.maxPrice, STORE_CONFIG.currency)}
+            {/* 4. Max Price Section */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-medium uppercase text-[#8A94A6] tracking-[0.6px]">
+                  MAX PRICE
+                </span>
+                {/* Selected value as dark pill badge */}
+                <span className="text-[12px] font-semibold text-white bg-[#1E2433] px-3 py-1 rounded-full shadow-xs">
+                  {formatPrice(filters.maxPrice, STORE_CONFIG?.currency || '₹')}
                 </span>
               </div>
-              <input
-                type="range"
-                min="500"
-                max="5000"
-                step="100"
-                value={filters.maxPrice}
-                onChange={(e) => onUpdateFilters({ maxPrice: Number(e.target.value) })}
-                className="w-full accent-[#1D1D1F] cursor-pointer"
-              />
-              <div className="flex justify-between text-[11px] text-[#777777] font-semibold mt-1">
-                <span>{STORE_CONFIG.currency}500</span>
-                <span>{STORE_CONFIG.currency}5,000</span>
+
+              <div className="pt-1">
+                <input
+                  type="range"
+                  min={minPrice}
+                  max={maxPriceRange}
+                  step="250"
+                  value={filters.maxPrice}
+                  onChange={(e) => onUpdateFilters({ maxPrice: Number(e.target.value) })}
+                  style={{
+                    background: `linear-gradient(to right, #1E2433 0%, #1E2433 ${pricePercent}%, #E8EBF0 ${pricePercent}%, #E8EBF0 100%)`,
+                  }}
+                  className="w-full h-1.5 rounded-lg appearance-none cursor-pointer focus:outline-none 
+                    [&::-webkit-slider-thumb]:appearance-none 
+                    [&::-webkit-slider-thumb]:w-5 
+                    [&::-webkit-slider-thumb]:h-5 
+                    [&::-webkit-slider-thumb]:rounded-full 
+                    [&::-webkit-slider-thumb]:bg-white 
+                    [&::-webkit-slider-thumb]:border-2 
+                    [&::-webkit-slider-thumb]:border-[#1E2433] 
+                    [&::-webkit-slider-thumb]:shadow-md 
+                    [&::-webkit-slider-thumb]:transition-transform 
+                    [&::-webkit-slider-thumb]:active:scale-110"
+                />
+
+                <div className="flex items-center justify-between text-[11px] text-[#8A94A6] font-medium mt-2">
+                  <span>{formatPrice(minPrice, STORE_CONFIG?.currency || '₹')}</span>
+                  <span>{formatPrice(maxPriceRange, STORE_CONFIG?.currency || '₹')}</span>
+                </div>
               </div>
             </div>
 
-            {/* In-Stock Toggle */}
-            <div className="flex items-center justify-between p-3.5 rounded-2xl bg-[#F5F5F7] border border-black/[0.04]">
+            {/* 5. In Stock Only Row */}
+            <div className="py-2 border-y border-[#F0F2F5] flex items-center justify-between min-h-[48px]">
               <div>
-                <span className="text-xs font-bold text-[#1D1D1F] block">In Stock Only</span>
-                <span className="text-[11px] text-[#777777]">Hide items that are out of stock</span>
+                <span className="text-[14px] font-semibold text-[#1A1E2C] block leading-snug">
+                  In Stock Only
+                </span>
+                <span className="text-[12px] text-[#8A94A6] block leading-snug">
+                  Hide items that are out of stock
+                </span>
               </div>
-              <input
-                type="checkbox"
-                checked={filters.inStockOnly}
-                onChange={(e) => onUpdateFilters({ inStockOnly: e.target.checked })}
-                className="w-5 h-5 accent-[#1D1D1F] rounded cursor-pointer"
-              />
+
+              {/* iOS-Style Toggle */}
+              <button
+                type="button"
+                role="switch"
+                aria-checked={filters.inStockOnly}
+                onClick={() => onUpdateFilters({ inStockOnly: !filters.inStockOnly })}
+                className={`w-11 h-6 rounded-full transition-colors duration-200 cursor-pointer p-0.5 relative shrink-0 ${
+                  filters.inStockOnly ? 'bg-[#1E2433]' : 'bg-[#D1D5DB]'
+                }`}
+              >
+                <motion.div
+                  layout
+                  transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                  className={`w-5 h-5 rounded-full bg-white shadow-xs ${
+                    filters.inStockOnly ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
             </div>
 
-            {/* Discount Level Filter */}
-            <div>
-              <label className="text-xs font-bold text-[#1D1D1F] block mb-2.5 uppercase tracking-wider">
-                Minimum Discount
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                {discountOptions.map((opt) => (
-                  <button
-                    key={opt.value}
-                    onClick={() => onUpdateFilters({ minDiscount: opt.value })}
-                    className={`px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-between transition-all cursor-pointer ${
-                      filters.minDiscount === opt.value
-                        ? 'bg-[#1D1D1F] text-white shadow-xs'
-                        : 'bg-[#F5F5F7] text-[#1D1D1F] hover:bg-[#E8E8ED]'
-                    }`}
-                  >
-                    <span>{opt.label}</span>
-                    {filters.minDiscount === opt.value && <Check className="w-3.5 h-3.5 stroke-[3]" />}
-                  </button>
-                ))}
-              </div>
-            </div>
+            {/* 6. Minimum Discount Section */}
+            <div className="space-y-2">
+              <span className="text-[11px] font-medium uppercase text-[#8A94A6] tracking-[0.6px] block">
+                MINIMUM DISCOUNT
+              </span>
 
-            {/* Customer Rating Filter */}
-            <div>
-              <label className="text-xs font-bold text-[#1D1D1F] block mb-2.5 uppercase tracking-wider">
-                Customer Rating
-              </label>
-              <div className="space-y-1.5">
-                {ratingOptions.map((opt) => (
-                  <button
-                    key={opt.value}
-                    onClick={() => onUpdateFilters({ minRating: opt.value })}
-                    className={`w-full px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center justify-between transition-all cursor-pointer ${
-                      filters.minRating === opt.value
-                        ? 'bg-[#1D1D1F] text-white shadow-xs'
-                        : 'bg-[#F5F5F7] text-[#1D1D1F] hover:bg-[#E8E8ED]'
-                    }`}
-                  >
-                    <span className="flex items-center gap-1.5">
-                      <Star className={`w-3.5 h-3.5 ${opt.value > 0 ? 'fill-[#FF9500] text-[#FF9500]' : ''}`} />
-                      {opt.label}
-                    </span>
-                    {filters.minRating === opt.value && <Check className="w-3.5 h-3.5 stroke-[3]" />}
-                  </button>
-                ))}
+              {/* Checkbox list rows matching Image 2 */}
+              <div className="rounded-xl border border-[#F0F2F5] overflow-hidden divide-y divide-[#F0F2F5] bg-white">
+                {discountOptions.map((opt) => {
+                  const isChecked = filters.minDiscount === opt.value;
+
+                  return (
+                    <div
+                      key={opt.value}
+                      onClick={() => onUpdateFilters({ minDiscount: opt.value })}
+                      className={`h-[44px] px-3.5 flex items-center justify-between cursor-pointer transition-colors ${
+                        isChecked ? 'bg-[#F9FAFB]' : 'hover:bg-[#F9FAFB]/60'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`w-[18px] h-[18px] rounded-[4px] flex items-center justify-center transition-all ${
+                            isChecked
+                              ? 'bg-[#1E2433] border border-[#1E2433]'
+                              : 'border-[1.5px] border-[#D1D5DB] bg-white'
+                          }`}
+                        >
+                          {isChecked && (
+                            <motion.div
+                              initial={{ scale: 0.6, opacity: 0 }}
+                              animate={{ scale: 1, opacity: 1 }}
+                              transition={{ type: 'spring', damping: 15, stiffness: 450 }}
+                            >
+                              <Check className="w-3 h-3 text-white stroke-[2.8]" />
+                            </motion.div>
+                          )}
+                        </div>
+                        <span className="text-[14px] text-[#1A1E2C] font-normal">
+                          {opt.label}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
           </div>
 
-          {/* Drawer Footer Actions */}
-          <div className="p-4 sm:p-5 border-t border-black/[0.06] bg-[#F5F5F7] flex items-center gap-3">
+          {/* 7. Sticky CTA Footer */}
+          <div className="p-4 border-t border-[#F0F2F5] bg-white shrink-0 shadow-[0_-4px_12px_rgba(0,0,0,0.06)] pb-[max(16px,env(safe-area-inset-bottom))]">
             <button
-              onClick={onResetFilters}
-              className="flex-1 py-3 px-4 rounded-full bg-white hover:bg-neutral-100 text-[#1D1D1F] font-bold text-xs flex items-center justify-center gap-1.5 border border-black/5 transition-colors active:scale-95 cursor-pointer shadow-xs"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span>Reset</span>
-            </button>
-
-            <button
+              type="button"
               onClick={onClose}
-              className="flex-2 py-3 px-6 rounded-full bg-[#1D1D1F] hover:bg-black text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all active:scale-95 cursor-pointer"
+              className="w-full py-3.5 px-4 rounded-[12px] bg-[#1E2433] hover:bg-[#141822] active:scale-[0.99] text-white font-semibold text-[14px] transition-all flex items-center justify-center cursor-pointer shadow-sm"
             >
-              <span>Show {totalResultsCount} Items</span>
+              <motion.span
+                key={totalResultsCount}
+                initial={{ scale: 0.95, opacity: 0.8 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.15 }}
+              >
+                Show {totalResultsCount} {totalResultsCount === 1 ? 'product' : 'products'}
+              </motion.span>
             </button>
           </div>
-
         </motion.aside>
       </div>
     </AnimatePresence>
   );
 };
+
+export default FilterDrawer;

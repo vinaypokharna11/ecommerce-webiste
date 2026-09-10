@@ -4,8 +4,10 @@ import React from 'react';
 import Link from 'next/link';
 import { Mail, Phone, MapPin, ArrowRight } from 'lucide-react';
 import { STORE_CONFIG } from '@/data/mockData';
+import { useCatalog } from '@/context/CatalogContext';
 
 export const Footer = ({ onLinkClick }) => {
+  const { storeConfig } = useCatalog();
 
   const shopDepartments = [
     { label: 'Bags & Trolleys', tabId: 'catalog', cat: 'bags-luggage' },
@@ -103,11 +105,11 @@ export const Footer = ({ onLinkClick }) => {
             <div className="space-y-2 text-xs sm:text-sm text-[#6E6E73]">
               <p className="flex items-center gap-2">
                 <Phone className="w-3.5 h-3.5 text-[#1D1D1F]" />
-                <span>{STORE_CONFIG?.whatsappDisplay || '+91 98765 43210'}</span>
+                <span>{storeConfig?.whatsappDisplay || STORE_CONFIG?.whatsappDisplay || '+91 98794 51341'}</span>
               </p>
-              <p className="flex items-center gap-2">
-                <MapPin className="w-3.5 h-3.5 text-[#1D1D1F]" />
-                <span>Bangalore, Karnataka, India</span>
+              <p className="flex items-start gap-2">
+                <MapPin className="w-3.5 h-3.5 text-[#1D1D1F] shrink-0 mt-0.5" />
+                <span>{storeConfig?.address || '6, Honey Complex, Opposite Gunjan Cinema, Koparli Road, Gunjan, G.I.D.C, Vapi, Gujarat — 396195'}</span>
               </p>
               <p className="text-xs text-[#86868B] pt-1">
                 Mon - Sun: 9:30 AM – 9:30 PM IST

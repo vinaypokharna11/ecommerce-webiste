@@ -18,10 +18,8 @@ import {
   Clock,
   X,
   ShoppingBag,
-  Star,
   Bell,
   ChevronDown,
-  MessageCircle,
   ArrowRight,
   Plus,
   Trash2,
@@ -42,6 +40,28 @@ import { inquiryService } from '@/services/inquiryService';
 
 // ─── Default fallback mock orders ─────────────────────────────────────────────
 export const INITIAL_ORDERS = [];
+
+// Helper to safely format order items into a string summary (prevents Object child render error)
+const formatOrderItemSummary = (order) => {
+  if (typeof order?.itemSummary === 'string' && order.itemSummary.trim()) {
+    return order.itemSummary;
+  }
+  if (Array.isArray(order?.items) && order.items.length > 0) {
+    return order.items
+      .map((item) => {
+        if (typeof item === 'string') return item;
+        if (item && typeof item === 'object') {
+          return `${item.name || 'Product'} (x${item.quantity || 1})`;
+        }
+        return 'Product';
+      })
+      .join(', ');
+  }
+  if (typeof order?.items === 'string' && order.items.trim()) {
+    return order.items;
+  }
+  return 'Product details';
+};
 
 const STATUS_STYLES = {
   delivered: {
@@ -98,7 +118,7 @@ const SheetModal = ({ isOpen, onClose, title, subtitle, children }) => {
               <X className="w-4 h-4" />
             </button>
           </div>
-          <div className="overflow-y-auto flex-1 py-3.5 sm:py-4 space-y-3.5 sm:space-y-4">{children}</div>
+          <div className="overflow-y-auto overscroll-contain flex-1 min-h-0 py-3.5 sm:py-4 space-y-3.5 sm:space-y-4">{children}</div>
         </motion.div>
       </div>
     </AnimatePresence>
@@ -185,9 +205,60 @@ const OrderDetailsModal = ({ order, onClose }) => {
         </div>
 
         {/* Items */}
-        <div className="p-4 rounded-2xl bg-[#F5F5F7]/60 border border-black/5 space-y-2">
-          <span className="text-xs font-bold text-[#777777] uppercase tracking-wider block mb-1">Items Ordered</span>
-          <p className="text-sm font-semibold text-[#1D1D1F]">{order.items || order.itemSummary || 'Product details'}</p>
+        <div className="p-4 rounded-2xl bg-[#F5F5F7]/60 border border-black/5 space-y-3">
+          <span className="text-xs font-bold text-[#777777] uppercase tracking-wider block">Items Ordered</span>
+          {Array.isArray(order.items) && order.items.length > 0 ? (
+            <div className="space-y-2.5 divide-y divide-black/5">
+              {order.items.map((item, idx) => {
+                if (typeof item === 'string') {
+                  return (
+                    <p key={idx} className="text-sm font-semibold text-[#1D1D1F] pt-2 first:pt-0">
+                      {item}
+                    </p>
+                  );
+                }
+                const itemKey = item?._id || item?.id || idx;
+                const itemName = item?.name || 'Product';
+                const itemQty = item?.quantity || 1;
+                const itemPrice = item?.price != null ? item.price : null;
+                const itemImage = item?.image;
+                const variantInfo = [item?.selectedColor, item?.selectedSize].filter(Boolean).join(' / ');
+
+                return (
+                  <div key={itemKey} className="flex items-center gap-3 pt-2.5 first:pt-0">
+                    {itemImage ? (
+                      <div className="w-11 h-11 rounded-xl bg-white border border-black/5 overflow-hidden shrink-0 flex items-center justify-center">
+                        <img src={itemImage} alt={itemName} className="w-full h-full object-cover" />
+                      </div>
+                    ) : (
+                      <div className="w-11 h-11 rounded-xl bg-white border border-black/5 flex items-center justify-center shrink-0">
+                        <Package className="w-5 h-5 text-[#777777]" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-[#1D1D1F] truncate">{itemName}</p>
+                      <div className="flex items-center gap-2 text-xs text-[#777777] mt-0.5">
+                        <span>Qty: {itemQty}</span>
+                        {variantInfo && (
+                          <>
+                            <span>•</span>
+                            <span className="truncate">{variantInfo}</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    {itemPrice != null && (
+                      <span className="text-sm font-bold text-[#1D1D1F] shrink-0">
+                        {formatPrice(itemPrice * itemQty, STORE_CONFIG.currency)}
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-sm font-semibold text-[#1D1D1F]">{formatOrderItemSummary(order)}</p>
+          )}
         </div>
 
         {/* Address */}
@@ -534,23 +605,6 @@ export const ProfilePage = ({ orders = [], onExploreCatalog, onNavigate }) => {
               )}
             </div>
           </div>
-
-          {/* Stats Row */}
-          <div className="grid grid-cols-3 gap-1.5 sm:gap-3 mt-4 sm:mt-6 pt-3.5 sm:pt-5 border-t border-black/5">
-            {[
-              { label: 'Orders', value: `${allOrdersList.length}`, icon: Package, color: 'text-[#1D1D1F]', bg: 'bg-[#F5F5F7]' },
-              { label: 'Member Tier', value: isAuthenticated ? 'VIP Gold' : 'Explorer', icon: Star, color: 'text-[#0071E3]', bg: 'bg-[#EBF5FF]' },
-              { label: 'Support', value: 'Instant', icon: MessageCircle, color: 'text-[#1D1D1F]', bg: 'bg-[#F5F5F7]' },
-            ].map((stat) => (
-              <div key={stat.label} className="flex flex-col items-center text-center gap-0.5 sm:gap-1">
-                <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full ${stat.bg} flex items-center justify-center`}>
-                  <stat.icon className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${stat.color}`} />
-                </div>
-                <span className="text-sm sm:text-base font-extrabold text-[#1D1D1F]">{stat.value}</span>
-                <span className="text-[10px] sm:text-[11px] font-bold text-[#777777]">{stat.label}</span>
-              </div>
-            ))}
-          </div>
         </motion.div>
 
         {/* ── My Orders ─────────────────────────────────────────── */}
@@ -606,7 +660,7 @@ export const ProfilePage = ({ orders = [], onExploreCatalog, onNavigate }) => {
                       <span className="text-[11px] sm:text-xs text-[#777777] font-medium">{order.date}</span>
                       <span className="text-[10px] text-[#A0A0A0]">•</span>
                       <span className="text-[11px] sm:text-xs text-[#1D1D1F] font-medium truncate max-w-[120px] xs:max-w-[180px] sm:max-w-xs">
-                        {order.items || order.itemSummary || 'Product details'}
+                        {formatOrderItemSummary(order)}
                       </span>
                     </div>
                   </div>
@@ -665,7 +719,7 @@ export const ProfilePage = ({ orders = [], onExploreCatalog, onNavigate }) => {
                 <span className="text-xs sm:text-sm font-bold text-[#1D1D1F] group-hover:text-emerald-700 transition-colors block truncate">
                   Direct WhatsApp Support
                 </span>
-                <span className="text-[10px] sm:text-[11px] text-[#777777] block truncate">Chat instantly with our Bangalore store team</span>
+                <span className="text-[10px] sm:text-[11px] text-[#777777] block truncate">Chat instantly with our store support team</span>
               </div>
               <ChevronRight className="w-4 h-4 text-[#A0A0A0] group-hover:text-[#1D1D1F] shrink-0" />
             </button>
@@ -842,7 +896,7 @@ export const ProfilePage = ({ orders = [], onExploreCatalog, onNavigate }) => {
 
           {/* Footer note */}
           <p className="text-center text-[11px] text-[#A0A0A0] font-medium pt-5">
-            Nakoda Imitation v1.0.0 · Local Neighborhood Store in Bangalore
+            Nakoda Imitation v1.0.0 · Retail Store in Vapi, Gujarat
           </p>
         </motion.div>
 

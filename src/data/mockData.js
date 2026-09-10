@@ -22,7 +22,7 @@ export const STORE_CONFIG = {
   whatsappNumber: process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '919876543210',
   whatsappDisplay: process.env.NEXT_PUBLIC_WHATSAPP_DISPLAY || '+91 98765 43210',
   whatsappLink: process.env.NEXT_PUBLIC_WHATSAPP_LINK || `https://wa.me/${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '919876543210'}`,
-  address: 'Shop #14, Main Market Road, Bangalore',
+  address: '6, Honey Complex, Opposite Gunjan Cinema, Koparli Road, Gunjan, G.I.D.C, Vapi, Gujarat — 396195',
   hours: 'Mon - Sun: 9:30 AM – 9:30 PM',
   currency: '₹',
 };
@@ -667,7 +667,7 @@ export const FAQS_DATA = [
   {
     category: 'Delivery & Shipping',
     question: 'What are your delivery timelines and charges?',
-    answer: 'We provide Free Express Delivery on orders above ₹999 across Bangalore and metro cities. Standard shipping takes 2-4 business days, while local store delivery in Bangalore is fulfilled within 24-48 hours.',
+    answer: 'We provide Free Express Delivery on orders above ₹999 across Vapi, Gujarat and major cities. Standard shipping takes 2-4 business days, while local store delivery in Vapi is fulfilled within 24-48 hours.',
   },
   {
     category: 'Returns & Exchange',
@@ -677,7 +677,7 @@ export const FAQS_DATA = [
   {
     category: 'Store & Physical Visit',
     question: 'Where is your physical retail store located?',
-    answer: 'Our flagship store is located at Shop #14, Main Market Road, Bangalore (Karnataka). We are open 7 days a week from 9:30 AM to 9:30 PM. Dedicated customer parking is available.',
+    answer: 'Our flagship store is located at 6, Honey Complex, Opposite Gunjan Cinema, Koparli Road, Gunjan, G.I.D.C, Vapi, Gujarat (396195). We are open 7 days a week from 9:30 AM to 9:30 PM. Dedicated customer parking is available.',
   },
   {
     category: 'Payment & Security',
@@ -688,13 +688,13 @@ export const FAQS_DATA = [
 
 export const STORE_LOCATION_DETAILS = {
   name: 'Nakoda Imitation Flagship Retail Store',
-  address: 'Shop #14, Main Market Road, Indiranagar, Bangalore, Karnataka — 560038',
-  phone: '+91 98765 43210',
+  address: '6, Honey Complex, Opposite Gunjan Cinema, Koparli Road, Gunjan, G.I.D.C, Vapi, Gujarat — 396195',
+  phone: '+91 98794 51341',
   email: 'support@nakodaimitation.com',
   hoursWeekday: 'Monday – Saturday: 9:30 AM – 9:30 PM',
   hoursSunday: 'Sunday: 10:00 AM – 9:00 PM',
-  landmark: 'Opposite Metro Pillar #142, near Green Park Square',
-  parking: 'Free Customer Parking Available (Basement 1)',
-  googleMapsUrl: 'https://maps.google.com/?q=Indiranagar+Bangalore',
+  landmark: 'Opposite Gunjan Cinema, Koparli Road, Gunjan GIDC',
+  parking: 'Free Customer Parking Available',
+  googleMapsUrl: 'https://maps.app.goo.gl/q44LnodPwW119dep8',
 };
 

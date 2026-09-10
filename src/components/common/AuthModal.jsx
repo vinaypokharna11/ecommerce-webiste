@@ -31,6 +31,31 @@ export const AuthModal = () => {
     setError('');
   }, [authModalConfig, isAuthModalOpen]);
 
+  // Lock body scroll and prevent background moving while modal is open
+  React.useEffect(() => {
+    if (!isAuthModalOpen) return;
+
+    const originalOverflow = document.body.style.overflow;
+    const originalPaddingRight = document.body.style.paddingRight;
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+
+    document.body.style.overflow = 'hidden';
+    if (scrollbarWidth > 0) {
+      document.body.style.paddingRight = `${scrollbarWidth}px`;
+    }
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') closeAuthModal();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      document.body.style.paddingRight = originalPaddingRight;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isAuthModalOpen, closeAuthModal]);
+
   // Login Form
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -101,24 +126,30 @@ export const AuthModal = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3.5 sm:p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain">
       {/* Backdrop */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         onClick={closeAuthModal}
-        className="fixed inset-0 bg-black/50 backdrop-blur-md"
+        className="fixed inset-0 bg-black/50 backdrop-blur-md -z-10"
       />
 
-      {/* Modal Card */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-        className="relative w-full max-w-md bg-white rounded-2xl sm:rounded-[32px] border border-black/[0.08] shadow-2xl p-4.5 xs:p-6 sm:p-8 z-10 max-h-[90vh] overflow-y-auto"
+      {/* Centering Wrapper with vertical scroll padding */}
+      <div 
+        className="min-h-full flex items-center justify-center p-3 sm:p-4 py-6 sm:py-10"
+        onClick={closeAuthModal}
       >
+        {/* Modal Card */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95, y: 20 }}
+          transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+          onClick={(e) => e.stopPropagation()}
+          className="relative w-full max-w-md bg-white rounded-2xl sm:rounded-[32px] border border-black/[0.08] shadow-2xl p-4 xs:p-5 sm:p-7 md:p-8 my-auto"
+        >
         {/* Close Button */}
         <button
           onClick={closeAuthModal}
@@ -350,6 +381,7 @@ export const AuthModal = () => {
         </div>
       </motion.div>
     </div>
+  </div>
   );
 };
 

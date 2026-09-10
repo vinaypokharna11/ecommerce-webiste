@@ -18,6 +18,7 @@ import Image from 'next/image';
 import { STORE_CONFIG } from '@/data/mockData';
 import { createProductWhatsAppUrl } from '@/utils/whatsapp';
 import { formatPrice } from '@/utils/formatPrice';
+import { getProductSizes } from '@/utils/productOptions';
 
 export const QuickViewModal = ({ 
   product, 
@@ -29,30 +30,47 @@ export const QuickViewModal = ({
   isFavorite = false,
   onToggleFavorite,
 }) => {
-  const [selectedVariant, setSelectedVariant] = useState(null);
+  const [selectedSize, setSelectedSize] = useState(null);
   const [localQty, setLocalQty] = useState(1);
   const [isAdded, setIsAdded] = useState(false);
 
   useEffect(() => {
     if (product) {
-      const defaultVar = product.variants ? product.variants[0] : product.sizes ? product.sizes[0] : null;
-      setSelectedVariant(defaultVar);
+      const sizes = getProductSizes(product);
+      setSelectedSize(product.selectedSize || (sizes.length > 0 ? sizes[0] : null));
       setLocalQty(1);
       setIsAdded(false);
     }
   }, [product]);
 
-  // Handle ESC key
+  // Handle ESC key and bulletproof background scroll lock
   useEffect(() => {
+    if (!isOpen) return;
+    const scrollY = window.scrollY;
+    const origBodyPosition = document.body.style.position;
+    const origBodyTop = document.body.style.top;
+    const origBodyWidth = document.body.style.width;
+    const origBodyOverflow = document.body.style.overflow;
+    const origHtmlOverflow = document.documentElement.style.overflow;
+
+    document.documentElement.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.width = '100%';
+    document.body.style.overflow = 'hidden';
+
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') onClose();
     };
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-      window.addEventListener('keydown', handleKeyDown);
-    }
+    window.addEventListener('keydown', handleKeyDown);
+
     return () => {
-      document.body.style.overflow = 'unset';
+      document.documentElement.style.overflow = origHtmlOverflow || '';
+      document.body.style.position = origBodyPosition || '';
+      document.body.style.top = origBodyTop || '';
+      document.body.style.width = origBodyWidth || '';
+      document.body.style.overflow = origBodyOverflow || '';
+      window.scrollTo(0, scrollY);
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [isOpen, onClose]);
@@ -61,15 +79,20 @@ export const QuickViewModal = ({
 
   const isOutOfStock = product.stockStatus === 'out_of_stock';
   const totalPrice = (product.price || 0) * localQty;
-  const whatsappUrl = createProductWhatsAppUrl(product, STORE_CONFIG?.whatsappNumber);
-
-  const availableOptions = product.variants || product.sizes || [];
+  const availableSizes = getProductSizes(product);
+  const whatsappUrl = createProductWhatsAppUrl(
+    product,
+    selectedSize ? `Size: ${selectedSize}` : null,
+    null,
+    STORE_CONFIG?.whatsappNumber
+  );
 
   const handleAdd = () => {
     if (isOutOfStock) return;
     onAddToCart && onAddToCart({
       ...product,
-      selectedVariant,
+      selectedVariant: selectedSize || '',
+      selectedSize: selectedSize || (availableSizes.length > 0 ? availableSizes[0] : ''),
       quantity: localQty,
     });
     setIsAdded(true);
@@ -78,24 +101,30 @@ export const QuickViewModal = ({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-3.5 sm:p-6 overflow-y-auto">
+      <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain">
         {/* Backdrop */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={onClose}
-          className="fixed inset-0 bg-black/40 backdrop-blur-md transition-opacity"
+          className="fixed inset-0 bg-black/40 backdrop-blur-md transition-opacity -z-10"
         />
 
-        {/* Apple Modal Container */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          transition={{ type: 'spring', damping: 26, stiffness: 320 }}
-          className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto bg-white border border-black/[0.08] shadow-[0_25px_60px_rgba(0,0,0,0.18)] rounded-2xl sm:rounded-[2rem] z-10 p-4.5 xs:p-6 sm:p-8"
+        {/* Scroll Centering Wrapper */}
+        <div 
+          className="min-h-full flex items-center justify-center p-3 sm:p-6 py-6 sm:py-10"
+          onClick={onClose}
         >
+          {/* Apple Modal Container */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            transition={{ type: 'spring', damping: 26, stiffness: 320 }}
+            onClick={(e) => e.stopPropagation()}
+            className="relative w-full max-w-3xl bg-white border border-black/[0.08] shadow-[0_25px_60px_rgba(0,0,0,0.18)] rounded-2xl sm:rounded-[2rem] z-10 p-4 xs:p-5 sm:p-7 md:p-8 my-auto"
+          >
           {/* Close button */}
           <button
             onClick={onClose}
@@ -169,26 +198,38 @@ export const QuickViewModal = ({
                 </p>
               </div>
 
-              {/* Sizing / Variant Selection */}
-              {availableOptions.length > 0 && (
+              {/* Sizing Selection (Clothing & Footwear Only) */}
+              {availableSizes.length > 0 && (
                 <div className="space-y-1.5 sm:space-y-2 pt-2 border-t border-black/[0.06]">
-                  <span className="text-xs font-sans font-semibold text-[#1D1D1F]">
-                    Select Option:
-                  </span>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-sans font-semibold text-[#1D1D1F]">
+                      Size:
+                    </span>
+                    {selectedSize && (
+                      <span className="text-[11px] font-sans font-medium text-[#86868B]">
+                        Selected: <strong className="text-[#1D1D1F]">{selectedSize}</strong>
+                      </span>
+                    )}
+                  </div>
                   <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                    {availableOptions.map((opt) => (
-                      <button
-                        key={opt}
-                        onClick={() => setSelectedVariant(opt)}
-                        className={`px-3 sm:px-3.5 py-1 sm:py-1.5 rounded-full text-xs font-sans font-medium transition-all cursor-pointer ${
-                          selectedVariant === opt
-                            ? 'bg-[#1D1D1F] text-white shadow-xs'
-                            : 'bg-[#F5F5F7] text-[#1D1D1F] hover:bg-[#E8E8ED] border border-black/[0.05]'
-                        }`}
-                      >
-                        {opt}
-                      </button>
-                    ))}
+                    {availableSizes.map((sz) => {
+                      const isSelected = selectedSize === sz;
+
+                      return (
+                        <button
+                          key={sz}
+                          type="button"
+                          onClick={() => setSelectedSize(sz)}
+                          className={`px-3 sm:px-3.5 py-1 sm:py-1.5 rounded-full text-xs font-sans font-medium transition-all cursor-pointer ${
+                            isSelected
+                              ? 'bg-[#1D1D1F] text-white shadow-xs scale-105'
+                              : 'bg-[#F5F5F7] text-[#1D1D1F] hover:bg-[#E8E8ED] border border-black/[0.05]'
+                          }`}
+                        >
+                          {sz}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -267,7 +308,8 @@ export const QuickViewModal = ({
 
             </div>
           </div>
-        </motion.div>
+          </motion.div>
+        </div>
       </div>
     </AnimatePresence>
   );

@@ -68,9 +68,10 @@ export const createCartWhatsAppUrl = (cartItems, totalAmount, overrideNumber = n
 
   cartItems.forEach((item, index) => {
     const itemTotal = Number(item.price || 0) * Number(item.quantity || 1);
+    const itemSize = item.selectedSize || (item.sizes && item.sizes[0]) || (item.variants && item.variants[0]) || item.selectedVariant || '';
     text += `${index + 1}. *${item.name}*\n`;
     text += `   Quantity: ${item.quantity}\n`;
-    if (item.selectedSize) text += `   Size: ${item.selectedSize}\n`;
+    if (itemSize) text += `   Size: ${itemSize}\n`;
     if (item.selectedColor) text += `   Color: ${item.selectedColor}\n`;
     text += `   Price: ${formatPrice(item.price, currency)} × ${item.quantity} = ${formatPrice(itemTotal, currency)}\n\n`;
   });

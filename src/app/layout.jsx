@@ -19,7 +19,7 @@ export const metadata = {
     template: '%s | Nakoda Store',
   },
   description: 'Shop premium bags, jewelry, trolleys, gourmet papad, apparel, undergarments, electronics and more with fast Pan-India delivery and WhatsApp ordering.',
-  keywords: ['online store', 'ecommerce', 'bags', 'jewelry', 'trolley bags', 'papad', 'undergarments', 'fashion', 'electronics', 'Bangalore shopping'],
+  keywords: ['online store', 'ecommerce', 'bags', 'jewelry', 'trolley bags', 'papad', 'undergarments', 'fashion', 'electronics', 'Vapi shopping', 'Gujarat shopping'],
   authors: [{ name: 'Nakoda Store' }],
   creator: 'Nakoda Store',
   metadataBase: new URL('https://nakodaimitation.com'),

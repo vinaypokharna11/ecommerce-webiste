@@ -132,25 +132,16 @@ export const CatalogPage = ({
 
   return (
     <div className="w-full bg-[#FBFBFD] text-[#1D1D1F]">
-      <section id="catalog-grid" className="relative pt-18 sm:pt-28 pb-24 overflow-hidden min-h-screen bg-[#FBFBFD]">
+      <section id="catalog-grid" className="relative pt-3 sm:pt-5 pb-24 overflow-hidden min-h-screen bg-[#FBFBFD]">
         <div className="w-full max-w-[1440px] mx-auto px-3.5 sm:px-8 lg:px-12">
           
-          {/* Apple Style Header */}
-          <div className="text-center max-w-2xl mx-auto mb-6 sm:mb-8 space-y-2">
-            <motion.h1
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-2xl xs:text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-[#1D1D1F] font-sans"
-            >
-              Explore All Products
-            </motion.h1>
-            <p className="text-xs sm:text-sm text-[#6E6E73] font-normal max-w-lg mx-auto">
-              Browse bags, luggage trolleys, fine jewelry, authentic papads, organic innerwear, and electronics.
-            </p>
-          </div>
+          {/* Accessible Screen Reader Heading for SEO */}
+          <h1 className="sr-only">
+            {selectedCategory && selectedCategory !== 'all' ? `Catalog - ${selectedCategory}` : 'Storefront Product Catalog'}
+          </h1>
 
           {/* Elevated Apple Search Bar */}
-          <div className="max-w-xl mx-auto mb-6 sm:mb-8">
+          <div id="catalog-search-bar" className="max-w-xl mx-auto mb-4 sm:mb-6">
             <div className="flex items-center justify-between px-3.5 sm:px-4 py-2.5 sm:py-3 bg-white rounded-full border border-black/[0.08] shadow-[0_2px_14px_rgba(0,0,0,0.04)] focus-within:border-[#1D1D1F] transition-all">
               <div className="flex items-center gap-2.5 sm:gap-3 flex-1 min-w-0">
                 <Search className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-[#86868B] shrink-0" />
