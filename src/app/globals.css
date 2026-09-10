@@ -63,145 +63,147 @@
   bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));
 }
 
-/* ── Apple UI Component Utilities ── */
-.apple-glass {
-  background: rgba(255, 255, 255, 0.82);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(0, 0, 0, 0.06);
-}
+@layer components {
+  /* ── Apple UI Component Utilities ── */
+  .apple-glass {
+    background: rgba(255, 255, 255, 0.82);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+  }
 
-.apple-card {
-  background-color: #FFFFFF;
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  border-radius: 1.5rem;
-  box-shadow: 0 2px 14px rgba(0, 0, 0, 0.04);
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-}
+  .apple-card {
+    background-color: #FFFFFF;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 1.5rem;
+    box-shadow: 0 2px 14px rgba(0, 0, 0, 0.04);
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
 
-.apple-card:hover {
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.08);
-  transform: translateY(-2px);
-}
+  .apple-card:hover {
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.08);
+    transform: translateY(-2px);
+  }
 
-/* ── Apple Style Buttons ── */
-.btn-apple-primary {
-  background-color: #1D1D1F;
-  color: #FFFFFF;
-  font-weight: 500;
-  font-size: 0.875rem;
-  padding: 0.65rem 1.4rem;
-  border-radius: 9999px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  cursor: pointer;
-}
+  /* ── Apple Style Buttons ── */
+  .btn-apple-primary {
+    background-color: #1D1D1F;
+    color: #FFFFFF;
+    font-weight: 500;
+    font-size: 0.875rem;
+    padding: 0.65rem 1.4rem;
+    border-radius: 9999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+  }
 
-.btn-apple-primary:hover {
-  background-color: #000000;
-  transform: scale(1.02);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.16);
-}
+  .btn-apple-primary:hover {
+    background-color: #000000;
+    transform: scale(1.02);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.16);
+  }
 
-.btn-apple-primary:active {
-  transform: scale(0.97);
-}
+  .btn-apple-primary:active {
+    transform: scale(0.97);
+  }
 
-.btn-apple-blue {
-  background-color: #0071E3;
-  color: #FFFFFF;
-  font-weight: 500;
-  font-size: 0.875rem;
-  padding: 0.65rem 1.4rem;
-  border-radius: 9999px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 2px 10px rgba(0, 113, 227, 0.25);
-  cursor: pointer;
-}
+  .btn-apple-blue {
+    background-color: #0071E3;
+    color: #FFFFFF;
+    font-weight: 500;
+    font-size: 0.875rem;
+    padding: 0.65rem 1.4rem;
+    border-radius: 9999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 2px 10px rgba(0, 113, 227, 0.25);
+    cursor: pointer;
+  }
 
-.btn-apple-blue:hover {
-  background-color: #0077ED;
-  transform: scale(1.02);
-  box-shadow: 0 6px 20px rgba(0, 113, 227, 0.35);
-}
+  .btn-apple-blue:hover {
+    background-color: #0077ED;
+    transform: scale(1.02);
+    box-shadow: 0 6px 20px rgba(0, 113, 227, 0.35);
+  }
 
-.btn-apple-blue:active {
-  transform: scale(0.97);
-}
+  .btn-apple-blue:active {
+    transform: scale(0.97);
+  }
 
-.btn-apple-secondary {
-  background-color: #F5F5F7;
-  color: #1D1D1F;
-  font-weight: 500;
-  font-size: 0.875rem;
-  padding: 0.65rem 1.4rem;
-  border-radius: 9999px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  border: 1px solid rgba(0, 0, 0, 0.05);
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  cursor: pointer;
-}
+  .btn-apple-secondary {
+    background-color: #F5F5F7;
+    color: #1D1D1F;
+    font-weight: 500;
+    font-size: 0.875rem;
+    padding: 0.65rem 1.4rem;
+    border-radius: 9999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    cursor: pointer;
+  }
 
-.btn-apple-secondary:hover {
-  background-color: #E8E8ED;
-  transform: scale(1.02);
-}
+  .btn-apple-secondary:hover {
+    background-color: #E8E8ED;
+    transform: scale(1.02);
+  }
 
-.btn-apple-secondary:active {
-  transform: scale(0.97);
-}
+  .btn-apple-secondary:active {
+    transform: scale(0.97);
+  }
 
-/* ── Backward compatibility classes ── */
-.btn-gold {
-  background-color: #1D1D1F;
-  color: #FFFFFF;
-  font-weight: 500;
-  font-size: 0.875rem;
-  padding: 0.65rem 1.4rem;
-  border-radius: 9999px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  cursor: pointer;
-}
+  /* ── Backward compatibility classes ── */
+  .btn-gold {
+    background-color: #1D1D1F;
+    color: #FFFFFF;
+    font-weight: 500;
+    font-size: 0.875rem;
+    padding: 0.65rem 1.4rem;
+    border-radius: 9999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    cursor: pointer;
+  }
 
-.btn-gold:hover {
-  background-color: #000000;
-  transform: scale(1.02);
-}
+  .btn-gold:hover {
+    background-color: #000000;
+    transform: scale(1.02);
+  }
 
-.btn-ghost-gold {
-  background-color: transparent;
-  color: #1D1D1F;
-  border: 1px solid rgba(0, 0, 0, 0.15);
-  font-weight: 500;
-  font-size: 0.875rem;
-  padding: 0.65rem 1.4rem;
-  border-radius: 9999px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  cursor: pointer;
-}
+  .btn-ghost-gold {
+    background-color: transparent;
+    color: #1D1D1F;
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    font-weight: 500;
+    font-size: 0.875rem;
+    padding: 0.65rem 1.4rem;
+    border-radius: 9999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    cursor: pointer;
+  }
 
-.btn-ghost-gold:hover {
-  background-color: #F5F5F7;
-  border-color: rgba(0, 0, 0, 0.3);
+  .btn-ghost-gold:hover {
+    background-color: #F5F5F7;
+    border-color: rgba(0, 0, 0, 0.3);
+  }
 }
 
 /* ── Sleek Minimal Scrollbar ── */

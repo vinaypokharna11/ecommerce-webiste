@@ -37,7 +37,7 @@ export const ProductCardComponent = ({
         {/* Optional Badge */}
         {product.badge && (
           <div className="absolute top-2 sm:top-2.5 left-2 sm:left-2.5 z-10">
-            <span className="inline-block px-2 sm:px-2.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-sans font-bold tracking-wide bg-[#1D1D1F] text-white shadow-xs">
+            <span className="inline-block px-2.5 py-0.5 sm:px-2.5 sm:py-0.5 rounded-full text-[11px] sm:text-[10px] font-sans font-bold tracking-wide bg-[#1D1D1F] text-white shadow-xs">
               {product.badge}
             </span>
           </div>

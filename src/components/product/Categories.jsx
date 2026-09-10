@@ -31,24 +31,13 @@ export const Categories = ({
       <div className="max-w-[1440px] mx-auto space-y-8 sm:space-y-12">
 
         {/* Apple Style Section Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-3 sm:gap-4">
-          <div className="space-y-2 sm:space-y-3">
-            <h2 className="text-2xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-[#1D1D1F] font-sans">
-              Explore Our Collections
-            </h2>
-            <p className="text-xs sm:text-base text-[#6E6E73] max-w-xl font-normal">
-              Find exactly what you’re looking for across our curated lifestyle, grocery, apparel, and travel categories.
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => onExploreCatalog && onExploreCatalog('all')}
-            className="inline-flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-semibold text-[#0071E3] hover:text-[#0077ED] transition-colors self-start md:self-auto group cursor-pointer"
-          >
-            <span>View All Products</span>
-            <ArrowUpRight className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-          </button>
+        <div className="space-y-2 sm:space-y-3">
+          <h2 className="text-2xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-[#1D1D1F] font-sans">
+            Explore Our Collections
+          </h2>
+          <p className="text-xs sm:text-base text-[#6E6E73] max-w-xl font-normal">
+            Find exactly what you’re looking for across our curated lifestyle, grocery, apparel, and travel categories.
+          </p>
         </div>
 
         {/* Apple 4-Column Responsive Grid with Smooth Hover Scale */}

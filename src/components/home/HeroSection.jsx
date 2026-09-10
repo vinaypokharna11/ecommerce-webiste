@@ -65,39 +65,27 @@ export const HeroSection = ({
             From lightweight spinner trolleys and handcrafted imitation jewelry to authentic sun-dried papads, organic undergarments, and top electronics.
           </motion.p>
 
-          {/* Action CTAs: Both primary buttons kept on the SAME ROW */}
+          {/* Action CTAs: Always side-by-side with responsive scaling from mobile to desktop */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.4 }}
-            className="flex flex-wrap items-center gap-2.5 sm:gap-3.5 pt-1"
+            className="flex items-center gap-1.5 xs:gap-2.5 sm:gap-3.5 pt-1 flex-nowrap"
           >
-            <div className="flex items-center gap-2.5 sm:gap-3 flex-nowrap">
-              <button
-                onClick={() => onExploreClick && onExploreClick('all')}
-                className="btn-apple-primary px-4.5 sm:px-6 py-2.5 sm:py-3 text-xs sm:text-sm shadow-sm whitespace-nowrap"
-              >
-                <span>Explore All Catalog</span>
-                <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              </button>
-
-              <button
-                onClick={() => onNavClick && onNavClick('offers', 'Offers')}
-                className="btn-apple-secondary px-4.5 sm:px-6 py-2.5 sm:py-3 text-xs sm:text-sm whitespace-nowrap"
-              >
-                <span>Today’s Exclusive Deals</span>
-              </button>
-            </div>
-
-            <a
-              href={whatsappUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-2 px-3.5 py-2 sm:py-2.5 rounded-full text-xs font-semibold text-[#25D366] hover:bg-[#25D366]/10 transition-colors whitespace-nowrap"
+            <button
+              onClick={() => onExploreClick && onExploreClick('all')}
+              className="btn-apple-primary px-2.5 xs:px-3.5 sm:px-5 lg:px-6 py-1.5 xs:py-2 sm:py-2.5 lg:py-3 text-[11px] xs:text-xs sm:text-sm font-semibold shadow-sm flex items-center justify-center gap-1 sm:gap-2 whitespace-nowrap shrink-0"
             >
-              <MessageCircle className="w-4 h-4" />
-              <span>Instant WhatsApp Help</span>
-            </a>
+              <span>Explore All Catalog</span>
+              <ArrowRight className="w-3 h-3 xs:w-3.5 xs:h-3.5 sm:w-4 sm:h-4 shrink-0" />
+            </button>
+
+            <button
+              onClick={() => onNavClick && onNavClick('offers', 'Offers')}
+              className="btn-apple-secondary px-2.5 xs:px-3.5 sm:px-5 lg:px-6 py-1.5 xs:py-2 sm:py-2.5 lg:py-3 text-[11px] xs:text-xs sm:text-sm font-semibold flex items-center justify-center whitespace-nowrap shrink-0"
+            >
+              <span>Today's Exclusive Deals</span>
+            </button>
           </motion.div>
 
         </div>

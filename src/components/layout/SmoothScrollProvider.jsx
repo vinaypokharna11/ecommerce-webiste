@@ -42,6 +42,9 @@ export function SmoothScrollProvider({ children }) {
       });
 
       lenisRef.current = lenis;
+      if (typeof window !== 'undefined') {
+        window.__lenis = lenis;
+      }
 
       try {
         const { default: gsap } = await import('gsap');
@@ -80,6 +83,9 @@ export function SmoothScrollProvider({ children }) {
         }).catch(() => {});
       }
       if (lenis) {
+        if (typeof window !== 'undefined' && window.__lenis === lenis) {
+          window.__lenis = null;
+        }
         lenis.destroy();
         lenisRef.current = null;
       }

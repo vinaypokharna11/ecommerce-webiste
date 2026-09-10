@@ -515,7 +515,7 @@ export const ProfilePage = ({ orders = [], onExploreCatalog, onNavigate }) => {
   };
 
   return (
-    <section className="relative pt-20 sm:pt-28 pb-32 sm:pb-32 overflow-hidden min-h-[85vh] bg-[#F6F5F0]">
+    <section className="relative pt-4 sm:pt-6 pb-24 sm:pb-28 overflow-hidden min-h-[85vh] bg-[#F6F5F0]">
       <div className="max-w-3xl mx-auto px-3.5 sm:px-6">
 
         {/* ── Sign-In Notification Banner (if guest) ── */}

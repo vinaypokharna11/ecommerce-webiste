@@ -60,7 +60,10 @@ function StorefrontContent() {
 
   // Synchronize activeTab on browser Back/Forward (popstate event)
   useEffect(() => {
-    const handlePopState = () => {
+    const handlePopState = (e) => {
+      if (e?.state?.modal === 'product-quickview' || quickViewProduct) {
+        return;
+      }
       const urlParams = new URLSearchParams(window.location.search);
       const tab = urlParams.get('tab');
       const validTabs = ['home', 'catalog', 'offers', 'contact', 'cart', 'profile'];
@@ -71,7 +74,7 @@ function StorefrontContent() {
 
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, []);
+  }, [quickViewProduct]);
 
   // Cart & Wishlist state: strictly isolated per user session
   const [cartItems, setCartItems] = useState({});

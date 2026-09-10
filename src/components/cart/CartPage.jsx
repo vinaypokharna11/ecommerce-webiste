@@ -456,6 +456,7 @@ export const CartPage = ({
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [viewTab, setViewTab] = useState('cart'); // 'cart' | 'wishlist'
+  const [selectedItemId, setSelectedItemId] = useState(null);
 
   const cartList = Object.values(cartItems).filter((item) => item.quantity > 0);
   const subtotal = cartList.reduce((sum, item) => sum + (item.price || 0) * item.quantity, 0);
@@ -604,6 +605,7 @@ export const CartPage = ({
                       const fullProduct = products?.find((p) => p.id === item.id || p.id === item.productId) || item;
                       const availableSizes = getProductSizes(fullProduct);
                       const activeSize = item.selectedSize || (availableSizes.length > 0 ? availableSizes[0] : null);
+                      const isSelected = selectedItemId === item.id;
 
                       return (
                         <motion.div
@@ -612,7 +614,8 @@ export const CartPage = ({
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, scale: 0.95 }}
-                          className="bg-white/95 backdrop-blur-md rounded-2xl sm:rounded-[24px] border border-black/[0.06] p-3 sm:p-4 shadow-sm flex gap-3 sm:gap-4 items-center"
+                          onClick={() => setSelectedItemId(item.id)}
+                          className="bg-white/95 backdrop-blur-md rounded-2xl sm:rounded-[24px] border border-black/[0.06] p-3 sm:p-4 shadow-sm flex gap-3 sm:gap-4 items-center cursor-pointer hover:border-black/20 hover:shadow-md transition-all duration-200"
                         >
                           <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl sm:rounded-2xl bg-[#F5F5F7] overflow-hidden shrink-0 relative">
                             <Image
@@ -636,14 +639,14 @@ export const CartPage = ({
                                 </span>
                                 <div className="flex flex-wrap items-center gap-1">
                                   {availableSizes.map((sz) => {
-                                    const isSelected = activeSize === sz;
+                                    const isSzSelected = activeSize === sz;
                                     return (
                                       <button
                                         key={sz}
                                         type="button"
-                                        onClick={() => onUpdateSize && onUpdateSize(item.id, sz)}
+                                        onClick={(e) => { e.stopPropagation(); onUpdateSize && onUpdateSize(item.id, sz); }}
                                         className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold transition-all cursor-pointer ${
-                                          isSelected
+                                          isSzSelected
                                             ? 'bg-[#1D1D1F] text-white shadow-xs scale-105'
                                             : 'bg-[#F5F5F7] text-[#555555] hover:bg-[#E8E8ED] hover:text-[#1D1D1F] border border-black/5'
                                         }`}
@@ -664,7 +667,7 @@ export const CartPage = ({
                             <div className="flex items-center gap-2">
                               <div className="flex items-center bg-[#F5F5F7] rounded-full p-1 shadow-inner">
                                 <button
-                                  onClick={() => onUpdateQuantity(item.id, item.quantity - 1)}
+                                  onClick={(e) => { e.stopPropagation(); onUpdateQuantity(item.id, item.quantity - 1); }}
                                   className="w-6 h-6 rounded-full bg-white text-[#1D1D1F] flex items-center justify-center hover:bg-black hover:text-white transition-colors"
                                 >
                                   <Minus className="w-3 h-3" />
@@ -673,7 +676,7 @@ export const CartPage = ({
                                   {item.quantity}
                                 </span>
                                 <button
-                                  onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
+                                  onClick={(e) => { e.stopPropagation(); onUpdateQuantity(item.id, item.quantity + 1); }}
                                   className="w-6 h-6 rounded-full bg-[#1D1D1F] text-white flex items-center justify-center font-bold hover:bg-[#000000] transition-colors"
                                 >
                                   <Plus className="w-3 h-3" />
@@ -681,7 +684,7 @@ export const CartPage = ({
                               </div>
 
                               <button
-                                onClick={() => onUpdateQuantity(item.id, 0)}
+                                onClick={(e) => { e.stopPropagation(); onUpdateQuantity(item.id, 0); }}
                                 className="w-7 h-7 rounded-full bg-[#F5F5F7] hover:bg-rose-50 text-[#777777] hover:text-rose-500 flex items-center justify-center transition-colors"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
@@ -859,6 +862,133 @@ export const CartPage = ({
             }}
           />
         )}
+      </AnimatePresence>
+
+      {/* ─── Cart Item Popup Modal ─────────────────────────────────────── */}
+      <AnimatePresence>
+        {selectedItemId && (() => {
+          const selItem = cartList.find(i => i.id === selectedItemId);
+          if (!selItem) return null;
+          const selProduct = products?.find((p) => p.id === selItem.id || p.id === selItem.productId) || selItem;
+          const selSizes = getProductSizes(selProduct);
+          const selActiveSize = selItem.selectedSize || (selSizes.length > 0 ? selSizes[0] : null);
+          return (
+            <motion.div
+              key="cart-item-popup-backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setSelectedItemId(null)}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+            >
+              <motion.div
+                key="cart-item-popup"
+                initial={{ opacity: 0, scale: 0.92, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.92, y: 20 }}
+                transition={{ type: 'spring', damping: 26, stiffness: 320 }}
+                onClick={(e) => e.stopPropagation()}
+                className="relative bg-white rounded-[28px] shadow-2xl border border-black/[0.06] w-full max-w-sm overflow-hidden"
+              >
+                {/* Close Button */}
+                <button
+                  onClick={() => setSelectedItemId(null)}
+                  className="absolute top-4 right-4 z-10 w-8 h-8 rounded-full bg-black/5 hover:bg-black/10 flex items-center justify-center transition-colors"
+                >
+                  <X className="w-4 h-4 text-[#1D1D1F]" />
+                </button>
+
+                {/* Product Image */}
+                <div className="relative w-full h-52 bg-[#F5F5F7]">
+                  <Image
+                    src={selItem.image || '/assets/images/prod_headphones.jpg'}
+                    alt={selItem.name}
+                    fill
+                    sizes="400px"
+                    className="object-cover"
+                  />
+                  {selProduct?.discountPercent > 0 && (
+                    <div className="absolute top-3 left-3 bg-emerald-500 text-white text-[11px] font-extrabold px-3 py-1 rounded-full shadow-md">
+                      {selProduct.discountPercent}% OFF
+                    </div>
+                  )}
+                </div>
+
+                {/* Content */}
+                <div className="p-5 space-y-4">
+                  {/* Category & Name */}
+                  <div>
+                    <span className="text-[10px] font-bold text-[#888888] uppercase tracking-widest">
+                      {selItem.categoryName}
+                    </span>
+                    <h3 className="text-base sm:text-lg font-extrabold text-[#1D1D1F] mt-0.5 leading-tight">
+                      {selItem.name}
+                    </h3>
+                    {selProduct?.brand && (
+                      <p className="text-xs text-[#888888] mt-0.5">by {selProduct.brand}</p>
+                    )}
+                  </div>
+
+                  {/* Price Row */}
+                  <div className="flex items-end gap-2">
+                    <span className="text-2xl font-extrabold text-[#1D1D1F]">
+                      {formatPrice(selItem.price * selItem.quantity, STORE_CONFIG.currency)}
+                    </span>
+                    {selItem.quantity > 1 && (
+                      <span className="text-xs text-[#888888] mb-1">
+                        {formatPrice(selItem.price, STORE_CONFIG.currency)} each
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Detail Chips */}
+                  <div className="flex flex-wrap gap-2">
+                    <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#F5F5F7] text-xs font-bold text-[#1D1D1F]">
+                      <Package className="w-3 h-3" />
+                      Qty: {selItem.quantity}
+                    </span>
+                    {selActiveSize && (
+                      <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#F5F5F7] text-xs font-bold text-[#1D1D1F]">
+                        <Tag className="w-3 h-3" />
+                        Size: {selActiveSize}
+                      </span>
+                    )}
+                    {selProduct?.isPopular && (
+                      <span className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-amber-50 text-amber-600 text-xs font-bold">
+                        <Star className="w-3 h-3 fill-current" />
+                        Popular
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Description */}
+                  {selProduct?.description && (
+                    <p className="text-xs text-[#666666] leading-relaxed border-t border-black/[0.06] pt-3">
+                      {selProduct.description}
+                    </p>
+                  )}
+
+                  {/* Action Row */}
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      onClick={() => setSelectedItemId(null)}
+                      className="flex-1 py-3 rounded-full bg-[#F5F5F7] text-[#1D1D1F] font-bold text-xs hover:bg-[#E5E5EA] transition-colors"
+                    >
+                      Close
+                    </button>
+                    <button
+                      onClick={() => { onUpdateQuantity(selItem.id, 0); setSelectedItemId(null); }}
+                      className="px-4 py-3 rounded-full bg-rose-50 text-rose-500 font-bold text-xs hover:bg-rose-100 transition-colors flex items-center gap-1.5"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            </motion.div>
+          );
+        })()}
       </AnimatePresence>
     </section>
   );

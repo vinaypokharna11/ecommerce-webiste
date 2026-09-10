@@ -50,15 +50,6 @@ test.describe('Explore Our Collections Clickable Feature', () => {
     await expect(page).toHaveURL(/category=jewelry/);
   });
 
-  test('Clicking "View All Products" button navigates to catalog with all products', async ({ page }) => {
-    const viewAllBtn = page.locator('#categories-section button', { hasText: 'View All Products' });
-    await expect(viewAllBtn).toBeVisible();
-    await viewAllBtn.click();
-
-    await expect(page).toHaveURL(/tab=catalog/);
-    const catalogGrid = page.locator('#catalog-grid');
-    await expect(catalogGrid).toBeVisible();
-  });
 
   test('Keyboard navigation (Enter key) on collection card opens catalog', async ({ page }) => {
     const papadCard = page.locator('#categories-section [role="button"]', { hasText: 'Papad & Gourmet' });

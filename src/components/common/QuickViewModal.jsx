@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   X, 
@@ -43,37 +43,75 @@ export const QuickViewModal = ({
     }
   }, [product]);
 
-  // Handle ESC key and bulletproof background scroll lock
+  const isClosingViaBackRef = useRef(false);
+
+  const handleModalClose = useCallback(() => {
+    if (typeof window !== 'undefined' && window.history.state?.modal === 'product-quickview') {
+      isClosingViaBackRef.current = true;
+      window.history.back();
+    } else {
+      onClose();
+    }
+  }, [onClose]);
+
+  // Handle ESC key, browser Back button, and scroll lock with Lenis coordination
   useEffect(() => {
     if (!isOpen) return;
-    const scrollY = window.scrollY;
-    const origBodyPosition = document.body.style.position;
-    const origBodyTop = document.body.style.top;
-    const origBodyWidth = document.body.style.width;
+
+    // Capture exact scroll position prior to opening modal
+    const scrollY = window.scrollY || window.pageYOffset || document.documentElement.scrollTop || 0;
+    const lenis = typeof window !== 'undefined' ? window.__lenis : null;
+    if (lenis) {
+      lenis.stop();
+    }
+
     const origBodyOverflow = document.body.style.overflow;
     const origHtmlOverflow = document.documentElement.style.overflow;
 
+    // Lock page scrollbar without position:fixed which resets scrollY
     document.documentElement.style.overflow = 'hidden';
-    document.body.style.position = 'fixed';
-    document.body.style.top = `-${scrollY}px`;
-    document.body.style.width = '100%';
     document.body.style.overflow = 'hidden';
 
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape') onClose();
+    // Push history state so browser Back button closes modal without jumping/navigating away
+    if (typeof window !== 'undefined') {
+      window.history.pushState({ modal: 'product-quickview' }, '');
+    }
+
+    const handlePopState = () => {
+      // Browser back button or mobile back gesture pressed
+      isClosingViaBackRef.current = true;
+      onClose();
     };
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        handleModalClose();
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
     window.addEventListener('keydown', handleKeyDown);
 
     return () => {
       document.documentElement.style.overflow = origHtmlOverflow || '';
-      document.body.style.position = origBodyPosition || '';
-      document.body.style.top = origBodyTop || '';
-      document.body.style.width = origBodyWidth || '';
       document.body.style.overflow = origBodyOverflow || '';
-      window.scrollTo(0, scrollY);
+
+      window.removeEventListener('popstate', handlePopState);
       window.removeEventListener('keydown', handleKeyDown);
+
+      // If modal was unmounted directly without back navigation, clean up pushed history state
+      if (!isClosingViaBackRef.current && typeof window !== 'undefined' && window.history.state?.modal === 'product-quickview') {
+        window.history.back();
+      }
+
+      // Restore exact scroll position and synchronize with Lenis
+      window.scrollTo({ top: scrollY, left: 0, behavior: 'instant' });
+      if (lenis) {
+        lenis.scrollTo(scrollY, { immediate: true });
+        lenis.start();
+      }
     };
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, handleModalClose]);
 
   if (!isOpen || !product) return null;
 
@@ -107,14 +145,14 @@ export const QuickViewModal = ({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          onClick={onClose}
+          onClick={handleModalClose}
           className="fixed inset-0 bg-black/40 backdrop-blur-md transition-opacity -z-10"
         />
 
         {/* Scroll Centering Wrapper */}
         <div 
           className="min-h-full flex items-center justify-center p-3 sm:p-6 py-6 sm:py-10"
-          onClick={onClose}
+          onClick={handleModalClose}
         >
           {/* Apple Modal Container */}
           <motion.div
@@ -127,7 +165,7 @@ export const QuickViewModal = ({
           >
           {/* Close button */}
           <button
-            onClick={onClose}
+            onClick={handleModalClose}
             className="absolute top-3.5 right-3.5 sm:top-5 sm:right-5 w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-[#F5F5F7] hover:bg-[#E8E8ED] text-[#1D1D1F] flex items-center justify-center transition-colors z-20 cursor-pointer shadow-xs"
             aria-label="Close modal"
           >
@@ -145,7 +183,7 @@ export const QuickViewModal = ({
                 sizes="(max-width: 768px) 100vw, 400px"
               />
               {product.badge && (
-                <div className="absolute top-3 left-3 sm:top-4 sm:left-4 px-2.5 py-0.5 sm:px-3 sm:py-1 bg-[#1D1D1F] text-white text-[9px] sm:text-[10px] font-sans font-bold tracking-wide rounded-full">
+                <div className="absolute top-3 left-3 sm:top-4 sm:left-4 px-2.5 py-0.5 sm:px-3 sm:py-1 bg-[#1D1D1F] text-white text-[11px] sm:text-[10px] font-sans font-bold tracking-wide rounded-full">
                   {product.badge}
                 </div>
               )}
@@ -283,28 +321,7 @@ export const QuickViewModal = ({
                   <span>{isAdded ? 'Added to Bag ✓' : `Add to Bag · ${formatPrice(totalPrice, STORE_CONFIG.currency)}`}</span>
                 </button>
 
-                <a
-                  href={whatsappUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full py-2 sm:py-2.5 px-4 rounded-full bg-[#F5F5F7] hover:bg-[#E8E8ED] text-[#1D1D1F] text-xs font-semibold flex items-center justify-center gap-2 transition-all"
-                >
-                  <MessageCircle className="w-4 h-4 text-[#25D366]" />
-                  <span>Inquire or Order via WhatsApp</span>
-                </a>
-              </div>
-
-              {/* Trust Badges */}
-              <div className="grid grid-cols-2 gap-2 sm:gap-3 pt-3 border-t border-black/[0.06] text-[11px] sm:text-xs text-[#6E6E73]">
-                <div className="flex items-center gap-1.5 sm:gap-2">
-                  <ShieldCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#34C759] shrink-0" />
-                  <span className="truncate">Genuine Quality</span>
-                </div>
-                <div className="flex items-center gap-1.5 sm:gap-2">
-                  <Truck className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#0071E3] shrink-0" />
-                  <span className="truncate">Express Shipping</span>
-                </div>
-              </div>
+            </div>
 
             </div>
           </div>

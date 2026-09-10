@@ -34,10 +34,10 @@ export const Footer = ({ onLinkClick }) => {
   return (
     <footer className="bg-[#F5F5F7] text-[#1D1D1F] border-t border-black/[0.08] pt-12 sm:pt-16 pb-28 sm:pb-16">
       <div className="max-w-[1440px] mx-auto px-4 sm:px-8 lg:px-12">
-        
+
         {/* 4 Column Responsive Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 sm:gap-10 pb-12 border-b border-black/[0.08]">
-          
+
           {/* Col 1: Brand & Description */}
           <div className="space-y-4">
             <div className="flex items-center gap-2.5">
@@ -109,7 +109,7 @@ export const Footer = ({ onLinkClick }) => {
               </p>
               <p className="flex items-start gap-2">
                 <MapPin className="w-3.5 h-3.5 text-[#1D1D1F] shrink-0 mt-0.5" />
-                <span>{storeConfig?.address || '6, Honey Complex, Opposite Gunjan Cinema, Koparli Road, Gunjan, G.I.D.C, Vapi, Gujarat — 396195'}</span>
+                <span>{storeConfig?.address || '6, Honey Complex, Opposite Gunjan Cinema, Koparli Road, Gunjan, G.I.D.C, Vapi, Gujarat,396195'}</span>
               </p>
               <p className="text-xs text-[#86868B] pt-1">
                 Mon - Sun: 9:30 AM – 9:30 PM IST

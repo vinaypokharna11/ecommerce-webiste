@@ -181,41 +181,39 @@ export const Navbar = ({
       <header
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-        className={`fixed top-0 left-0 right-0 z-50 w-full transition-transform duration-300 ease-in-out ${
-          isVisible ? 'translate-y-0' : '-translate-y-full pointer-events-none'
-        } ${
-          scrolled
-            ? 'bg-white/85 backdrop-blur-xl border-b border-black/[0.06] shadow-sm py-3.5'
-            : 'bg-[#FBFBFD]/90 backdrop-blur-md border-b border-black/[0.04] py-5'
-        }`}
+        className={`fixed top-0 left-0 right-0 z-50 w-full transition-transform duration-300 ease-in-out ${isVisible ? 'translate-y-0' : '-translate-y-full pointer-events-none'
+          } ${scrolled
+            ? 'bg-white/85 backdrop-blur-xl border-b border-black/[0.06] shadow-sm py-2.5 sm:py-3.5'
+            : 'bg-[#FBFBFD]/90 backdrop-blur-md border-b border-black/[0.04] py-2.5 xs:py-3 sm:py-5'
+          }`}
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 flex items-center justify-between gap-3 sm:gap-5">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-10 flex items-center justify-between gap-2 sm:gap-5">
 
           {/* Logo & Brand Identity */}
           <button
             id="navbar-brand-logo"
             onClick={() => handleLinkClick('home', 'Home')}
-            className={`flex items-center gap-2 sm:gap-2.5 group text-left cursor-pointer focus:outline-none min-w-0 transition-opacity duration-300 ${isLogoHidden ? 'opacity-0' : 'opacity-100'
+            className={`flex items-center gap-2 sm:gap-2.5 group text-left cursor-pointer focus:outline-none min-w-0 shrink transition-opacity duration-300 ${isLogoHidden ? 'opacity-0' : 'opacity-100'
               }`}
             aria-label="Go to Nakoda Store Home"
           >
-            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-[#1D1D1F] text-white flex items-center justify-center font-bold text-base sm:text-lg tracking-wider shadow-sm group-hover:scale-105 transition-transform shrink-0">
+            <div className="w-8 h-8 xs:w-9 xs:h-9 sm:w-11 sm:h-11 rounded-lg sm:rounded-xl bg-[#1D1D1F] text-white flex items-center justify-center font-bold text-sm xs:text-lg sm:text-lg tracking-wider shadow-sm group-hover:scale-105 transition-transform shrink-0">
               N
             </div>
-            <span className="text-base sm:text-lg font-bold tracking-tight text-[#1D1D1F] leading-tight whitespace-nowrap">
+            <span className="text-sm xs:text-base sm:text-lg font-bold tracking-tight text-[#1D1D1F] leading-tight truncate">
               {STORE_CONFIG.name}
             </span>
           </button>
 
           {/* Desktop Navigation Links */}
-          <nav className="hidden md:flex items-center gap-1 bg-[#F5F5F7] p-1.5 rounded-full border border-black/[0.04]">
+          <nav className="hidden lg:flex items-center gap-1 bg-[#F5F5F7] p-1.5 rounded-full border border-black/[0.04] shrink-0">
             {NAV_ITEMS.map((item) => {
               const isActive = activeTab === item.id;
               return (
                 <button
                   key={item.id}
                   onClick={() => handleLinkClick(item.id, item.label)}
-                  className={`relative px-5 py-2 rounded-full text-sm font-medium transition-all duration-200 cursor-pointer ${isActive
+                  className={`relative px-3.5 xl:px-5 py-2 rounded-full text-xs xl:text-sm font-medium transition-all duration-200 cursor-pointer whitespace-nowrap ${isActive
                     ? 'text-[#1D1D1F] font-semibold'
                     : 'text-[#6E6E73] hover:text-[#1D1D1F]'
                     }`}
@@ -234,12 +232,12 @@ export const Navbar = ({
           </nav>
 
           {/* Right Action Icons: Search, WhatsApp, Profile, Cart, Hamburger */}
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          <div className="flex items-center gap-1.5 xs:gap-2 sm:gap-2.5 xl:gap-3 shrink-0">
 
-            {/* Profile Button (Hidden on extra small mobile to save space, accessible in mobile drawer) */}
+            {/* Profile Button (Visible on extra-large desktop screens; accessible via nav pill or drawer) */}
             <button
               onClick={() => handleLinkClick('profile', 'Profile')}
-              className={`hidden sm:flex w-10 h-10 sm:w-11 sm:h-11 rounded-full items-center justify-center transition-colors cursor-pointer ${activeTab === 'profile'
+              className={`hidden xl:flex w-10 h-10 sm:w-11 sm:h-11 rounded-full items-center justify-center transition-colors cursor-pointer ${activeTab === 'profile'
                 ? 'bg-[#1D1D1F] text-white'
                 : 'bg-[#F5F5F7] text-[#1D1D1F] hover:bg-[#E8E8ED]'
                 }`}
@@ -252,12 +250,12 @@ export const Navbar = ({
             {/* Wishlist Button */}
             <button
               onClick={() => handleLinkClick('wishlist', 'Wishlist')}
-              className={`hidden sm:flex w-10 h-10 sm:w-11 sm:h-11 rounded-full items-center justify-center transition-colors cursor-pointer relative ${wishlistCount > 0 ? 'bg-rose-50 text-rose-500 border border-rose-200' : 'bg-[#F5F5F7] text-[#1D1D1F] hover:bg-[#E8E8ED]'
+              className={`hidden sm:flex w-8 h-8 xs:w-9 xs:h-9 sm:w-10 sm:h-10 lg:w-11 lg:h-11 rounded-full items-center justify-center transition-colors cursor-pointer relative ${wishlistCount > 0 ? 'bg-rose-50 text-rose-500 border border-rose-200' : 'bg-[#F5F5F7] text-[#1D1D1F] hover:bg-[#E8E8ED]'
                 }`}
               aria-label="Wishlist"
               title={`Wishlist (${wishlistCount})`}
             >
-              <Heart className="w-4.5 h-4.5 sm:w-5 sm:h-5" fill={wishlistCount > 0 ? 'currentColor' : 'none'} />
+              <Heart className="w-4 h-4 sm:w-4.5 sm:h-4.5 lg:w-5 lg:h-5" fill={wishlistCount > 0 ? 'currentColor' : 'none'} />
               {wishlistCount > 0 && (
                 <span className="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 text-white rounded-full text-[9px] font-bold flex items-center justify-center">
                   {wishlistCount}
@@ -270,27 +268,27 @@ export const Navbar = ({
               href={whatsappUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-[#25D366]/10 hover:bg-[#25D366]/20 text-[#25D366] flex items-center justify-center transition-all cursor-pointer shrink-0"
+              className="w-8 h-8 xs:w-9 xs:h-9 sm:w-10 sm:h-10 lg:w-11 lg:h-11 rounded-full bg-[#25D366]/10 hover:bg-[#25D366]/20 text-[#25D366] flex items-center justify-center transition-all cursor-pointer shrink-0"
               aria-label="WhatsApp Us"
               title="Chat on WhatsApp"
             >
-              <WhatsAppIcon className="w-4.5 h-4.5 sm:w-5 sm:h-5" />
+              <WhatsAppIcon className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
             </a>
 
             {/* Shopping Bag Button with Pill */}
             <button
               onClick={() => handleLinkClick('cart', 'Cart')}
-              className="relative px-4 sm:px-5 py-2.5 rounded-full bg-[#1D1D1F] hover:bg-[#000000] text-white flex items-center gap-2 sm:gap-2.5 transition-all cursor-pointer shadow-sm active:scale-95 shrink-0"
+              className="relative h-8 xs:h-9 sm:h-10 lg:h-11 px-2.5 xs:px-3.5 sm:px-4 lg:px-5 rounded-full bg-[#1D1D1F] hover:bg-[#000000] text-white flex items-center gap-1.5 sm:gap-2.5 transition-all cursor-pointer shadow-sm active:scale-95 shrink-0"
               aria-label="Shopping Cart"
             >
-              <ShoppingBag className="w-4.5 h-4.5 sm:w-5 sm:h-5" />
+              <ShoppingBag className="w-3.5 h-3.5 xs:w-4 xs:h-4 sm:w-4.5 sm:h-4.5" />
               <span className="text-xs sm:text-sm font-semibold">{cartCount}</span>
             </button>
 
-            {/* Mobile Hamburger Menu */}
+            {/* Mobile / Tablet Hamburger Menu (Visible below lg: 1024px) */}
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="md:hidden w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-[#F5F5F7] text-[#1D1D1F] flex items-center justify-center transition-colors shrink-0"
+              className="lg:hidden w-8 h-8 xs:w-9 xs:h-9 sm:w-10 sm:h-10 rounded-full bg-[#F5F5F7] text-[#1D1D1F] hover:bg-[#E8E8ED] flex items-center justify-center transition-colors shrink-0 cursor-pointer"
               aria-label="Toggle Navigation Menu"
             >
               {isMobileMenuOpen ? <X className="w-4 h-4 sm:w-5 sm:h-5" /> : <Menu className="w-4 h-4 sm:w-5 sm:h-5" />}
@@ -301,7 +299,7 @@ export const Navbar = ({
       </header>
 
       {/* Spacer to preserve document layout since header is fixed */}
-      <div className="w-full shrink-0 h-[72px] sm:h-[82px]" aria-hidden="true" />
+      <div className="w-full shrink-0 h-[56px] xs:h-[62px] sm:h-[82px]" aria-hidden="true" />
 
       {/* Mobile Animated Dropdown Drawer */}
       <AnimatePresence>
@@ -311,9 +309,8 @@ export const Navbar = ({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.2 }}
-            className={`fixed inset-x-0 ${
-              scrolled ? 'top-[52px] sm:top-[56px]' : 'top-[60px] sm:top-[64px]'
-            } z-40 bg-white/95 backdrop-blur-2xl border-b border-black/[0.08] shadow-xl md:hidden p-4 sm:p-5 space-y-3 max-h-[calc(100vh-60px)] overflow-y-auto`}
+            className={`fixed inset-x-0 ${scrolled ? 'top-[49px] xs:top-[54px] sm:top-[60px]' : 'top-[56px] xs:top-[62px] sm:top-[82px]'
+              } z-40 bg-white/95 backdrop-blur-2xl border-b border-black/[0.08] shadow-xl md:hidden p-4 sm:p-5 space-y-3 max-h-[calc(100vh-60px)] overflow-y-auto`}
           >
             {/* Mobile User Profile Link */}
             <div
