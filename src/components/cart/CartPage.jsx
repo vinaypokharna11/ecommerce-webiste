@@ -29,8 +29,8 @@ import { useCatalog } from '@/context/CatalogContext';
 import { firePartyPopper } from '@/utils/confetti';
 import { orderService } from '@/services/orderService';
 import { formatPrice } from '@/utils/formatPrice';
+import { getProductSizes, isProductSizeAvailable } from '@/utils/productOptions';
 import { createCartWhatsAppUrl } from '@/utils/whatsapp';
-import { getProductSizes } from '@/utils/productOptions';
 
 const SHIPPING_THRESHOLD = 999;
 
@@ -437,6 +437,7 @@ const CheckoutModal = ({ cartList, products = [], subtotal, promoDiscountAmount,
 
 // ─── Main Cart Page ───────────────────────────────────────────────────────────
 export const CartPage = ({
+  initialTab = 'cart',
   cartItems = {},
   wishlist = {},
   products = [],
@@ -455,8 +456,21 @@ export const CartPage = ({
   const [promoError, setPromoError] = useState('');
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState(false);
-  const [viewTab, setViewTab] = useState('cart'); // 'cart' | 'wishlist'
+  const [viewTab, setViewTab] = useState(initialTab || 'cart'); // 'cart' | 'wishlist'
   const [selectedItemId, setSelectedItemId] = useState(null);
+
+  useEffect(() => {
+    if (initialTab && (initialTab === 'cart' || initialTab === 'wishlist')) {
+      setViewTab(initialTab);
+    }
+  }, [initialTab]);
+
+  const handleViewTabChange = (tab) => {
+    setViewTab(tab);
+    if (typeof window !== 'undefined') {
+      window.history.replaceState({ tab }, '', `/?tab=${tab}`);
+    }
+  };
 
   const cartList = Object.values(cartItems).filter((item) => item.quantity > 0);
   const subtotal = cartList.reduce((sum, item) => sum + (item.price || 0) * item.quantity, 0);
@@ -473,7 +487,23 @@ export const CartPage = ({
   // Wishlist products resolution
   const wishlistProducts = Object.keys(wishlist)
     .filter((id) => wishlist[id])
-    .map((id) => products.find((p) => p.id === id))
+    .map((id) => {
+      const found = products.find((p) => p.id === id || p.id === (wishlist[id]?.productId));
+      if (found) return found;
+      const raw = wishlist[id];
+      if (raw && typeof raw === 'object') {
+        return {
+          id: raw.productId || id,
+          name: raw.productName || raw.name || 'Product',
+          price: raw.productPrice || raw.price || 0,
+          image: raw.productImage || raw.image || '',
+          category: raw.productCategory || raw.category || 'all',
+          categoryName: raw.productCategory || raw.categoryName || 'General',
+          ...raw,
+        };
+      }
+      return null;
+    })
     .filter(Boolean);
 
   // Special featured products for bottom section
@@ -520,7 +550,7 @@ export const CartPage = ({
         {/* Apple Style Pill Toggle */}
         <div className="flex items-center bg-[#F5F5F7] p-1 rounded-full border border-black/[0.06] self-start sm:self-auto shadow-xs">
           <button
-            onClick={() => setViewTab('cart')}
+            onClick={() => handleViewTabChange('cart')}
             className={`px-4 py-2 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
               viewTab === 'cart'
                 ? 'bg-white text-[#1D1D1F] shadow-sm'
@@ -534,7 +564,7 @@ export const CartPage = ({
           </button>
 
           <button
-            onClick={() => setViewTab('wishlist')}
+            onClick={() => handleViewTabChange('wishlist')}
             className={`px-4 py-2 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
               viewTab === 'wishlist'
                 ? 'bg-white text-[#1D1D1F] shadow-sm'
@@ -614,8 +644,11 @@ export const CartPage = ({
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, scale: 0.95 }}
-                          onClick={() => setSelectedItemId(item.id)}
-                          className="bg-white/95 backdrop-blur-md rounded-2xl sm:rounded-[24px] border border-black/[0.06] p-3 sm:p-4 shadow-sm flex gap-3 sm:gap-4 items-center cursor-pointer hover:border-black/20 hover:shadow-md transition-all duration-200"
+                          onClick={() => {
+                            setSelectedItemId(item.id);
+                            if (onQuickView) onQuickView(fullProduct);
+                          }}
+                          className="bg-white/95 backdrop-blur-md rounded-2xl sm:rounded-[24px] border border-black/[0.06] p-3 sm:p-4 shadow-sm flex gap-3 sm:gap-4 items-center cursor-pointer hover:border-black/20 hover:shadow-md transition-all duration-200 group"
                         >
                           <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl sm:rounded-2xl bg-[#F5F5F7] overflow-hidden shrink-0 relative">
                             <Image
@@ -639,19 +672,45 @@ export const CartPage = ({
                                 </span>
                                 <div className="flex flex-wrap items-center gap-1">
                                   {availableSizes.map((sz) => {
+                                    const isAvailable = isProductSizeAvailable(fullProduct, sz);
                                     const isSzSelected = activeSize === sz;
                                     return (
                                       <button
                                         key={sz}
                                         type="button"
-                                        onClick={(e) => { e.stopPropagation(); onUpdateSize && onUpdateSize(item.id, sz); }}
-                                        className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold transition-all cursor-pointer ${
-                                          isSzSelected
-                                            ? 'bg-[#1D1D1F] text-white shadow-xs scale-105'
-                                            : 'bg-[#F5F5F7] text-[#555555] hover:bg-[#E8E8ED] hover:text-[#1D1D1F] border border-black/5'
+                                        disabled={!isAvailable}
+                                        onClick={(e) => { 
+                                          e.stopPropagation(); 
+                                          if (isAvailable && onUpdateSize) onUpdateSize(item.id, sz); 
+                                        }}
+                                        title={isAvailable ? `Select Size ${sz}` : `Size ${sz} is out of stock`}
+                                        className={`relative overflow-hidden px-2.5 py-0.5 rounded-full text-[11px] font-bold transition-all ${
+                                          !isAvailable
+                                            ? 'bg-black/[0.03] text-[#86868B] border border-dashed border-black/15 cursor-not-allowed opacity-50'
+                                            : isSzSelected
+                                            ? 'bg-[#1D1D1F] text-white shadow-xs scale-105 cursor-pointer'
+                                            : 'bg-[#F5F5F7] text-[#555555] hover:bg-[#E8E8ED] hover:text-[#1D1D1F] border border-black/5 cursor-pointer'
                                         }`}
                                       >
-                                        {sz}
+                                        <span>{sz}</span>
+                                        {!isAvailable && (
+                                          <svg
+                                            className="absolute inset-0 w-full h-full pointer-events-none text-black/40"
+                                            viewBox="0 0 100 100"
+                                            preserveAspectRatio="none"
+                                            aria-hidden="true"
+                                          >
+                                            <line
+                                              x1="0"
+                                              y1="100"
+                                              x2="100"
+                                              y2="0"
+                                              stroke="currentColor"
+                                              strokeWidth="1.5"
+                                              vectorEffect="non-scaling-stroke"
+                                            />
+                                          </svg>
+                                        )}
                                       </button>
                                     );
                                   })}
@@ -801,9 +860,10 @@ export const CartPage = ({
               {wishlistProducts.map((prod) => (
                 <div
                   key={prod.id}
-                  className="bg-white/95 backdrop-blur-md rounded-[24px] border border-black/[0.06] p-4 shadow-sm flex gap-4 items-center justify-between"
+                  onClick={() => onQuickView && onQuickView(prod)}
+                  className="bg-white/95 backdrop-blur-md rounded-[24px] border border-black/[0.06] p-4 shadow-sm flex gap-4 items-center justify-between cursor-pointer hover:border-black/20 hover:shadow-md transition-all group"
                 >
-                  <div className="w-16 h-16 rounded-2xl bg-[#F5F5F7] relative overflow-hidden flex-shrink-0">
+                  <div className="w-16 h-16 rounded-2xl bg-[#F5F5F7] relative overflow-hidden flex-shrink-0 group-hover:scale-105 transition-transform">
                     <Image
                       src={prod.image || '/assets/images/prod_headphones.jpg'}
                       alt={prod.name}
@@ -813,13 +873,13 @@ export const CartPage = ({
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <h4 className="text-xs font-bold text-[#1D1D1F] truncate">{prod.name}</h4>
+                    <h4 className="text-xs font-bold text-[#1D1D1F] truncate group-hover:text-[#0071E3] transition-colors">{prod.name}</h4>
                     <span className="text-xs font-extrabold text-[#1D1D1F] block mt-0.5">
                       {formatPrice(prod.price, STORE_CONFIG.currency)}
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
                     <button
                       onClick={() => handleMoveWishlistToCart(prod)}
                       className="px-3 py-1.5 rounded-full bg-[#1D1D1F] hover:bg-black text-white font-extrabold text-[11px] shadow-sm active:scale-95 transition-all flex items-center gap-1 cursor-pointer"

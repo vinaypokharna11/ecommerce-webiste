@@ -83,7 +83,8 @@ ecommerce website/
 │   └── assets/                  ← Images and Static Media
 │
 ├── public/                      ← Static public assets served directly
-│   ├── favicon.jpg              ShopEase logo favicon
+│   ├── favicon.jpg              Nakoda N logo favicon
+│   ├── favicon.svg              Nakoda N logo vector favicon
 │   ├── robots.txt               SEO crawler rules
 │   └── site.webmanifest         PWA web app manifest
 │

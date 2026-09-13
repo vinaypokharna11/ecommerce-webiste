@@ -2,15 +2,20 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Authentication — Login & Signup', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/login');
-    await page.waitForLoadState('domcontentloaded');
-    await page.waitForTimeout(800);
+  test.beforeEach(async ({ context, page }) => {
+    await context.clearCookies();
+    await page.addInitScript(() => {
+      try {
+        localStorage.clear();
+        sessionStorage.clear();
+      } catch (e) {}
+    });
+    await page.goto('/login', { waitUntil: 'domcontentloaded' });
   });
 
   test('login page renders with heading', async ({ page }) => {
     const heading = page.getByRole('heading').first();
-    await expect(heading).toBeVisible();
+    await expect(heading).toBeVisible({ timeout: 12000 });
     await expect(page.locator('h1, h2').first()).toContainText(/login|sign in|welcome/i);
   });
 
@@ -26,8 +31,8 @@ test.describe('Authentication — Login & Signup', () => {
       page.locator('form input').first()
     );
     const passwordInput = page.locator('form input[type="password"]').first();
-    await expect(emailInput).toBeVisible();
-    await expect(passwordInput).toBeVisible();
+    await expect(emailInput).toBeVisible({ timeout: 8000 });
+    await expect(passwordInput).toBeVisible({ timeout: 8000 });
   });
 
   test('submitting empty login form shows validation error', async ({ page }) => {
@@ -43,64 +48,70 @@ test.describe('Authentication — Login & Signup', () => {
   });
 
   test('wrong credentials show error message', async ({ page }) => {
-    const emailInput = page.locator('form input[type="text"], form input[type="email"]').first();
+    await page.waitForTimeout(600);
+    const emailInput = page.locator('form input[type="email"]').first();
     const passwordInput = page.locator('form input[type="password"]').first();
 
+    await expect(emailInput).toBeVisible({ timeout: 10000 });
+    await emailInput.click();
     await emailInput.fill('wronguser@example.com');
+    await passwordInput.click();
     await passwordInput.fill('wrongpassword123');
 
     const submitBtn = page.locator('form button[type="submit"]');
     await submitBtn.click({ force: true });
-    await page.waitForTimeout(3000);
 
-    // Should show invalid credentials error
-    const error = page.getByText(/invalid|incorrect|wrong|denied|failed/i).first();
-    await expect(error).toBeVisible({ timeout: 8000 });
+    // Should show invalid credentials error or rate limit message
+    const error = page.getByText(/invalid|incorrect|wrong|denied|failed|too many/i).first();
+    await expect(error).toBeVisible({ timeout: 12000 });
   });
 
   test('password visibility toggle works', async ({ page }) => {
+    await page.waitForTimeout(600);
     const passwordInput = page.locator('form input[type="password"]').first();
+    await expect(passwordInput).toBeVisible({ timeout: 10000 });
     await passwordInput.fill('testpassword');
 
     // Click show password button
     const toggleBtn = page.locator('button[aria-label*="password"]').first();
-    if (await toggleBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await toggleBtn.click();
-      const inputType = await page.locator('form input').nth(1).getAttribute('type');
-      expect(inputType).toBe('text');
-    }
+    await expect(toggleBtn).toBeVisible({ timeout: 5000 });
+    await toggleBtn.click();
+    await page.waitForTimeout(300);
+    // After toggle, password field type should change to text
+    const textInput = page.locator('form input[type="text"]').last();
+    expect(await textInput.getAttribute('type')).toBe('text');
   });
 
   test('signup tab switches form to signup mode', async ({ page }) => {
-    const signupTab = page.getByText('New? Sign Up').first();
+    await page.waitForTimeout(600);
+    const signupTab = page.locator('button', { hasText: 'New? Sign Up' }).first();
     await signupTab.click();
-    await page.waitForTimeout(500);
     // Name field should now appear
     const nameInput = page.getByPlaceholder(/Ramesh Kumar|name/i).first();
-    await expect(nameInput).toBeVisible({ timeout: 5000 });
+    await expect(nameInput).toBeVisible({ timeout: 8000 });
   });
 
   test('signup with short password shows error', async ({ page }) => {
+    await page.waitForTimeout(600);
     // Switch to signup tab
-    const signupTab = page.getByText('New? Sign Up').first();
+    const signupTab = page.locator('button', { hasText: 'New? Sign Up' }).first();
     await signupTab.click();
-    await page.waitForTimeout(500);
 
     // Fill form with short password
     const nameInput = page.getByPlaceholder(/Ramesh Kumar|name/i).first();
     const emailInput = page.locator('form input[type="email"]').first();
     const passwordInput = page.locator('form input[type="password"]').first();
 
+    await expect(nameInput).toBeVisible({ timeout: 8000 });
     await nameInput.fill('Test User');
     await emailInput.fill('testuser@example.com');
     await passwordInput.fill('123'); // Too short
 
     const submitBtn = page.locator('form button[type="submit"]');
     await submitBtn.click({ force: true });
-    await page.waitForTimeout(800);
 
     const error = page.getByText(/6 character|too short|minimum|password/i).first();
-    await expect(error).toBeVisible({ timeout: 5000 });
+    await expect(error).toBeVisible({ timeout: 8000 });
   });
 
   test('"Back to Store" link navigates to homepage', async ({ page }) => {

@@ -45,7 +45,7 @@ test.describe('Brand Loading Screen & Navbar Morph Animation', () => {
 
     // Locate both action buttons in Hero
     const exploreBtn = page.locator('button:has-text("Explore All Catalog")').first();
-    const dealsBtn = page.locator('button:has-text("Today’s Exclusive Deals")').first();
+    const dealsBtn = page.getByRole('button', { name: /Exclusive Deals/i }).first();
 
     await expect(exploreBtn).toBeVisible();
     await expect(dealsBtn).toBeVisible();

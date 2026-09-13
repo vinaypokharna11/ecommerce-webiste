@@ -22,7 +22,7 @@ export const STORE_CONFIG = {
   whatsappNumber: process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '919876543210',
   whatsappDisplay: process.env.NEXT_PUBLIC_WHATSAPP_DISPLAY || '+91 98765 43210',
   whatsappLink: process.env.NEXT_PUBLIC_WHATSAPP_LINK || `https://wa.me/${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '919876543210'}`,
-  address: '6, Honey Complex, Opposite Gunjan Cinema, Koparli Road, Gunjan, G.I.D.C, Vapi, Gujarat — 396195',
+  address: '6, Honey Complex, Opposite Gunjan Cinema, Koparli Road, Gunjan, G.I.D.C, Vapi, Gujarat 396195',
   hours: 'Mon - Sun: 9:30 AM – 9:30 PM',
   currency: '₹',
 };
@@ -40,7 +40,7 @@ export const NAV_ITEMS = [
   { id: 'catalog', label: 'Catalog', icon: 'LayoutGrid' },
   { id: 'offers', label: 'Offers', icon: 'Sparkles' },
   { id: 'contact', label: 'Contact Us', icon: 'PhoneCall' },
-  { id: 'cart', label: 'Cart', icon: 'ShoppingCart' },
+
   { id: 'profile', label: 'Profile', icon: 'User' },
 ];
 
@@ -210,6 +210,7 @@ export const CATALOG_PRODUCTS = [
     image: prodSneakers,
     description: 'Ultra-lightweight mesh runners with responsive Zoom foam cushioning, ergonomic heel cup, and anti-slip rubber traction.',
     sizes: ['UK 7', 'UK 8', 'UK 9', 'UK 10', 'UK 11'],
+    availableSizes: ['UK 7', 'UK 8', 'UK 10'],
     colors: [
       { name: 'Chalk Grey', hex: '#94A3B8' },
       { name: 'Pure White', hex: '#F8FAFC' },
@@ -257,6 +258,7 @@ export const CATALOG_PRODUCTS = [
     image: catLinenShirt,
     description: '100% natural breathable European flax linen shirt with mother-of-pearl buttons and relaxed spread collar. Perfect for everyday luxury.',
     sizes: ['S', 'M', 'L', 'XL', 'XXL'],
+    availableSizes: ['S', 'M', 'L', 'XL'],
     colors: [
       { name: 'Lavender Mist', hex: '#C084FC' },
       { name: 'Crisp White', hex: '#FFFFFF' },
@@ -688,7 +690,7 @@ export const FAQS_DATA = [
 
 export const STORE_LOCATION_DETAILS = {
   name: 'Nakoda Imitation Flagship Retail Store',
-  address: '6, Honey Complex, Opposite Gunjan Cinema, Koparli Road, Gunjan, G.I.D.C, Vapi, Gujarat — 396195',
+  address: '6, Honey Complex, Opposite Gunjan Cinema, Koparli Road, Gunjan, G.I.D.C, Vapi, Gujarat 396195',
   phone: '+91 98794 51341',
   email: 'support@nakodaimitation.com',
   hoursWeekday: 'Monday – Saturday: 9:30 AM – 9:30 PM',

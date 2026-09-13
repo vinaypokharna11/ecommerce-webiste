@@ -16,7 +16,6 @@ import {
   ProfilePage,
   ContactInquirePage,
   QuickViewModal,
-  FloatingCartBar,
   Footer,
   Toast,
   BrandLoadingScreen,
@@ -52,7 +51,7 @@ function StorefrontContent() {
 
   // Synchronize activeTab whenever searchParams changes (e.g. Back/Forward navigation, direct links)
   useEffect(() => {
-    const validTabs = ['home', 'catalog', 'offers', 'contact', 'cart', 'profile'];
+    const validTabs = ['home', 'catalog', 'offers', 'contact', 'cart', 'wishlist', 'profile'];
     const currentTab = tabParam && validTabs.includes(tabParam) ? tabParam : 'home';
     setActiveTab(currentTab);
     if (categoryParam) {
@@ -68,7 +67,7 @@ function StorefrontContent() {
       }
       const urlParams = new URLSearchParams(window.location.search);
       const tab = urlParams.get('tab');
-      const validTabs = ['home', 'catalog', 'offers', 'contact', 'cart', 'profile'];
+      const validTabs = ['home', 'catalog', 'offers', 'contact', 'cart', 'wishlist', 'profile'];
       setActiveTab(tab && validTabs.includes(tab) ? tab : 'home');
       const cat = urlParams.get('category');
       if (cat) setSelectedCategory(cat);
@@ -152,7 +151,9 @@ function StorefrontContent() {
     } else if (prevUserId !== currentUserId && currentUserId) {
       // ─── USER SWITCH / LOGIN: Reset in-memory states before fetching new user data ───
       setCartItems({});
-      setWishlist({});
+      if (prevUserId) {
+        setWishlist({});
+      }
       isCartSyncedWithBackendRef.current = false;
     }
 
@@ -179,14 +180,10 @@ function StorefrontContent() {
           data.wishlist.forEach((item) => {
             if (item.productId) freshWishlist[item.productId] = true;
           });
-          setWishlist(freshWishlist);
-        } else {
-          setWishlist({});
+          setWishlist((prev) => ({ ...freshWishlist, ...prev }));
         }
       })
-      .catch(() => {
-        if (isMounted) setWishlist({});
-      });
+      .catch(() => {});
 
     // 2. Fetch persistent cart belonging ONLY to this user
     fetch('/api/cart')
@@ -311,7 +308,7 @@ function StorefrontContent() {
       router.push('/admin');
       return;
     }
-    const routableTabs = ['home', 'catalog', 'offers', 'contact', 'cart', 'profile'];
+    const routableTabs = ['home', 'catalog', 'offers', 'contact', 'cart', 'wishlist', 'profile'];
     if (routableTabs.includes(id)) {
       if (id !== 'contact') setInquiryProduct(null);
       setActiveTab(id);
@@ -362,9 +359,14 @@ function StorefrontContent() {
       return;
     }
 
-    // Determine initial default size if product has sizes (clothing & shoes)
+    // Require explicit size selection if product has sizes (clothing & shoes)
     const availableSizes = getProductSizes(product);
-    const defaultSize = product.selectedSize || product.selectedVariant || (availableSizes.length > 0 ? availableSizes[0] : '');
+    if (availableSizes.length > 0 && !product.selectedSize && !product.selectedVariant) {
+      addToast('error', 'Select Size First ⚠️', `Please select a size for "${product.name}" before adding to your bag.`);
+      return;
+    }
+
+    const chosenSize = product.selectedSize || product.selectedVariant || '';
 
     setCartItems((prev) => {
       const existing = prev[product.id];
@@ -382,7 +384,7 @@ function StorefrontContent() {
           image: product.image || existing?.image || '',
           quantity: newQty,
           selectedColor: product.selectedColor || existing?.selectedColor || '',
-          selectedSize: product.selectedSize || product.selectedVariant || existing?.selectedSize || defaultSize || '',
+          selectedSize: chosenSize || existing?.selectedSize || '',
         },
       };
     });
@@ -673,9 +675,11 @@ function StorefrontContent() {
               onResetCategory={handleResetCategory}
               onAddToCart={handleAddToCart}
               onUpdateQuantity={handleUpdateQuantity}
+              onUpdateSize={handleUpdateSize}
               onToggleFavorite={handleToggleFavorite}
               onViewAllClick={() => handleExploreCatalog('all')}
               onQuickView={handleQuickView}
+              onNotify={addToast}
             />
             <FeatureBenefits />
             <PromoBanner onCheckOffers={() => handleNavClick('offers', 'Offers')} />
@@ -698,7 +702,9 @@ function StorefrontContent() {
             initialCategory={selectedCategory}
             onAddToCart={handleAddToCart}
             onUpdateQuantity={handleUpdateQuantity}
+            onUpdateSize={handleUpdateSize}
             onToggleFavorite={handleToggleFavorite}
+            onQuickView={handleQuickView}
             onInquire={handleOpenProductInquiry}
             onNotify={addToast}
           />
@@ -717,8 +723,9 @@ function StorefrontContent() {
           />
         )}
 
-        {activeTab === 'cart' && (
+        {(activeTab === 'cart' || activeTab === 'wishlist') && (
           <CartPage
+            initialTab={activeTab === 'wishlist' ? 'wishlist' : 'cart'}
             cartItems={cartItems}
             wishlist={wishlist}
             products={products}
@@ -741,14 +748,6 @@ function StorefrontContent() {
         )}
       </main>
 
-      {/* Floating Bottom Cart Bar for mobile & quick WhatsApp order */}
-      <FloatingCartBar
-        cartItems={cartItemsList}
-        totalCount={totalCartCount}
-        totalAmount={totalCartAmount}
-        activeTab={activeTab}
-        onOpenCartModal={() => handleNavClick('cart', 'Cart')}
-      />
 
       {/* Footer */}
       <Footer onLinkClick={handleFooterLinkClick} />
@@ -766,6 +765,7 @@ function StorefrontContent() {
         onUpdateQuantity={handleUpdateQuantity}
         isFavorite={quickViewProduct ? !!wishlist[quickViewProduct.id] : false}
         onToggleFavorite={handleToggleFavorite}
+        onNotify={addToast}
       />
     </div>
   );

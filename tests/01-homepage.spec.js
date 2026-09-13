@@ -19,13 +19,11 @@ test.describe('Homepage', () => {
   });
 
   test('navbar renders with main tabs', async ({ page }) => {
-    const nav = page.locator('header nav').first().or(page.locator('nav').first());
-    await expect(nav).toBeVisible();
+    const nav = page.getByRole('navigation').first();
+    await expect(nav).toBeVisible({ timeout: 10000 });
 
     // Check for key navigation labels
-    const homeTab = page.locator('header nav button').filter({ hasText: 'Home' }).first().or(
-      page.getByRole('button', { name: 'Home' }).first()
-    );
+    const homeTab = nav.getByRole('button', { name: 'Home' }).first();
     await expect(homeTab).toBeVisible();
   });
 
@@ -46,10 +44,9 @@ test.describe('Homepage', () => {
 
   test('navigating to catalog tab shows products', async ({ page }) => {
     // Click catalog in navbar
-    const catalogBtn = page.locator('header nav button').filter({ hasText: 'Catalog' }).first().or(
-      page.getByRole('button', { name: 'Catalog' }).first()
-    );
-    await catalogBtn.click({ force: true });
+    const catalogBtn = page.getByRole('navigation').getByRole('button', { name: 'Catalog' }).first();
+    await expect(catalogBtn).toBeVisible({ timeout: 10000 });
+    await catalogBtn.click();
     await page.waitForTimeout(1000);
 
     // URL should update

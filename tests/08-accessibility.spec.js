@@ -15,7 +15,7 @@ test.describe('Accessibility & SEO Checks', () => {
   for (const pg of pagesToCheck) {
     test(`${pg.name} — has at least one <h1> element`, async ({ page }) => {
       await page.goto(pg.url);
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
       await page.waitForTimeout(1000);
 
       const h1Count = await page.locator('h1').count();
@@ -25,7 +25,7 @@ test.describe('Accessibility & SEO Checks', () => {
 
   test('Homepage images have alt attributes', async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(1500);
 
     const images = page.locator('img');
@@ -47,7 +47,7 @@ test.describe('Accessibility & SEO Checks', () => {
 
   test('Catalog images have alt attributes', async ({ page }) => {
     await page.goto('/?tab=catalog');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(1500);
 
     const images = page.locator('img');
@@ -67,7 +67,7 @@ test.describe('Accessibility & SEO Checks', () => {
 
   test('interactive buttons have accessible labels', async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(1000);
 
     const buttons = page.locator('button');
@@ -94,7 +94,7 @@ test.describe('Accessibility & SEO Checks', () => {
 
   test('no broken internal navigation links on homepage', async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Check all anchor hrefs that are relative (internal)
     const links = page.locator('a[href^="/"]');
@@ -123,7 +123,7 @@ test.describe('Accessibility & SEO Checks', () => {
 
   test('admin login page has valid form labels', async ({ page }) => {
     await page.goto('/admin/login');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(800);
 
     // Labels should exist for email and password inputs
@@ -141,7 +141,7 @@ test.describe('Accessibility & SEO Checks', () => {
     });
 
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(2000);
 
     // Filter out known benign errors (e.g., extension errors, 3rd party)

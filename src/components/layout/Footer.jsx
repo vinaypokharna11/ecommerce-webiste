@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Mail, Phone, MapPin, ArrowRight } from 'lucide-react';
 import { STORE_CONFIG } from '@/data/mockData';
 import { useCatalog } from '@/context/CatalogContext';
+import { TextScatter, ScatterItem } from '@/components';
 
 export const Footer = ({ onLinkClick }) => {
   const { storeConfig } = useCatalog();
@@ -21,6 +22,7 @@ export const Footer = ({ onLinkClick }) => {
   const quickLinks = [
     { label: 'Home', tabId: 'home' },
     { label: 'Catalog', tabId: 'catalog' },
+    { label: 'Saved Wishlist', tabId: 'wishlist' },
     { label: 'Special Offers', tabId: 'offers' },
     { label: 'Contact Us', tabId: 'contact' },
   ];
@@ -38,15 +40,32 @@ export const Footer = ({ onLinkClick }) => {
         {/* 4 Column Responsive Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 sm:gap-10 pb-12 border-b border-black/[0.08]">
 
-          {/* Col 1: Brand & Description */}
+          {/* Col 1: Brand & Description with Interactive Text Scatter Motion */}
           <div className="space-y-4">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-[#1D1D1F] flex items-center justify-center text-white font-bold text-sm">
-                N
-              </div>
-              <span className="font-sans text-xl font-bold tracking-tight text-[#1D1D1F]">
-                {STORE_CONFIG?.name || 'Nakoda Store'}
-              </span>
+              <ScatterItem
+                velocity={120}
+                rotation={45}
+                scale={1.12}
+                returnAfter={0.8}
+                duration={1.6}
+                title="Interactive Logo"
+                className="shrink-0"
+              >
+                <div className="w-8 h-8 rounded-xl bg-[#1D1D1F] flex items-center justify-center text-white font-bold text-sm shadow-sm transition-transform hover:scale-105">
+                  N
+                </div>
+              </ScatterItem>
+              <TextScatter
+                text={storeConfig?.name || STORE_CONFIG?.name || 'Nakoda Imitation'}
+                as="h3"
+                className="font-sans text-xl font-bold tracking-tight text-[#1D1D1F]"
+                velocity={140}
+                rotation={60}
+                scale={1.08}
+                returnAfter={0.8}
+                duration={1.8}
+              />
             </div>
             <p className="text-xs sm:text-sm text-[#6E6E73] leading-relaxed font-normal">
               Your one-stop destination for premium bags, luggage trolleys, fine jewelry, authentic papads, organic innerwear, and electronics.
@@ -109,10 +128,11 @@ export const Footer = ({ onLinkClick }) => {
               </p>
               <p className="flex items-start gap-2">
                 <MapPin className="w-3.5 h-3.5 text-[#1D1D1F] shrink-0 mt-0.5" />
-                <span>{storeConfig?.address || '6, Honey Complex, Opposite Gunjan Cinema, Koparli Road, Gunjan, G.I.D.C, Vapi, Gujarat,396195'}</span>
-              </p>
-              <p className="text-xs text-[#86868B] pt-1">
-                Mon - Sun: 9:30 AM – 9:30 PM IST
+                <span>
+                  {(storeConfig?.address || STORE_CONFIG?.address || '6, Honey Complex, Opposite Gunjan Cinema, Koparli Road, Gunjan, G.I.D.C, Vapi, Gujarat 396195')
+                    .replace(/\s*[\u2014\u2013-]\s*(\d{6})/g, ' $1')
+                    .replace(/Gujarat,(\d{6})/g, 'Gujarat $1')}
+                </span>
               </p>
             </div>
           </div>
@@ -121,7 +141,13 @@ export const Footer = ({ onLinkClick }) => {
 
         {/* Bottom Bar */}
         <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#86868B]">
-          <p>© {new Date().getFullYear()} {STORE_CONFIG?.name || 'Nakoda Store'}. All rights reserved.</p>
+          <p className="flex items-center gap-1.5 flex-wrap">
+            <span>© {new Date().getFullYear()}</span>
+            <span className="font-medium text-[#1D1D1F]">
+              {storeConfig?.name || STORE_CONFIG?.name || 'Nakoda Imitation'}
+            </span>
+            <span>. All rights reserved.</span>
+          </p>
         </div>
 
       </div>

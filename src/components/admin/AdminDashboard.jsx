@@ -98,44 +98,8 @@ export const AdminDashboard = ({ onNavigate, onOpenAddProduct }) => {
   return (
     <div className="space-y-8 font-sans">
       
-      {/* ── Welcome Banner ── */}
-      <div className="relative overflow-hidden rounded-[32px] bg-[#171717] p-6 sm:p-9 text-white shadow-[0_20px_50px_rgba(0,0,0,0.15)] border border-black/10">
-        {/* Glow behind banner */}
-        <div className="absolute top-0 right-0 w-96 h-96 bg-[#9FD842]/15 rounded-full blur-[90px] pointer-events-none" />
-
-        <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
-          <div>
-            <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white/10 border border-white/15 backdrop-blur-md text-xs font-bold mb-3 text-[#9FD842]">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>{storeConfig?.name || 'Nakoda Imitation'} Catalog & Order Hub</span>
-            </div>
-            <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight mb-2">
-              Store Control Center
-            </h1>
-            <p className="text-xs sm:text-sm text-[#AAAAAA] max-w-xl leading-relaxed">
-              Managing <strong className="text-white">{catalogStats.totalProducts} products</strong> across <strong className="text-white">{catalogStats.totalCategoriesCount} categories</strong> with live WhatsApp order routing.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-3 flex-shrink-0 flex-wrap">
-            <button
-              onClick={() => onNavigate('inquiries')}
-              className="inline-flex items-center gap-2 px-5 py-3 rounded-full bg-white/10 hover:bg-white/20 text-white font-bold text-xs sm:text-sm backdrop-blur-md border border-white/20 shadow-sm transition-all cursor-pointer"
-            >
-              <MessageSquare className="w-4 h-4 text-[#9FD842]" />
-              <span>Inquiries & Messages</span>
-            </button>
-
-            <button
-              onClick={onOpenAddProduct}
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[#9FD842] hover:bg-[#8EC731] text-[#171717] font-extrabold text-xs sm:text-sm shadow-md hover:scale-105 active:scale-95 transition-all cursor-pointer"
-            >
-              <Plus className="w-4 h-4 text-[#171717]" />
-              <span>Add New Product</span>
-            </button>
-          </div>
-        </div>
-      </div>
+      {/* Accessible page heading */}
+      <h1 className="sr-only">Store Control Center Dashboard</h1>
 
       {/* ── Metric KPI Cards ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">

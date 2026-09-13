@@ -628,14 +628,14 @@ export const AdminProducts = ({ onPreviewStore }) => {
                   />
                   
                   {/* Badges */}
-                  <div className="absolute top-2.5 left-2.5 flex flex-col gap-1 z-10">
+                  <div className="absolute top-2.5 left-2.5 flex flex-col gap-1.5 z-10">
                     {product.badge && (
-                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#171717] text-white shadow-xs">
+                      <span className="px-3 py-1 rounded-full text-xs font-bold bg-[#171717] text-white shadow-xs">
                         {product.badge}
                       </span>
                     )}
                     {product.isPopular && (
-                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-400 text-[#171717] shadow-xs">
+                      <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-400 text-[#171717] shadow-xs">
                         ★ Featured
                       </span>
                     )}

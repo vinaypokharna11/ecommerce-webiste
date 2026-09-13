@@ -31,10 +31,7 @@ export default function AdminLoginPage() {
     async function checkExistingAuth() {
       try {
         const token = localStorage.getItem('nakoda_admin_token') || localStorage.getItem('shopease_admin_token');
-        if (!token) {
-          setIsCheckingAuth(false);
-          return;
-        }
+        if (!token) return;
 
         const res = await fetch('/api/admin/auth', {
           headers: { Authorization: `Bearer ${token}` },
@@ -53,7 +50,6 @@ export default function AdminLoginPage() {
         localStorage.removeItem('nakoda_admin_token');
         localStorage.removeItem('shopease_admin_token');
       }
-      setIsCheckingAuth(false);
     }
 
     checkExistingAuth();
@@ -93,15 +89,6 @@ export default function AdminLoginPage() {
       setIsLoading(false);
     }
   };
-
-  if (isCheckingAuth) {
-    return (
-      <div className="min-h-screen bg-[#F6F5F0] flex flex-col items-center justify-center gap-3 font-sans">
-        <div className="w-10 h-10 border-3 border-[#171717] border-t-[#9FD842] rounded-full animate-spin" />
-        <p className="text-xs font-bold text-[#171717]">Checking active admin session...</p>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-[#F6F5F0] text-[#171717] flex flex-col justify-between relative overflow-hidden font-sans selection:bg-[#9FD842] selection:text-[#171717]">

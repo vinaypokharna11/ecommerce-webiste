@@ -23,6 +23,24 @@ export async function POST(request) {
       );
     }
 
+    if (/[^a-zA-Z\s]/.test(name.trim())) {
+      return NextResponse.json(
+        { success: false, error: 'Name must only contain letters and spaces (no special characters or numbers)' },
+        { status: 400 }
+      );
+    }
+
+    let cleanPhone = '';
+    if (phone && String(phone).trim() !== '') {
+      cleanPhone = String(phone).replace(/\D/g, '');
+      if (cleanPhone.length !== 10) {
+        return NextResponse.json(
+          { success: false, error: 'Phone number must be exactly 10 digits' },
+          { status: 400 }
+        );
+      }
+    }
+
     if (password.length < 6) {
       return NextResponse.json(
         { success: false, error: 'Password must be at least 6 characters' },
@@ -30,7 +48,15 @@ export async function POST(request) {
       );
     }
 
-    const user = await registerCustomer({ name, email, password, phone, address, city, pincode });
+    const user = await registerCustomer({ 
+      name: name.trim(), 
+      email: email.trim().toLowerCase(), 
+      password, 
+      phone: cleanPhone, 
+      address, 
+      city, 
+      pincode 
+    });
 
     // Generate JWT token
     const token = signToken({

@@ -15,7 +15,7 @@ test.describe('Admin Panel', () => {
     });
 
     await page.goto('/admin');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(2000);
 
     // Should be redirected to admin/login or show access denied
@@ -31,7 +31,7 @@ test.describe('Admin Panel', () => {
 
   test('admin login page renders correctly', async ({ page }) => {
     await page.goto('/admin/login');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(1000);
 
     const heading = page.locator('h1').first();
@@ -78,7 +78,7 @@ test.describe('Admin Panel', () => {
 
   test('admin login with correct credentials redirects to dashboard', async ({ page }) => {
     await page.goto('/admin/login');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(1000);
 
     await page.locator('input[type="email"]').first().fill(ADMIN_EMAIL);
@@ -86,7 +86,7 @@ test.describe('Admin Panel', () => {
 
     const submitBtn = page.getByRole('button', { name: /sign in/i }).first();
     await submitBtn.click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(3000);
 
     // Should redirect to /admin dashboard
@@ -103,7 +103,7 @@ test.describe('Admin Panel', () => {
     await page.locator('input[type="email"]').first().fill(ADMIN_EMAIL);
     await page.locator('input[type="password"]').first().fill(ADMIN_PASSWORD);
     await page.getByRole('button', { name: /sign in/i }).first().click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(3000);
 
     // Dashboard should show metric cards: Total Products, Categories etc.
@@ -117,7 +117,7 @@ test.describe('Admin Panel', () => {
     await page.locator('input[type="email"]').first().fill(ADMIN_EMAIL);
     await page.locator('input[type="password"]').first().fill(ADMIN_PASSWORD);
     await page.getByRole('button', { name: /sign in/i }).first().click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(3000);
 
     const productsNav = page.getByText('Products Catalog').first();
@@ -130,7 +130,7 @@ test.describe('Admin Panel', () => {
     await page.locator('input[type="email"]').first().fill(ADMIN_EMAIL);
     await page.locator('input[type="password"]').first().fill(ADMIN_PASSWORD);
     await page.getByRole('button', { name: /sign in/i }).first().click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(3000);
 
     // Click Products Catalog in nav
@@ -151,7 +151,7 @@ test.describe('Admin Panel', () => {
     await page.locator('input[type="email"]').first().fill(ADMIN_EMAIL);
     await page.locator('input[type="password"]').first().fill(ADMIN_PASSWORD);
     await page.getByRole('button', { name: /sign in/i }).first().click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(3000);
 
     const logoutBtn = page.getByRole('button', { name: /logout|log out|sign out/i }).first();
@@ -170,7 +170,7 @@ test.describe('Admin Panel', () => {
     await page.locator('input[type="email"]').first().fill(ADMIN_EMAIL);
     await page.locator('input[type="password"]').first().fill(ADMIN_PASSWORD);
     await page.getByRole('button', { name: /sign in/i }).first().click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await page.waitForTimeout(3000);
 
     const backLink = page.getByRole('link', { name: /back to store|view store/i }).first();

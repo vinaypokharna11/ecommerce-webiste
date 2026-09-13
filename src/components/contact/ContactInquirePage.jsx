@@ -111,14 +111,33 @@ export const ContactInquirePage = ({
   // ─── Submit Contact Form ───
   const handleSubmitContact = async (e) => {
     e.preventDefault();
-    if (!contactForm.name.trim() || !contactForm.email.trim() || !contactForm.message.trim()) {
+    const cleanName = contactForm.name.trim();
+    if (!cleanName || !contactForm.email.trim() || !contactForm.message.trim()) {
       onNotify('error', 'Missing Information', 'Please fill in your name, email, and message.');
       return;
     }
 
+    if (/[^a-zA-Z\s]/.test(cleanName)) {
+      onNotify('error', 'Invalid Name', 'Name must contain only letters and spaces (no special characters or numbers).');
+      return;
+    }
+
+    let cleanPhone = '';
+    if (contactForm.phone && String(contactForm.phone).trim() !== '') {
+      cleanPhone = String(contactForm.phone).replace(/\D/g, '');
+      if (cleanPhone.length !== 10) {
+        onNotify('error', 'Invalid Phone Number', 'Phone number must be exactly 10 digits.');
+        return;
+      }
+    }
+
     setContactSubmitting(true);
     try {
-      const data = await inquiryService.submitContactMessage(contactForm);
+      const data = await inquiryService.submitContactMessage({
+        ...contactForm,
+        name: cleanName,
+        phone: cleanPhone,
+      });
 
       if (data.success && data.contact) {
         setContactSubmittedTicket(data.contact);
@@ -140,6 +159,8 @@ export const ContactInquirePage = ({
       const mockTicket = {
         id: `CT-${Math.floor(1000 + Math.random() * 9000)}`,
         ...contactForm,
+        name: cleanName,
+        phone: cleanPhone,
         createdAt: new Date().toISOString(),
       };
       setContactSubmittedTicket(mockTicket);
@@ -152,9 +173,24 @@ export const ContactInquirePage = ({
   // ─── Submit Inquiry Form ───
   const handleSubmitInquiry = async (e) => {
     e.preventDefault();
-    if (!inquiryForm.customerName.trim() || !inquiryForm.customerEmail.trim()) {
+    const cleanCustomerName = inquiryForm.customerName.trim();
+    if (!cleanCustomerName || !inquiryForm.customerEmail.trim()) {
       onNotify('error', 'Missing Contact Info', 'Please provide your name and email for the quotation.');
       return;
+    }
+
+    if (/[^a-zA-Z\s]/.test(cleanCustomerName)) {
+      onNotify('error', 'Invalid Name', 'Name must contain only letters and spaces (no special characters or numbers).');
+      return;
+    }
+
+    let cleanInqPhone = '';
+    if (inquiryForm.customerPhone && String(inquiryForm.customerPhone).trim() !== '') {
+      cleanInqPhone = String(inquiryForm.customerPhone).replace(/\D/g, '');
+      if (cleanInqPhone.length !== 10) {
+        onNotify('error', 'Invalid Phone Number', 'Phone number must be exactly 10 digits.');
+        return;
+      }
     }
 
     setInquirySubmitting(true);
@@ -164,6 +200,8 @@ export const ContactInquirePage = ({
 
     const payload = {
       ...inquiryForm,
+      customerName: cleanCustomerName,
+      customerPhone: cleanInqPhone,
       productName: resolvedProductName,
     };
 
@@ -329,7 +367,7 @@ export const ContactInquirePage = ({
                           required
                           placeholder="e.g. Rahul Sharma"
                           value={contactForm.name}
-                          onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
+                          onChange={(e) => setContactForm({ ...contactForm, name: e.target.value.replace(/[^a-zA-Z\s]/g, '') })}
                           className="w-full px-3.5 sm:px-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl bg-[#F5F5F7]/60 border border-black/5 text-xs sm:text-sm text-[#1D1D1F] focus:bg-white focus:border-[#0071E3] focus:outline-none focus:ring-2 focus:ring-[#0071E3]/30 transition-all placeholder:text-[#888888]"
                         />
                       </div>
@@ -352,14 +390,16 @@ export const ContactInquirePage = ({
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
                       <div>
                         <label className="block text-xs font-bold text-[#1D1D1F] mb-1">
-                          Phone Number
+                          Phone Number (10 Digits)
                         </label>
                         <input
                           type="tel"
-                          placeholder="e.g. +91 98765 43210"
+                          inputMode="numeric"
+                          maxLength={10}
+                          placeholder="9876543210"
                           value={contactForm.phone}
-                          onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })}
-                          className="w-full px-3.5 sm:px-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl bg-[#F5F5F7]/60 border border-black/5 text-xs sm:text-sm text-[#1D1D1F] focus:bg-white focus:border-[#0071E3] focus:outline-none focus:ring-2 focus:ring-[#0071E3]/30 transition-all placeholder:text-[#888888]"
+                          onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value.replace(/\D/g, '').slice(0, 10) })}
+                          className="w-full px-3.5 sm:px-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl bg-[#F5F5F7]/60 border border-black/5 text-xs sm:text-sm text-[#1D1D1F] focus:bg-white focus:border-[#0071E3] focus:outline-none focus:ring-2 focus:ring-[#0071E3]/30 transition-all placeholder:text-[#888888] tracking-wider"
                         />
                       </div>
 
@@ -466,6 +506,34 @@ export const ContactInquirePage = ({
                         {storeConfig.whatsappDisplay || '+91 98794 51341'}
                       </a>
                     </div>
+                  </div>
+
+                  {/* WhatsApp Support Desk */}
+                  <div className="p-3 sm:p-3.5 rounded-xl sm:rounded-2xl bg-[#F5F5F7]/60 border border-black/5 flex items-center justify-between gap-2.5 sm:gap-3">
+                    <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                      <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-[#25D366]/20 text-[#25D366] flex items-center justify-center shrink-0">
+                        <MessageCircle className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-bold text-[#777777] uppercase tracking-wider">WhatsApp Support</p>
+                        <a
+                          href={`https://wa.me/${storeConfig.whatsappNumber || '9879451341'}?text=Hi%20Nakoda%20Imitation!%20I%20have%20an%20inquiry.`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs sm:text-sm font-extrabold text-[#1D1D1F] hover:text-[#25D366] truncate block"
+                        >
+                          Chat: {storeConfig.whatsappDisplay || '+91 98794 51341'}
+                        </a>
+                      </div>
+                    </div>
+                    <a
+                      href={`https://wa.me/${storeConfig.whatsappNumber || '9879451341'}?text=Hi%20Nakoda%20Imitation!%20I%20have%20an%20inquiry.`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3 py-1.5 rounded-full bg-[#25D366] text-white text-[11px] font-bold hover:bg-[#20bd5a] transition-colors shrink-0 shadow-sm inline-flex items-center gap-1"
+                    >
+                      Chat
+                    </a>
                   </div>
 
                   {/* Retail Store Address */}
@@ -709,7 +777,7 @@ export const ContactInquirePage = ({
                         required
                         placeholder="Contact Person Name"
                         value={inquiryForm.customerName}
-                        onChange={(e) => setInquiryForm({ ...inquiryForm, customerName: e.target.value })}
+                        onChange={(e) => setInquiryForm({ ...inquiryForm, customerName: e.target.value.replace(/[^a-zA-Z\s]/g, '') })}
                         className="w-full px-3.5 sm:px-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl bg-[#F5F5F7]/60 border border-black/5 text-xs sm:text-sm text-[#1D1D1F] focus:bg-white focus:border-[#0071E3] focus:outline-none focus:ring-2 focus:ring-[#0071E3]/30 transition-all placeholder:text-[#888888]"
                       />
                     </div>
@@ -745,14 +813,16 @@ export const ContactInquirePage = ({
 
                     <div>
                       <label className="block text-xs font-bold text-[#1D1D1F] mb-1">
-                        Phone / WhatsApp Number
+                        Phone Number (10 Digits)
                       </label>
                       <input
                         type="tel"
-                        placeholder="+91 98765 43210"
+                        inputMode="numeric"
+                        maxLength={10}
+                        placeholder="9876543210"
                         value={inquiryForm.customerPhone}
-                        onChange={(e) => setInquiryForm({ ...inquiryForm, customerPhone: e.target.value })}
-                        className="w-full px-3.5 sm:px-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl bg-[#F5F5F7]/60 border border-black/5 text-xs sm:text-sm text-[#1D1D1F] focus:bg-white focus:border-[#0071E3] focus:outline-none focus:ring-2 focus:ring-[#0071E3]/30 transition-all placeholder:text-[#888888]"
+                        onChange={(e) => setInquiryForm({ ...inquiryForm, customerPhone: e.target.value.replace(/\D/g, '').slice(0, 10) })}
+                        className="w-full px-3.5 sm:px-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl bg-[#F5F5F7]/60 border border-black/5 text-xs sm:text-sm text-[#1D1D1F] focus:bg-white focus:border-[#0071E3] focus:outline-none focus:ring-2 focus:ring-[#0071E3]/30 transition-all placeholder:text-[#888888] tracking-wider"
                       />
                     </div>
                   </div>
@@ -809,10 +879,6 @@ export const ContactInquirePage = ({
       {/* ── Interactive FAQ Accordion Section ── */}
       <section className="bg-white/95 backdrop-blur-md rounded-2xl sm:rounded-3xl border border-black/[0.06] p-4.5 xs:p-6 sm:p-10 shadow-sm mb-8 sm:mb-12">
         <div className="text-center max-w-2xl mx-auto mb-6 sm:mb-8">
-          <div className="inline-flex items-center gap-2 px-3 py-1 sm:px-3.5 sm:py-1.5 rounded-full bg-[#0071E3]/20 text-[#0071E3] border border-[#0071E3]/30 text-[11px] sm:text-xs font-extrabold mb-3">
-            <HelpCircle className="w-3.5 h-3.5 text-[#5F8C1D]" />
-            <span>Got Questions? We Have Answers</span>
-          </div>
           <h2 className="text-xl xs:text-2xl sm:text-3xl font-extrabold text-[#1D1D1F] tracking-tight mb-2">
             Frequently Asked Questions
           </h2>

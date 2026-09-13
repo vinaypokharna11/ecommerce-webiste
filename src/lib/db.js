@@ -403,6 +403,7 @@ export const INITIAL_DB_STATE = {
       image: '/assets/images/cat_linen_shirt.jpg',
       description: '13oz heavyweight 100% cotton denim with vintage stonewash effect, brass shank buttons, and deep welt side hand pockets.',
       sizes: ['M', 'L', 'XL'],
+      availableSizes: ['M', 'XL'],
       colors: [
         { name: 'Light Indigo', hex: '#60A5FA' },
         { name: 'Washed Black', hex: '#334155' },
@@ -563,7 +564,7 @@ export const INITIAL_DB_STATE = {
       status: 'delivered',
       statusLabel: 'Delivered',
       payMethod: 'Cash on Delivery',
-      deliveryAddress: '6, Honey Complex, Opposite Gunjan Cinema, Koparli Road, Gunjan, G.I.D.C, Vapi, Gujarat — 396195',
+      deliveryAddress: '6, Honey Complex, Opposite Gunjan Cinema, Koparli Road, Gunjan, G.I.D.C, Vapi, Gujarat 396195',
       date: 'Aug 20, 2026',
     },
     {
@@ -644,7 +645,7 @@ export const INITIAL_DB_STATE = {
     tagline: 'Premium Imitation Jewelry & Lifestyle Collection',
     whatsappNumber: '919876543210',
     whatsappDisplay: '+91 98765 43210',
-    address: '6, Honey Complex, Opposite Gunjan Cinema, Koparli Road, Gunjan, G.I.D.C, Vapi, Gujarat — 396195',
+    address: '6, Honey Complex, Opposite Gunjan Cinema, Koparli Road, Gunjan, G.I.D.C, Vapi, Gujarat 396195',
     hours: 'Mon - Sun: 9:30 AM – 9:30 PM',
     currency: '₹',
   },
@@ -1154,7 +1155,7 @@ export async function createProduct(productData) {
   if (db) {
     await Product.create(newProduct);
   } else if (process.env.MONGODB_URI) {
-    throw new Error('Database connection failed. Unable to persist product to MongoDB Atlas.');
+    console.warn('⚠️ MongoDB Atlas unavailable — persisting product to local fallback only.');
   }
 
   // 2. Always persist to local atomic JSON database
@@ -1190,7 +1191,7 @@ export async function updateProduct(id, updateData) {
       updatedProduct = rest;
     }
   } else if (process.env.MONGODB_URI) {
-    throw new Error('Database connection failed. Unable to update product in MongoDB Atlas.');
+    console.warn('⚠️ MongoDB Atlas unavailable — updating product in local fallback only.');
   }
 
   // 2. Always update local JSON database
@@ -1231,7 +1232,7 @@ export async function deleteProduct(id) {
     const res = await Product.deleteOne({ id: cleanId });
     if (res.deletedCount > 0) deleted = true;
   } else if (process.env.MONGODB_URI) {
-    throw new Error('Database connection failed. Unable to delete product from MongoDB Atlas.');
+    console.warn('⚠️ MongoDB Atlas unavailable — deleting product from local fallback only.');
   }
 
 
@@ -1676,7 +1677,7 @@ export async function createOrder(data) {
       await Cart.deleteOne({ userId: targetUserId }).catch(() => {});
     }
   } else if (process.env.MONGODB_URI) {
-    throw new Error('Database connection failed. Unable to place order in MongoDB Atlas.');
+    console.warn('⚠️ MongoDB Atlas unavailable — placing order in local fallback only.');
   }
 
   // 6. Update local JSON backup & atomic cache
@@ -2055,11 +2056,38 @@ export async function updateCustomerProfile(id, updateData) {
   delete cleanData.passwordHash;
   delete cleanData.role;
   delete cleanData._id;
+  delete cleanData.id;
+
+  if (cleanData.email) {
+    cleanData.email = String(cleanData.email).toLowerCase().trim();
+  }
 
   const db = await connectToDatabase();
   if (db) {
+    if (cleanData.email) {
+      const existing = await User.findOne({
+        email: cleanData.email,
+        _id: { $ne: id },
+      }).lean();
+      if (existing) {
+        throw new Error('This email address is already in use by another account');
+      }
+    }
+
     const updated = await User.findByIdAndUpdate(id, cleanData, { returnDocument: 'after' }).lean();
     if (!updated) return null;
+
+    if (cleanData.email) {
+      try {
+        await Order.updateMany(
+          { $or: [{ customerId: id }, { userId: String(id) }] },
+          { $set: { customerEmail: cleanData.email } }
+        );
+      } catch (err) {
+        console.warn('Could not update customerEmail on orders:', err);
+      }
+    }
+
     const { passwordHash, __v, ...sanitized } = updated;
     return sanitized;
   }
@@ -2068,7 +2096,30 @@ export async function updateCustomerProfile(id, updateData) {
   const index = (jdb.users || []).findIndex((u) => u._id === id || u.id === id || u.email === id);
   if (index === -1) return null;
 
+  if (cleanData.email) {
+    const existing = (jdb.users || []).find(
+      (u) =>
+        u.email &&
+        u.email.toLowerCase() === cleanData.email &&
+        u._id !== id &&
+        u.id !== id
+    );
+    if (existing) {
+      throw new Error('This email address is already in use by another account');
+    }
+  }
+
+  const oldEmail = jdb.users[index].email;
   jdb.users[index] = { ...jdb.users[index], ...cleanData };
+
+  if (cleanData.email && cleanData.email !== oldEmail && Array.isArray(jdb.orders)) {
+    jdb.orders.forEach((o) => {
+      if (o.userId === id || o.customerId === id || (oldEmail && o.customerEmail === oldEmail)) {
+        o.customerEmail = cleanData.email;
+      }
+    });
+  }
+
   writeJSONDB(jdb);
   const { passwordHash, ...sanitized } = jdb.users[index];
   return sanitized;
@@ -2163,7 +2214,7 @@ export async function addToWishlist(userId, productId) {
     const { _id, __v, ...rest } = doc;
     return rest;
   } else if (process.env.MONGODB_URI) {
-    throw new Error('Database connection failed. Unable to save to MongoDB Atlas wishlist.');
+    console.warn('⚠️ MongoDB Atlas unavailable — saving wishlist item to local fallback only.');
   }
 
   const jdb = readJSONDB();
@@ -2195,7 +2246,7 @@ export async function removeFromWishlist(userId, productId) {
     const res = await Wishlist.deleteOne({ userId: cleanUser, productId: cleanProd });
     return res.deletedCount > 0;
   } else if (process.env.MONGODB_URI) {
-    throw new Error('Database connection failed. Unable to remove from MongoDB Atlas wishlist.');
+    console.warn('⚠️ MongoDB Atlas unavailable — removing wishlist item from local fallback only.');
   }
 
   const jdb = readJSONDB();
@@ -2271,7 +2322,7 @@ export async function syncUserCart(userId, items = []) {
     const { _id, __v, ...rest } = updated;
     return rest;
   } else if (process.env.MONGODB_URI) {
-    throw new Error('Database connection failed. Unable to sync cart with MongoDB Atlas.');
+    console.warn('⚠️ MongoDB Atlas unavailable — syncing cart to local fallback only.');
   }
 
   const jdb = readJSONDB();

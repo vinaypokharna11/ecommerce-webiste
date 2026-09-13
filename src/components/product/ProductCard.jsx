@@ -1,25 +1,36 @@
 'use client';
 
-import React from 'react';
-import { motion } from 'framer-motion';
-import { Heart, Star, ShoppingBag, Plus, Minus, MessageCircle, Eye } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Heart, Star, ShoppingBag, Plus, Minus, MessageCircle, Eye, AlertCircle } from 'lucide-react';
 import Image from 'next/image';
 import { STORE_CONFIG } from '@/data/mockData';
 import { formatPrice } from '@/utils/formatPrice';
-import { getProductSizes } from '@/utils/productOptions';
+import { getProductSizes, isProductSizeAvailable } from '@/utils/productOptions';
 
 export const ProductCardComponent = ({ 
   product, 
   quantity = 0, 
   isFavorite = false,
+  selectedSize: initialSelectedSize = null,
   onAddToCart, 
   onUpdateQuantity, 
+  onUpdateSize,
   onToggleFavorite, 
   onQuickView,
   onWhatsAppInquiry,
+  onNotify,
 }) => {
   const isOutOfStock = product.stockStatus === 'out_of_stock';
   const sizes = getProductSizes(product);
+  const [selectedSize, setSelectedSize] = useState(initialSelectedSize || null);
+  const [showSizeWarning, setShowSizeWarning] = useState(false);
+
+  useEffect(() => {
+    if (initialSelectedSize) {
+      setSelectedSize(initialSelectedSize);
+    }
+  }, [initialSelectedSize]);
 
   return (
     <motion.article
@@ -28,7 +39,7 @@ export const ProductCardComponent = ({
       exit={{ opacity: 0, scale: 0.95 }}
       transition={{ duration: 0.25 }}
       className={`group relative bg-white rounded-2xl sm:rounded-3xl p-3 sm:p-4 lg:p-5 border border-black/[0.06] shadow-[0_2px_14px_rgba(0,0,0,0.04)] hover:shadow-[0_16px_36px_rgba(0,0,0,0.08)] transition-all duration-300 flex flex-col justify-between cursor-pointer ${
-        isOutOfStock ? 'opacity-70' : 'hover:-translate-y-1'
+        isOutOfStock ? 'opacity-85' : 'hover:-translate-y-1'
       }`}
       onClick={() => onQuickView && onQuickView(product)}
     >
@@ -36,8 +47,8 @@ export const ProductCardComponent = ({
       <div className="relative aspect-square w-full rounded-xl sm:rounded-2xl overflow-hidden mb-2.5 sm:mb-3.5 bg-[#F5F5F7] flex items-center justify-center">
         {/* Optional Badge */}
         {product.badge && (
-          <div className="absolute top-2 sm:top-2.5 left-2 sm:left-2.5 z-10">
-            <span className="inline-block px-2.5 py-0.5 sm:px-2.5 sm:py-0.5 rounded-full text-[11px] sm:text-[10px] font-sans font-bold tracking-wide bg-[#1D1D1F] text-white shadow-xs">
+          <div className="absolute top-2.5 sm:top-3 left-2.5 sm:left-3 z-10">
+            <span className="inline-flex items-center justify-center px-3 py-1 sm:px-3.5 sm:py-1 rounded-full text-xs sm:text-xs font-sans font-bold tracking-wider uppercase bg-[#1D1D1F] text-white shadow-sm">
               {product.badge}
             </span>
           </div>
@@ -71,15 +82,6 @@ export const ProductCardComponent = ({
             className="object-cover rounded-xl sm:rounded-2xl transition-transform duration-500 group-hover:scale-106"
             sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
           />
-        )}
-
-        {/* Out of Stock Overlay */}
-        {isOutOfStock && (
-          <div className="absolute inset-0 bg-white/80 backdrop-blur-[2px] flex items-center justify-center z-15">
-            <span className="px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full bg-[#1D1D1F] text-white text-[10px] sm:text-xs font-semibold shadow-sm">
-              Out of Stock
-            </span>
-          </div>
         )}
 
         {/* Quick View Pill (Desktop Hover) */}
@@ -117,20 +119,108 @@ export const ProductCardComponent = ({
             </span>
           </div>
 
-          {/* Sizes Preview (Clothing & Shoes Only) */}
+          {/* Sizes Selector (Clothing & Shoes) - Show ALL sizes, diagonal cross on unavailable */}
           {sizes.length > 0 && (
-            <div className="flex items-center gap-1 flex-wrap mb-2">
-              {sizes.slice(0, 4).map((sz) => (
-                <span
-                  key={sz}
-                  className="text-[10px] font-sans font-medium px-1.5 py-0.5 rounded text-[#1D1D1F] bg-[#F5F5F7] border border-black/[0.04]"
-                >
-                  {sz}
+            <div className="relative mb-2.5" onClick={(e) => e.stopPropagation()}>
+              {/* Floating Size Alert Popup when Add to Cart is clicked without selecting size */}
+              <AnimatePresence>
+                {showSizeWarning && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 6, scale: 0.92 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -4, scale: 0.92 }}
+                    transition={{ type: 'spring', damping: 20, stiffness: 350 }}
+                    className="absolute -top-9 left-1/2 -translate-x-1/2 z-30 bg-[#1D1D1F] text-white text-[11px] font-bold px-3 py-1 rounded-full shadow-lg border border-white/10 flex items-center gap-1.5 whitespace-nowrap pointer-events-none"
+                  >
+                    <span className="text-amber-400">⚠️</span>
+                    <span>Please select a size first!</span>
+                    <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-[#1D1D1F] rotate-45 border-r border-b border-white/10" />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              <div className="flex items-center justify-between mb-1 px-0.5">
+                <span className="text-[10px] font-bold text-[#86868B] uppercase tracking-wider">
+                  Size
                 </span>
-              ))}
-              {sizes.length > 4 && (
-                <span className="text-[9px] text-[#86868B] font-semibold">+{sizes.length - 4}</span>
-              )}
+                {selectedSize ? (
+                  <span className="text-[10px] font-extrabold text-[#0071E3] bg-[#0071E3]/10 px-1.5 py-0.2 rounded">
+                    Selected: {selectedSize}
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-medium text-amber-600">
+                    Required
+                  </span>
+                )}
+              </div>
+
+              <motion.div 
+                animate={showSizeWarning ? { x: [-4, 4, -4, 4, 0] } : {}}
+                transition={{ duration: 0.35 }}
+                className={`flex items-center gap-1.5 flex-wrap p-1 rounded-xl transition-all duration-200 ${
+                  showSizeWarning 
+                    ? 'bg-rose-50/80 ring-2 ring-rose-500/80' 
+                    : 'bg-transparent'
+                }`}
+              >
+                {sizes.map((sz) => {
+                  const isAvailable = isProductSizeAvailable(product, sz);
+                  const isSelected = selectedSize === sz;
+
+                  return (
+                    <button
+                      key={sz}
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (!isAvailable) {
+                          onNotify && onNotify('info', 'Out of Stock ⚠️', `Size ${sz} is currently out of stock.`);
+                          return;
+                        }
+                        setSelectedSize(sz);
+                        setShowSizeWarning(false);
+                        if (quantity > 0 && onUpdateSize) {
+                          onUpdateSize(product.id, sz);
+                        }
+                      }}
+                      title={
+                        !isAvailable 
+                          ? `Size ${sz} (Out of Stock)` 
+                          : isSelected 
+                          ? `Size ${sz} (Selected)` 
+                          : `Select Size ${sz}`
+                      }
+                      className={`relative text-[11px] font-sans font-bold px-2.5 py-1 rounded-lg transition-all duration-200 overflow-hidden cursor-pointer ${
+                        !isAvailable
+                          ? 'text-[#86868B] bg-black/[0.03] border border-dashed border-black/15 cursor-not-allowed opacity-45'
+                          : isSelected
+                          ? 'text-white bg-[#1D1D1F] shadow-sm border border-[#1D1D1F] scale-105'
+                          : 'text-[#1D1D1F] bg-[#F5F5F7] hover:bg-[#E8E8ED] border border-black/[0.08] active:scale-95'
+                      }`}
+                    >
+                      <span className={!isAvailable ? 'opacity-40' : ''}>{sz}</span>
+                      {!isAvailable && (
+                        <svg
+                          className="absolute inset-0 w-full h-full pointer-events-none text-black/40"
+                          viewBox="0 0 100 100"
+                          preserveAspectRatio="none"
+                          aria-hidden="true"
+                        >
+                          <line
+                            x1="0"
+                            y1="100"
+                            x2="100"
+                            y2="0"
+                            stroke="currentColor"
+                            strokeWidth="1.8"
+                            vectorEffect="non-scaling-stroke"
+                          />
+                        </svg>
+                      )}
+                    </button>
+                  );
+                })}
+              </motion.div>
             </div>
           )}
         </div>
@@ -156,24 +246,34 @@ export const ProductCardComponent = ({
             )}
           </div>
 
-          {/* Action Row: Add to Cart / Stepper / WhatsApp */}
-          <div className="flex items-center gap-1.5 sm:gap-2" onClick={(e) => e.stopPropagation()}>
+          {/* Action Row: Add to Cart / Stepper / Out of Stock */}
+          <div className="relative flex items-center gap-1.5 sm:gap-2" onClick={(e) => e.stopPropagation()}>
             {isOutOfStock ? (
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   onWhatsAppInquiry && onWhatsAppInquiry(product);
                 }}
-                className="w-full py-2 sm:py-2.5 px-2.5 sm:px-3 rounded-full bg-[#F5F5F7] hover:bg-[#E8E8ED] text-[#1D1D1F] text-[11px] sm:text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                className="w-full py-2 sm:py-2.5 px-2.5 sm:px-3 rounded-full bg-[#F5F5F7] hover:bg-[#E8E8ED] text-[#1D1D1F] text-[11px] sm:text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer border border-black/[0.06] shadow-xs"
+                title="Out of Stock - Click to inquire"
               >
-                <MessageCircle className="w-3.5 h-3.5 text-[#25D366]" />
-                <span>Notify Me</span>
+                <span>Out of Stock</span>
               </button>
             ) : quantity === 0 ? (
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  onAddToCart && onAddToCart(product);
+                  if (sizes.length > 0 && !selectedSize) {
+                    setShowSizeWarning(true);
+                    setTimeout(() => setShowSizeWarning(false), 3500);
+                    onNotify && onNotify('error', 'Select Size First ⚠️', `Please select a size for ${product.name} before adding to cart.`);
+                    return;
+                  }
+                  onAddToCart && onAddToCart({
+                    ...product,
+                    selectedSize,
+                    selectedVariant: selectedSize,
+                  });
                 }}
                 className="w-full py-2 sm:py-2.5 px-2.5 sm:px-4 rounded-full bg-[#1D1D1F] hover:bg-black text-white font-medium text-[11px] sm:text-xs font-sans tracking-wide flex items-center justify-center gap-1.5 sm:gap-2 shadow-xs active:scale-95 transition-all cursor-pointer"
               >
@@ -206,6 +306,12 @@ export const ProductCardComponent = ({
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
+                    if (sizes.length > 0 && !selectedSize) {
+                      setShowSizeWarning(true);
+                      setTimeout(() => setShowSizeWarning(false), 3500);
+                      onNotify && onNotify('error', 'Select Size First ⚠️', `Please select a size for ${product.name} before updating quantity.`);
+                      return;
+                    }
                     onUpdateQuantity && onUpdateQuantity(product.id, quantity + 1);
                   }}
                   className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-[#1D1D1F] text-white hover:bg-black flex items-center justify-center shadow-xs transition-colors cursor-pointer shrink-0"
@@ -214,21 +320,6 @@ export const ProductCardComponent = ({
                   <Plus className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                 </button>
               </div>
-            )}
-
-            {/* Quick WhatsApp Inquiry Icon */}
-            {onWhatsAppInquiry && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onWhatsAppInquiry(product);
-                }}
-                className="w-8 h-8 sm:w-9 sm:h-9 shrink-0 rounded-full bg-[#F5F5F7] hover:bg-[#25D366]/15 text-[#86868B] hover:text-[#25D366] flex items-center justify-center transition-colors cursor-pointer"
-                aria-label="Inquire on WhatsApp"
-                title="Inquire on WhatsApp"
-              >
-                <MessageCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              </button>
             )}
           </div>
         </div>

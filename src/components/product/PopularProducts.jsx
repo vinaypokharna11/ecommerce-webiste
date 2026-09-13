@@ -13,9 +13,11 @@ export const PopularProducts = ({
   onResetCategory, 
   onAddToCart, 
   onUpdateQuantity, 
+  onUpdateSize,
   onToggleFavorite, 
   onViewAllClick, 
   onQuickView, 
+  onNotify,
 }) => {
   const { products, storeConfig } = useCatalog();
 
@@ -84,7 +86,9 @@ export const PopularProducts = ({
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5 lg:gap-6">
             {displayProducts.slice(0, 8).map((product) => {
-              const quantity = cartItems[product.id]?.quantity || 0;
+              const currentCartItem = cartItems[product.id];
+              const quantity = currentCartItem?.quantity || 0;
+              const currentSize = currentCartItem?.selectedSize || null;
               const isFav = !!wishlist[product.id];
 
               return (
@@ -92,12 +96,15 @@ export const PopularProducts = ({
                   key={product.id}
                   product={product}
                   quantity={quantity}
+                  selectedSize={currentSize}
                   isFavorite={isFav}
                   onAddToCart={onAddToCart}
                   onUpdateQuantity={onUpdateQuantity}
+                  onUpdateSize={onUpdateSize}
                   onToggleFavorite={onToggleFavorite}
                   onQuickView={onQuickView}
                   onWhatsAppInquiry={handleWhatsApp}
+                  onNotify={onNotify}
                 />
               );
             })}

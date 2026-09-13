@@ -12,34 +12,43 @@ import {
   Check,
   MessageCircle,
   ShieldCheck,
-  Truck
+  Truck,
+  AlertCircle,
 } from 'lucide-react';
 import Image from 'next/image';
 import { STORE_CONFIG } from '@/data/mockData';
 import { createProductWhatsAppUrl } from '@/utils/whatsapp';
 import { formatPrice } from '@/utils/formatPrice';
-import { getProductSizes } from '@/utils/productOptions';
+import { 
+  getAllProductSizes, 
+  getProductAvailableSizes, 
+  isProductSizeAvailable 
+} from '@/utils/productOptions';
 
-export const QuickViewModal = ({ 
-  product, 
-  isOpen, 
-  onClose, 
+export const QuickViewModal = ({
+  product,
+  isOpen,
+  onClose,
   onAddToCart,
-  cartQuantity = 0,
-  onUpdateQuantity,
   isFavorite = false,
   onToggleFavorite,
+  onNotify,
 }) => {
   const [selectedSize, setSelectedSize] = useState(null);
+  const [showSizeWarning, setShowSizeWarning] = useState(false);
   const [localQty, setLocalQty] = useState(1);
   const [isAdded, setIsAdded] = useState(false);
 
   useEffect(() => {
     if (product) {
-      const sizes = getProductSizes(product);
-      setSelectedSize(product.selectedSize || (sizes.length > 0 ? sizes[0] : null));
+      setSelectedSize(
+        product.selectedSize && isProductSizeAvailable(product, product.selectedSize)
+          ? product.selectedSize
+          : null
+      );
       setLocalQty(1);
       setIsAdded(false);
+      setShowSizeWarning(false);
     }
   }, [product]);
 
@@ -117,7 +126,8 @@ export const QuickViewModal = ({
 
   const isOutOfStock = product.stockStatus === 'out_of_stock';
   const totalPrice = (product.price || 0) * localQty;
-  const availableSizes = getProductSizes(product);
+  const allSizes = getAllProductSizes(product);
+  const availableSizes = getProductAvailableSizes(product);
   const whatsappUrl = createProductWhatsAppUrl(
     product,
     selectedSize ? `Size: ${selectedSize}` : null,
@@ -127,10 +137,18 @@ export const QuickViewModal = ({
 
   const handleAdd = () => {
     if (isOutOfStock) return;
+    if (allSizes.length > 0 && !selectedSize) {
+      setShowSizeWarning(true);
+      setTimeout(() => setShowSizeWarning(false), 3500);
+      if (onNotify) {
+        onNotify('error', 'Select Size First ⚠️', `Please choose a size for ${product.name} before adding to cart.`);
+      }
+      return;
+    }
     onAddToCart && onAddToCart({
       ...product,
       selectedVariant: selectedSize || '',
-      selectedSize: selectedSize || (availableSizes.length > 0 ? availableSizes[0] : ''),
+      selectedSize: selectedSize || '',
       quantity: localQty,
     });
     setIsAdded(true);
@@ -156,12 +174,15 @@ export const QuickViewModal = ({
         >
           {/* Apple Modal Container */}
           <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-label={product?.name || "Product Quick View"}
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ type: 'spring', damping: 26, stiffness: 320 }}
             onClick={(e) => e.stopPropagation()}
-            className="relative w-full max-w-3xl bg-white border border-black/[0.08] shadow-[0_25px_60px_rgba(0,0,0,0.18)] rounded-2xl sm:rounded-[2rem] z-10 p-4 xs:p-5 sm:p-7 md:p-8 my-auto"
+            className="product-quickview-modal relative w-full max-w-3xl bg-white border border-black/[0.08] shadow-[0_25px_60px_rgba(0,0,0,0.18)] rounded-2xl sm:rounded-[2rem] z-10 p-4 xs:p-5 sm:p-7 md:p-8 my-auto"
           >
           {/* Close button */}
           <button
@@ -183,7 +204,7 @@ export const QuickViewModal = ({
                 sizes="(max-width: 768px) 100vw, 400px"
               />
               {product.badge && (
-                <div className="absolute top-3 left-3 sm:top-4 sm:left-4 px-2.5 py-0.5 sm:px-3 sm:py-1 bg-[#1D1D1F] text-white text-[11px] sm:text-[10px] font-sans font-bold tracking-wide rounded-full">
+                <div className="absolute top-3.5 left-3.5 sm:top-5 sm:left-5 px-3.5 py-1.5 sm:px-4 sm:py-1.5 bg-[#1D1D1F] text-white text-xs sm:text-sm font-sans font-bold tracking-wider uppercase rounded-full shadow-md">
                   {product.badge}
                 </div>
               )}
@@ -237,38 +258,91 @@ export const QuickViewModal = ({
               </div>
 
               {/* Sizing Selection (Clothing & Footwear Only) */}
-              {availableSizes.length > 0 && (
+              {allSizes.length > 0 && (
                 <div className="space-y-1.5 sm:space-y-2 pt-2 border-t border-black/[0.06]">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-sans font-semibold text-[#1D1D1F]">
                       Size:
                     </span>
-                    {selectedSize && (
-                      <span className="text-[11px] font-sans font-medium text-[#86868B]">
-                        Selected: <strong className="text-[#1D1D1F]">{selectedSize}</strong>
+                    {selectedSize ? (
+                      <span className="text-[11px] font-sans font-bold text-[#0071E3] bg-[#0071E3]/10 px-2 py-0.5 rounded">
+                        Selected: <strong className="text-[#0071E3]">{selectedSize}</strong>
+                      </span>
+                    ) : (
+                      <span className="text-[11px] font-sans font-medium text-amber-600">
+                        Please select a size
                       </span>
                     )}
                   </div>
-                  <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                    {availableSizes.map((sz) => {
+
+                  <AnimatePresence>
+                    {showSizeWarning && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }}
+                        className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-xs font-bold text-rose-700 flex items-center gap-2"
+                      >
+                        <AlertCircle className="w-4 h-4 flex-shrink-0 text-rose-600" />
+                        <span>Please select a size before adding to cart!</span>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  <motion.div 
+                    animate={showSizeWarning ? { x: [-4, 4, -4, 4, 0] } : {}}
+                    transition={{ duration: 0.35 }}
+                    className={`flex flex-wrap gap-1.5 sm:gap-2 p-1 rounded-xl transition-all ${
+                      showSizeWarning ? 'bg-rose-50 ring-2 ring-rose-500/80' : ''
+                    }`}
+                  >
+                    {allSizes.map((sz) => {
+                      const isAvailable = isProductSizeAvailable(product, sz);
                       const isSelected = selectedSize === sz;
 
                       return (
                         <button
                           key={sz}
                           type="button"
-                          onClick={() => setSelectedSize(sz)}
-                          className={`px-3 sm:px-3.5 py-1 sm:py-1.5 rounded-full text-xs font-sans font-medium transition-all cursor-pointer ${
-                            isSelected
-                              ? 'bg-[#1D1D1F] text-white shadow-xs scale-105'
-                              : 'bg-[#F5F5F7] text-[#1D1D1F] hover:bg-[#E8E8ED] border border-black/[0.05]'
+                          disabled={!isAvailable}
+                          onClick={() => {
+                            if (isAvailable) {
+                              setSelectedSize(sz);
+                              setShowSizeWarning(false);
+                            }
+                          }}
+                          title={isAvailable ? `Select Size ${sz}` : `Size ${sz} is out of stock`}
+                          className={`relative overflow-hidden px-3 sm:px-3.5 py-1 sm:py-1.5 rounded-full text-xs font-sans font-medium transition-all ${
+                            !isAvailable
+                              ? 'bg-black/[0.03] text-[#86868B] border border-dashed border-black/15 cursor-not-allowed opacity-60'
+                              : isSelected
+                              ? 'bg-[#1D1D1F] text-white shadow-xs scale-105 cursor-pointer'
+                              : 'bg-[#F5F5F7] text-[#1D1D1F] hover:bg-[#E8E8ED] border border-black/[0.05] cursor-pointer'
                           }`}
                         >
-                          {sz}
+                          <span>{sz}</span>
+                          {!isAvailable && (
+                            <svg
+                              className="absolute inset-0 w-full h-full pointer-events-none text-black/40"
+                              viewBox="0 0 100 100"
+                              preserveAspectRatio="none"
+                              aria-hidden="true"
+                            >
+                              <line
+                                x1="0"
+                                y1="100"
+                                x2="100"
+                                y2="0"
+                                stroke="currentColor"
+                                strokeWidth="1.5"
+                                vectorEffect="non-scaling-stroke"
+                              />
+                            </svg>
+                          )}
                         </button>
                       );
                     })}
-                  </div>
+                  </motion.div>
                 </div>
               )}
 

@@ -29,6 +29,8 @@ import {
   LogIn,
   Sparkles,
   ShieldCheck,
+  AlertCircle,
+  Heart,
 } from 'lucide-react';
 import { STORE_CONFIG } from '@/data/mockData';
 import { useAuth } from '@/context/AuthContext';
@@ -126,56 +128,163 @@ const SheetModal = ({ isOpen, onClose, title, subtitle, children }) => {
 };
 
 // ─── Edit Profile Modal ───────────────────────────────────────────────────────
+// ─── Edit Profile Modal ───────────────────────────────────────────────────────
 const EditProfileModal = ({ profile, onClose, onSave }) => {
-  const [form, setForm] = useState({ ...profile });
+  const initialEmail = (profile?.email && profile.email.includes('@')) ? profile.email : '';
+
+  const [form, setForm] = useState({
+    ...profile,
+    name: (profile?.name || '').replace(/[^a-zA-Z\s]/g, ''),
+    email: initialEmail,
+    phone: (profile?.phone || '').replace(/\D/g, '').slice(0, 10),
+  });
+  const [error, setError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+
+  const handleNameChange = (e) => {
+    const raw = e.target.value;
+    const cleaned = raw.replace(/[^a-zA-Z\s]/g, '');
+    setForm((prev) => ({ ...prev, name: cleaned }));
+    if (raw !== cleaned) {
+      setError('Special characters and numbers are not allowed in name.');
+    } else {
+      setError('');
+    }
+  };
+
+  const handleEmailChange = (e) => {
+    const raw = e.target.value;
+    setForm((prev) => ({ ...prev, email: raw }));
+    const trimmed = raw.trim();
+    if (trimmed && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+      setError('Please enter a valid email address (e.g. name@domain.com)');
+    } else {
+      setError('');
+    }
+  };
+
+  const handlePhoneChange = (e) => {
+    const digits = e.target.value.replace(/\D/g, '').slice(0, 10);
+    setForm((prev) => ({ ...prev, phone: digits }));
+    if (digits.length > 0 && digits.length < 10) {
+      setError(`Phone number must be exactly 10 digits (${digits.length}/10 entered).`);
+    } else {
+      setError('');
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const trimmedName = (form.name || '').trim();
+
+    if (!trimmedName) {
+      setError('Full name is required.');
+      return;
+    }
+
+    if (/[^a-zA-Z\s]/.test(trimmedName)) {
+      setError('Special characters and numbers are not allowed in name.');
+      return;
+    }
+
+    const trimmedEmail = (form.email || '').trim().toLowerCase();
+    if (!trimmedEmail) {
+      setError('Email address is required.');
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      setError('Please enter a valid email address (e.g. name@domain.com)');
+      return;
+    }
+
+    const phoneDigits = (form.phone || '').replace(/\D/g, '');
+    if (phoneDigits.length !== 10) {
+      setError(`Phone number must be exactly 10 digits (currently ${phoneDigits.length} digits).`);
+      return;
+    }
+
     setIsSaving(true);
-    await onSave(form);
+    setError('');
+    const res = await onSave({ ...form, name: trimmedName, email: trimmedEmail, phone: phoneDigits });
     setIsSaving(false);
+    if (res && res.success === false) {
+      setError(res.error || 'Failed to update profile');
+      return;
+    }
     onClose();
   };
 
   return (
     <SheetModal isOpen={true} onClose={onClose} title="Edit Profile" subtitle="Update your personal details">
       <form onSubmit={handleSubmit} className="space-y-3.5 sm:space-y-4">
+        {error && (
+          <div className="p-3 rounded-xl sm:rounded-2xl bg-rose-50 border border-rose-200 text-xs font-semibold text-rose-600 flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+            <span>{error}</span>
+          </div>
+        )}
+
         <div>
           <label className="text-xs font-bold text-[#777777] uppercase tracking-wider block mb-1">
-            Full Name
+            Full Name <span className="text-[#0071E3]">*</span>
           </label>
           <div className="relative">
             <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#777777]" />
             <input
               type="text"
               value={form.name || ''}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              onChange={handleNameChange}
+              placeholder="e.g. Himanshi Sharma"
               className="w-full pl-10 pr-3.5 sm:pr-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl border border-black/5 bg-[#F5F5F7]/60 text-xs sm:text-sm text-[#1D1D1F] focus:outline-none focus:ring-2 focus:ring-[#1D1D1F] focus:bg-white font-medium transition-all"
               required
             />
           </div>
+          <p className="text-[10px] text-[#86868B] mt-1">Letters and spaces only. No special characters or numbers.</p>
         </div>
 
         <div>
           <label className="text-xs font-bold text-[#777777] uppercase tracking-wider block mb-1">
-            Phone Number (WhatsApp)
+            Email Address <span className="text-[#0071E3]">*</span>
+          </label>
+          <div className="relative">
+            <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#777777]" />
+            <input
+              type="email"
+              value={form.email || ''}
+              onChange={handleEmailChange}
+              placeholder="e.g. yourname@example.com"
+              className="w-full pl-10 pr-3.5 sm:pr-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl border border-black/5 bg-[#F5F5F7]/60 text-xs sm:text-sm text-[#1D1D1F] focus:outline-none focus:ring-2 focus:ring-[#1D1D1F] focus:bg-white font-medium transition-all"
+              required
+            />
+          </div>
+          <p className="text-[10px] text-[#86868B] mt-1">Used for signing in and order notifications.</p>
+        </div>
+
+        <div>
+          <label className="text-xs font-bold text-[#777777] uppercase tracking-wider block mb-1">
+            Phone Number (10 Digits) <span className="text-[#0071E3]">*</span>
           </label>
           <div className="relative">
             <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#777777]" />
             <input
               type="tel"
+              inputMode="numeric"
+              maxLength={10}
               value={form.phone || ''}
-              onChange={(e) => setForm({ ...form, phone: e.target.value })}
-              className="w-full pl-10 pr-3.5 sm:pr-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl border border-black/5 bg-[#F5F5F7]/60 text-xs sm:text-sm text-[#1D1D1F] focus:outline-none focus:ring-2 focus:ring-[#1D1D1F] focus:bg-white font-medium transition-all"
+              onChange={handlePhoneChange}
+              placeholder="9876543210"
+              className="w-full pl-10 pr-3.5 sm:pr-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl border border-black/5 bg-[#F5F5F7]/60 text-xs sm:text-sm text-[#1D1D1F] focus:outline-none focus:ring-2 focus:ring-[#1D1D1F] focus:bg-white font-medium transition-all tracking-wider"
+              required
             />
           </div>
+          <p className="text-[10px] text-[#86868B] mt-1">Must be exactly 10 digits.</p>
         </div>
 
         <button
           type="submit"
           disabled={isSaving}
-          className="w-full py-3 sm:py-3.5 rounded-full bg-[#1D1D1F] hover:bg-black text-white font-extrabold text-xs sm:text-sm shadow-sm active:scale-95 transition-all flex items-center justify-center gap-2 mt-3 sm:mt-4 cursor-pointer"
+          className="w-full py-3 sm:py-3.5 rounded-full bg-[#1D1D1F] hover:bg-black text-white font-extrabold text-xs sm:text-sm shadow-sm active:scale-95 transition-all flex items-center justify-center gap-2 mt-3 sm:mt-4 cursor-pointer disabled:opacity-60"
         >
           {isSaving ? 'Saving...' : 'Save Changes'}
         </button>
@@ -497,21 +606,26 @@ export const ProfilePage = ({ orders = [], onExploreCatalog, onNavigate }) => {
   const displayedOrders = showAllOrders ? allOrdersList : allOrdersList.slice(0, 3);
 
   const profile = {
-    name: user?.name || (isAuthenticated ? 'Customer' : 'Guest Shopper'),
+    name: user?.name ? user.name.replace(/[^a-zA-Z\s]/g, '').trim() || user.name : (isAuthenticated ? 'Customer' : 'Guest Shopper'),
     email: user?.email || (isAuthenticated ? '' : 'Sign in to view orders & track packages'),
-    phone: user?.phone || (isAuthenticated ? '' : 'No phone linked'),
+    phone: user?.phone ? user.phone.replace(/\D/g, '').slice(0, 10) || user.phone : (isAuthenticated ? '' : 'No phone linked'),
   };
 
   const initials = profile.name
     .split(' ')
+    .filter(Boolean)
     .map((n) => n[0])
     .join('')
     .toUpperCase()
-    .slice(0, 2);
+    .slice(0, 2) || 'C';
 
   const handleSaveProfile = async (updated) => {
-    await updateProfile(updated);
-    firePartyPopper();
+    const res = await updateProfile(updated);
+    if (res && res.success !== false) {
+      firePartyPopper();
+      return { success: true };
+    }
+    return res;
   };
 
   return (
@@ -559,18 +673,10 @@ export const ProfilePage = ({ orders = [], onExploreCatalog, onNavigate }) => {
                 <div className="w-14 h-14 sm:w-20 sm:h-20 rounded-full bg-[#1D1D1F] text-white flex items-center justify-center shadow-md">
                   <span className="text-white text-lg sm:text-2xl font-extrabold tracking-wider">{initials}</span>
                 </div>
-                <div className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full border-2 border-white shadow-sm ${isAuthenticated ? 'bg-emerald-500' : 'bg-amber-400'}`} />
               </div>
 
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h2 className="text-base sm:text-xl font-extrabold text-[#1D1D1F] truncate">{profile.name}</h2>
-                  <span className={`px-2 sm:px-2.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wide ${
-                    isAuthenticated ? 'bg-[#EBF5FF] text-[#0071E3]' : 'bg-[#F5F5F7] text-[#777777]'
-                  }`}>
-                    {isAuthenticated ? 'Verified Customer' : 'Guest Mode'}
-                  </span>
-                </div>
+                <h2 className="text-base sm:text-xl font-extrabold text-[#1D1D1F] truncate">{profile.name}</h2>
 
                 <div className="flex items-center gap-1.5 text-xs text-[#777777] mt-1 truncate">
                   <Mail className="w-3.5 h-3.5 shrink-0" />
@@ -737,6 +843,23 @@ export const ProfilePage = ({ orders = [], onExploreCatalog, onNavigate }) => {
                   Browse Product Catalog
                 </span>
                 <span className="text-[10px] sm:text-[11px] text-[#777777] block truncate">Explore latest imitation jewelry, necklaces, and bangles</span>
+              </div>
+              <ChevronRight className="w-4 h-4 text-[#A0A0A0] group-hover:text-[#1D1D1F] shrink-0" />
+            </button>
+
+            {/* My Saved Wishlist */}
+            <button
+              onClick={() => onNavigate && onNavigate('wishlist', 'Wishlist')}
+              className="w-full flex items-center gap-3 sm:gap-3.5 px-4 sm:px-6 py-3.5 sm:py-4 hover:bg-[#F5F5F7]/40 transition-colors text-left group border-t border-black/5 cursor-pointer"
+            >
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-rose-50 text-rose-500 flex items-center justify-center shrink-0">
+                <Heart className="w-4 h-4" fill="currentColor" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <span className="text-xs sm:text-sm font-bold text-[#1D1D1F] group-hover:text-rose-600 transition-colors block truncate">
+                  My Saved Wishlist
+                </span>
+                <span className="text-[10px] sm:text-[11px] text-[#777777] block truncate">View your favorited items and products</span>
               </div>
               <ChevronRight className="w-4 h-4 text-[#A0A0A0] group-hover:text-[#1D1D1F] shrink-0" />
             </button>

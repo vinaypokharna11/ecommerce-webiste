@@ -11,11 +11,12 @@ export { default as FloatingCartBar } from './layout/FloatingCartBar';
 export { default as SmoothScrollProvider } from './layout/SmoothScrollProvider';
 export { default as GsapScrollAnimations } from './layout/GsapScrollAnimations';
 
-// Common / Modals / Notifications
+// Common / Modals / Notifications / Animations
 export { default as Toast } from './common/Toast';
 export { default as QuickViewModal } from './common/QuickViewModal';
 export { default as AuthModal } from './common/AuthModal';
 export { default as BrandLoadingScreen } from './common/BrandLoadingScreen';
+export { TextScatter, ScatterItem } from './ui/text-scatter';
 
 // Product Catalog & Browsing
 export { default as ProductCard } from './product/ProductCard';

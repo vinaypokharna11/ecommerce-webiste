@@ -44,12 +44,12 @@ const CouponCard = ({ offer, index, storeConfig, onExplore }) => {
       <div>
         {/* Top Meta Row */}
         <div className="flex items-center justify-between gap-2 mb-3">
-          <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-[#F5F5F7] text-[#0071E3] border border-black/[0.06] font-sans">
+          <span className="text-xs font-semibold px-3 py-1 rounded-full bg-[#F5F5F7] text-[#0071E3] border border-black/[0.06] font-sans">
             {offer.subtitle}
           </span>
           {offer.popular && (
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#1D1D1F] text-white text-[10px] font-semibold tracking-wide font-sans shrink-0">
-              <Zap className="w-2.5 h-2.5 text-[#FFB340] fill-[#FFB340]" />
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#1D1D1F] text-white text-xs font-bold tracking-wide font-sans shrink-0 shadow-xs">
+              <Zap className="w-3 h-3 text-[#FFB340] fill-[#FFB340]" />
               Trending Deal
             </span>
           )}

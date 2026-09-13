@@ -136,7 +136,7 @@ export const AdminFeatured = () => {
                         className="max-h-full max-w-full object-contain"
                       />
                       {product.badge && (
-                        <span className="absolute top-2 left-2 px-2.5 py-0.5 rounded-full text-[9px] font-bold bg-[#171717] text-white">
+                        <span className="absolute top-2 left-2 px-3 py-1 rounded-full text-xs font-bold bg-[#171717] text-white shadow-xs">
                           {product.badge}
                         </span>
                       )}

@@ -98,8 +98,20 @@ export const AuthModal = () => {
 
   const handleSignupSubmit = async (e) => {
     e.preventDefault();
-    if (!signupName || !signupEmail || !signupPassword) {
+    const trimmedName = signupName.trim();
+    if (!trimmedName || !signupEmail || !signupPassword) {
       setError('Name, email, and password are required.');
+      return;
+    }
+
+    if (/[^a-zA-Z\s]/.test(trimmedName)) {
+      setError('Special characters and numbers are not allowed in name.');
+      return;
+    }
+
+    const phoneDigits = signupPhone ? signupPhone.replace(/\D/g, '') : '';
+    if (phoneDigits && phoneDigits.length !== 10) {
+      setError(`Phone number must be exactly 10 digits (currently ${phoneDigits.length} digits).`);
       return;
     }
 
@@ -111,9 +123,9 @@ export const AuthModal = () => {
     setIsLoading(true);
     setError('');
     const res = await signup({
-      name: signupName,
+      name: trimmedName,
       email: signupEmail,
-      phone: signupPhone,
+      phone: phoneDigits,
       password: signupPassword,
     });
     setIsLoading(false);
@@ -282,15 +294,24 @@ export const AuthModal = () => {
           <form onSubmit={handleSignupSubmit} className="space-y-3 sm:space-y-3.5">
             <div>
               <label className="block text-[11px] font-bold text-[#1D1D1F] mb-1 uppercase tracking-wider">
-                Full Name
+                Full Name <span className="text-[#0071E3]">*</span>
               </label>
               <div className="relative">
                 <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#777777]" />
                 <input
                   type="text"
                   value={signupName}
-                  onChange={(e) => setSignupName(e.target.value)}
-                  placeholder="John Doe"
+                  onChange={(e) => {
+                    const raw = e.target.value;
+                    const cleaned = raw.replace(/[^a-zA-Z\s]/g, '');
+                    setSignupName(cleaned);
+                    if (raw !== cleaned) {
+                      setError('Special characters and numbers are not allowed in name.');
+                    } else {
+                      setError('');
+                    }
+                  }}
+                  placeholder="e.g. John Doe"
                   required
                   className="w-full pl-10 pr-3.5 sm:pr-4 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl bg-[#F5F5F7] border border-black/[0.06] text-xs sm:text-sm text-[#1D1D1F] placeholder-[#777777]/70 focus:outline-none focus:ring-2 focus:ring-[#0071E3] focus:bg-white font-medium transition-all"
                 />
@@ -299,7 +320,7 @@ export const AuthModal = () => {
 
             <div>
               <label className="block text-[11px] font-bold text-[#1D1D1F] mb-1 uppercase tracking-wider">
-                Email Address
+                Email Address <span className="text-[#0071E3]">*</span>
               </label>
               <div className="relative">
                 <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#777777]" />
@@ -316,16 +337,26 @@ export const AuthModal = () => {
 
             <div>
               <label className="block text-[11px] font-bold text-[#1D1D1F] mb-1 uppercase tracking-wider">
-                Phone Number (WhatsApp)
+                Phone Number (10 Digits)
               </label>
               <div className="relative">
                 <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#777777]" />
                 <input
                   type="tel"
+                  inputMode="numeric"
+                  maxLength={10}
                   value={signupPhone}
-                  onChange={(e) => setSignupPhone(e.target.value)}
-                  placeholder="+91 98765 43210"
-                  className="w-full pl-10 pr-3.5 sm:pr-4 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl bg-[#F5F5F7] border border-black/[0.06] text-xs sm:text-sm text-[#1D1D1F] placeholder-[#777777]/70 focus:outline-none focus:ring-2 focus:ring-[#0071E3] focus:bg-white font-medium transition-all"
+                  onChange={(e) => {
+                    const digits = e.target.value.replace(/\D/g, '').slice(0, 10);
+                    setSignupPhone(digits);
+                    if (digits.length > 0 && digits.length < 10) {
+                      setError(`Phone number must be exactly 10 digits (${digits.length}/10 entered).`);
+                    } else {
+                      setError('');
+                    }
+                  }}
+                  placeholder="9876543210"
+                  className="w-full pl-10 pr-3.5 sm:pr-4 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl bg-[#F5F5F7] border border-black/[0.06] text-xs sm:text-sm text-[#1D1D1F] placeholder-[#777777]/70 focus:outline-none focus:ring-2 focus:ring-[#0071E3] focus:bg-white font-medium transition-all tracking-wider"
                 />
               </div>
             </div>

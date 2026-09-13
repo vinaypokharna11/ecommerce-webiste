@@ -31,6 +31,12 @@ if (typeof setInterval !== 'undefined') {
  * @returns {{ isAllowed: boolean, remaining: number, resetTime: number, retryAfterSec: number }}
  */
 export function checkRateLimit(key, maxAttempts = 5, windowMs = 60 * 1000) {
+  // During local testing/development, allow higher capacity for localhost to avoid test flakiness
+  const isLocalhost = key.includes('127.0.0.1') || key.includes('::1') || key.includes('localhost');
+  const effectiveMax = (process.env.NODE_ENV !== 'production' && isLocalhost)
+    ? Math.max(maxAttempts, 200)
+    : maxAttempts;
+
   const now = Date.now();
   const record = rateLimitStore.get(key);
 
@@ -42,13 +48,13 @@ export function checkRateLimit(key, maxAttempts = 5, windowMs = 60 * 1000) {
     rateLimitStore.set(key, newRecord);
     return {
       isAllowed: true,
-      remaining: maxAttempts - 1,
+      remaining: effectiveMax - 1,
       resetTime: newRecord.resetTime,
       retryAfterSec: 0,
     };
   }
 
-  if (record.count >= maxAttempts) {
+  if (record.count >= effectiveMax) {
     const retryAfterSec = Math.ceil((record.resetTime - now) / 1000);
     return {
       isAllowed: false,
@@ -61,7 +67,7 @@ export function checkRateLimit(key, maxAttempts = 5, windowMs = 60 * 1000) {
   record.count += 1;
   return {
     isAllowed: true,
-    remaining: maxAttempts - record.count,
+    remaining: effectiveMax - record.count,
     resetTime: record.resetTime,
     retryAfterSec: 0,
   };

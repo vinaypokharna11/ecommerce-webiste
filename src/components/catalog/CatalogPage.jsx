@@ -23,7 +23,9 @@ export const CatalogPage = ({
   initialCategory = 'all',
   onAddToCart, 
   onUpdateQuantity, 
+  onUpdateSize,
   onToggleFavorite, 
+  onQuickView,
   onInquire, 
   onNotify 
 }) => {
@@ -173,7 +175,7 @@ export const CatalogPage = ({
 
           {/* Horizontal Category Filter Pills */}
           <div className="mb-6 sm:mb-8 overflow-x-auto no-scrollbar pb-2 touch-pan-x">
-            <div className="flex items-center gap-2 min-w-max px-0.5">
+            <div className="flex items-center gap-2.5 min-w-max px-0.5">
               {activeCategories.map((category) => {
                 const isSelected = selectedCategory === category.id;
 
@@ -181,20 +183,13 @@ export const CatalogPage = ({
                   <button
                     key={category.id}
                     onClick={() => handleCategorySelect(category.id)}
-                    className={`flex items-center gap-1.5 sm:gap-2 px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs font-sans transition-all duration-200 cursor-pointer shrink-0 ${
+                    className={`flex items-center px-5 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-sans transition-all duration-200 cursor-pointer shrink-0 ${
                       isSelected
                         ? 'bg-[#1D1D1F] text-white font-semibold shadow-xs'
-                        : 'bg-white text-[#1D1D1F] hover:bg-[#F5F5F7] border border-black/[0.06]'
+                        : 'bg-white text-[#1D1D1F] hover:bg-[#F5F5F7] border border-black/[0.08]'
                     }`}
                   >
                     <span>{category.name}</span>
-                    {category.count && (
-                      <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
-                        isSelected ? 'bg-white/20 text-white' : 'bg-[#F5F5F7] text-[#86868B]'
-                      }`}>
-                        {category.count}
-                      </span>
-                    )}
                   </button>
                 );
               })}
@@ -274,9 +269,11 @@ export const CatalogPage = ({
 
           {/* Product Grid */}
           {filteredProducts.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5 lg:gap-6">
+            <div id="catalog-grid" className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5 lg:gap-6">
               {filteredProducts.map((product) => {
-                const currentQty = cartItems[product.id]?.quantity || 0;
+                const currentCartItem = cartItems[product.id];
+                const currentQty = currentCartItem?.quantity || 0;
+                const currentSize = currentCartItem?.selectedSize || null;
                 const isFav = !!wishlist[product.id];
 
                 return (
@@ -284,12 +281,15 @@ export const CatalogPage = ({
                     key={product.id}
                     product={product}
                     quantity={currentQty}
+                    selectedSize={currentSize}
                     isFavorite={isFav}
                     onAddToCart={onAddToCart}
                     onUpdateQuantity={onUpdateQuantity}
+                    onUpdateSize={onUpdateSize}
                     onToggleFavorite={onToggleFavorite}
-                    onQuickView={setQuickViewProduct}
+                    onQuickView={onQuickView || setQuickViewProduct}
                     onWhatsAppInquiry={handleWhatsAppInquiry}
+                    onNotify={onNotify}
                   />
                 );
               })}
@@ -338,6 +338,7 @@ export const CatalogPage = ({
             onUpdateQuantity={onUpdateQuantity}
             isFavorite={!!wishlist[quickViewProduct.id]}
             onToggleFavorite={onToggleFavorite}
+            onNotify={onNotify}
           />
         )}
       </section>

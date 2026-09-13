@@ -22,7 +22,10 @@ export const metadata = {
   creator: 'Nakoda Store',
   metadataBase: new URL('https://nakodaimitation.com'),
   icons: {
-    icon: '/favicon.jpg',
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/favicon.jpg', type: 'image/jpeg' },
+    ],
     apple: '/favicon.jpg',
   },
   manifest: '/site.webmanifest',

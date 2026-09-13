@@ -63,7 +63,7 @@ test.describe('Wishlist & Cart User Isolation Tests', () => {
     await signupTab.click();
 
     // Fill signup form in AuthModal
-    await page.fill('input[placeholder="John Doe"]', 'Test Wishlist User');
+    await page.fill('input[placeholder*="John Doe"]', 'Test Wishlist User');
     const emailInputs = page.locator('input[type="email"]');
     await emailInputs.last().fill(testEmail);
     const passwordInputs = page.locator('input[type="password"]');
@@ -89,29 +89,47 @@ test.describe('Wishlist & Cart User Isolation Tests', () => {
     // 1. Sign up User A via /login?tab=signup
     await page.goto('/login?tab=signup');
     await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(600);
 
-    const signupTabA = page.locator('button:has-text("Sign Up"), button:has-text("Create an Account")').first();
-    if (await signupTabA.isVisible().catch(() => false)) {
-      await signupTabA.click();
-    }
+    const signupTabA = page.locator('button', { hasText: 'New? Sign Up' }).first();
+    await signupTabA.click();
+    await expect(page.locator('input[placeholder*="Ramesh Kumar"]')).toBeVisible({ timeout: 8000 });
 
-    await page.fill('input[placeholder="e.g. Ramesh Kumar"]', 'Cart User A');
+    await page.fill('input[placeholder*="Ramesh Kumar"]', 'Cart User A');
     await page.fill('input[type="email"]', userAEmail);
     await page.fill('input[type="password"]', 'Password@123');
     await page.click('button[type="submit"]:has-text("Create My Account")');
 
-    // Wait for redirect to storefront
-    await page.waitForURL('/', { timeout: 10000 });
+    await page.waitForURL((url) => url.pathname === '/' && !url.searchParams.has('tab'), { timeout: 12000 });
     await page.waitForSelector('#navbar-brand-logo:not(.opacity-0)', { timeout: 10000 }).catch(() => {});
 
-    // Add first available product to cart
-    const addToCartBtn = page.locator('button:has-text("Add to Cart")').first();
-    await expect(addToCartBtn).toBeVisible({ timeout: 10000 });
-    await addToCartBtn.click();
+    // Scroll first product card into view
+    const firstCard = page.locator('article').first();
+    await expect(firstCard).toBeVisible({ timeout: 10000 });
+    await firstCard.scrollIntoViewIfNeeded();
+    await page.waitForTimeout(400);
+
+    // Click available in-stock size 'M' on the card
+    const availableSizeBtn = firstCard.getByRole('button', { name: 'M', exact: true }).or(
+      firstCard.locator('button:not([class*="cursor-not-allowed"])', { hasText: /^M$/ })
+    ).first();
+    await expect(availableSizeBtn).toBeVisible({ timeout: 5000 });
+    await availableSizeBtn.click({ force: true });
+    await page.waitForTimeout(300);
+
+    // Add product to cart
+    const addToCartBtn = firstCard.locator('button:has-text("Add to Cart")');
+    await expect(addToCartBtn).toBeVisible({ timeout: 8000 });
+    await addToCartBtn.click({ force: true });
+    await page.waitForTimeout(500);
+
+    // Scroll to top so navbar is fully in view
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.waitForTimeout(400);
 
     // Verify cart counter increased to 1
     const cartCounter = page.locator('button[aria-label="Shopping Cart"] span');
-    await expect(cartCounter).toHaveText('1', { timeout: 5000 });
+    await expect(cartCounter).toHaveText('1', { timeout: 8000 });
 
     // Logout User A via Profile tab
     await page.goto('/?tab=profile');
@@ -134,18 +152,18 @@ test.describe('Wishlist & Cart User Isolation Tests', () => {
     // 2. Sign up User B via /login?tab=signup
     await page.goto('/login?tab=signup');
     await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(600);
 
-    const signupTabB = page.locator('button:has-text("Sign Up"), button:has-text("Create an Account")').first();
-    if (await signupTabB.isVisible().catch(() => false)) {
-      await signupTabB.click();
-    }
+    const signupTabB = page.locator('button', { hasText: 'New? Sign Up' }).first();
+    await signupTabB.click();
+    await expect(page.locator('input[placeholder*="Ramesh Kumar"]')).toBeVisible({ timeout: 8000 });
 
-    await page.fill('input[placeholder="e.g. Ramesh Kumar"]', 'Cart User B');
+    await page.fill('input[placeholder*="Ramesh Kumar"]', 'Cart User B');
     await page.fill('input[type="email"]', userBEmail);
     await page.fill('input[type="password"]', 'Password@123');
     await page.click('button[type="submit"]:has-text("Create My Account")');
 
-    await page.waitForURL('/', { timeout: 10000 });
+    await page.waitForURL((url) => url.pathname === '/' && !url.searchParams.has('tab'), { timeout: 12000 });
     await page.waitForSelector('#navbar-brand-logo:not(.opacity-0)', { timeout: 10000 }).catch(() => {});
 
     // User B's cart counter must be strictly 0!

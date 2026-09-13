@@ -11,14 +11,7 @@ const nextConfig = {
       },
     ],
   },
-  experimental: {
-    optimizePackageImports: [
-      'lucide-react',
-      'framer-motion',
-      'canvas-confetti',
-      'lenis',
-    ],
-  },
+
   async headers() {
     return [
       {
