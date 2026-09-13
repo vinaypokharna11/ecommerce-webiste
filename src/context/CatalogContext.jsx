@@ -478,7 +478,11 @@ export const CatalogProvider = ({ children }) => {
 
   // ─────────────────── Product Actions ───────────────────
   const addProduct = useCallback(async (productData) => {
-    const cleanId = String(productData.id || `prod-${Date.now()}`).trim();
+    const genUniqueId = () => `prod-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+    const isIdTaken = (candidateId) => products.some((p) => String(p.id).trim() === String(candidateId).trim());
+    const cleanId = (productData.id && !isIdTaken(productData.id))
+      ? String(productData.id).trim()
+      : genUniqueId();
     const newProduct = {
       ...productData,
       id: cleanId,
@@ -636,7 +640,7 @@ export const CatalogProvider = ({ children }) => {
     if (!source) return;
     const duplicated = {
       ...source,
-      id: `prod-${Date.now()}`,
+      id: `prod-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
       name: `${source.name} (Copy)`,
       badge: 'NEW',
       badgeType: 'new',

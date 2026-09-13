@@ -120,9 +120,10 @@ export const AdminProductModal = ({ isOpen, onClose, product = null }) => {
         );
 
         if (hasSavedContent) {
+          const { id: _oldId, _id: _oldMongoId, ...cleanRestored } = restored;
           setFormData({
             ...DEFAULT_FORM_STATE,
-            ...restored,
+            ...cleanRestored,
           });
           setHasDraftSaved(true);
         } else {
@@ -155,7 +156,8 @@ export const AdminProductModal = ({ isOpen, onClose, product = null }) => {
 
     if (hasContent) {
       try {
-        localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(formData));
+        const { id: _idStrip, _id: _mongoStrip, ...draftToSave } = formData;
+        localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draftToSave));
         setHasDraftSaved(true);
       } catch (e) {}
     }
@@ -324,6 +326,8 @@ export const AdminProductModal = ({ isOpen, onClose, product = null }) => {
       if (isEditing) {
         result = await updateProduct(product.id, payload);
       } else {
+        delete payload.id;
+        delete payload._id;
         result = await addProduct(payload);
       }
 

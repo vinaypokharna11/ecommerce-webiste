@@ -1124,7 +1124,24 @@ export async function getProductById(id) {
 }
 
 export async function createProduct(productData) {
-  const cleanId = String(productData.id || `prod-${Date.now()}`).trim();
+  const generateUniqueId = () => `prod-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+  let cleanId = String(productData.id || '').trim();
+
+  const db = await connectToDatabase();
+  if (db) {
+    if (!cleanId || (await Product.exists({ id: cleanId }))) {
+      cleanId = generateUniqueId();
+      while (await Product.exists({ id: cleanId })) {
+        cleanId = generateUniqueId();
+      }
+    }
+  } else {
+    const jdb = readJSONDB();
+    if (!cleanId || (jdb.products || []).some((p) => String(p.id).trim() === cleanId)) {
+      cleanId = generateUniqueId();
+    }
+  }
+
   const sanitized = sanitizeProductPayload(productData);
   const price = Number(sanitized.price) || 0;
   const oldPrice = Number(sanitized.oldPrice) || 0;
@@ -1134,7 +1151,7 @@ export async function createProduct(productData) {
   const stockCount = Number(sanitized.stockCount) || 0;
   const stockStatus = stockCount <= 0 ? 'out_of_stock' : stockCount < 5 ? 'low_stock' : 'in_stock';
 
-  const newProduct = {
+  let newProduct = {
     ...sanitized,
     id: cleanId,
     price,
@@ -1150,10 +1167,20 @@ export async function createProduct(productData) {
     createdAt: sanitized.createdAt || new Date().toISOString(),
   };
 
-  // 1. Persist to MongoDB if available
-  const db = await connectToDatabase();
+  // 1. Persist to MongoDB if available (with auto-retry on duplicate key collision)
   if (db) {
-    await Product.create(newProduct);
+    try {
+      await Product.create(newProduct);
+    } catch (err) {
+      if (err.code === 11000 || (err.message && err.message.includes('E11000'))) {
+        console.warn(`Product ID collision on ${newProduct.id} (E11000). Generating fresh ID and retrying...`);
+        newProduct.id = generateUniqueId();
+        cleanId = newProduct.id;
+        await Product.create(newProduct);
+      } else {
+        throw err;
+      }
+    }
   } else if (process.env.MONGODB_URI) {
     console.warn('⚠️ MongoDB Atlas unavailable — persisting product to local fallback only.');
   }
