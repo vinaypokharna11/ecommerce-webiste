@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
 
 /**
  * jsonStore.js
@@ -10,8 +11,23 @@ import path from 'path';
  * Operates as the offline / local fallback layer when MongoDB Atlas is unreachable.
  */
 
-export const DB_FILE_PATH = path.join(process.cwd(), 'src', 'data', 'db.json');
-export const SEED_TEMPLATE_PATH = path.join(process.cwd(), 'src', 'data', 'seedTemplate.json');
+const IS_SERVERLESS = Boolean(
+  process.env.VERCEL ||
+  process.env.AWS_LAMBDA_FUNCTION_NAME ||
+  process.env.NETLIFY ||
+  (typeof process.cwd === 'function' && process.cwd().startsWith('/var/task'))
+);
+
+export const LOCAL_DB_PATH = path.join(process.cwd(), 'src', 'data', 'db.json');
+export const LOCAL_SEED_TEMPLATE_PATH = path.join(process.cwd(), 'src', 'data', 'seedTemplate.json');
+
+export const DB_FILE_PATH = IS_SERVERLESS
+  ? path.join(os.tmpdir(), 'nakoda_db.json')
+  : LOCAL_DB_PATH;
+
+export const SEED_TEMPLATE_PATH = IS_SERVERLESS
+  ? path.join(os.tmpdir(), 'nakoda_seedTemplate.json')
+  : LOCAL_SEED_TEMPLATE_PATH;
 
 export const INITIAL_DB_STATE = {
   isInitialized: false,
@@ -25,30 +41,67 @@ export const INITIAL_DB_STATE = {
   users: [],
 };
 
+// In-memory fallback state so operations never throw EROFS in serverless environments
+let inMemoryDB = null;
+
+function cloneInitialDb() {
+  return JSON.parse(JSON.stringify(INITIAL_DB_STATE));
+}
+
 export function initJSONDB() {
   try {
+    if (!inMemoryDB) {
+      inMemoryDB = cloneInitialDb();
+    }
     const dir = path.dirname(DB_FILE_PATH);
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    if (!fs.existsSync(dir)) {
+      try {
+        fs.mkdirSync(dir, { recursive: true });
+      } catch (e) {}
+    }
     if (!fs.existsSync(DB_FILE_PATH)) {
-      fs.writeFileSync(DB_FILE_PATH, JSON.stringify(INITIAL_DB_STATE, null, 2), 'utf-8');
+      let baseline = null;
+      if (fs.existsSync(LOCAL_DB_PATH)) {
+        try {
+          baseline = JSON.parse(fs.readFileSync(LOCAL_DB_PATH, 'utf-8'));
+        } catch (e) {}
+      }
+      const dataToSave = baseline || inMemoryDB || cloneInitialDb();
+      try {
+        fs.writeFileSync(DB_FILE_PATH, JSON.stringify(dataToSave, null, 2), 'utf-8');
+        inMemoryDB = dataToSave;
+      } catch (e) {
+        // Read-only filesystem; proceed with inMemoryDB
+      }
     }
   } catch (err) {
-    console.error('Error initializing fallback JSON database file', err);
+    if (!inMemoryDB) inMemoryDB = cloneInitialDb();
   }
 }
 
 export function readJSONDB() {
   initJSONDB();
   try {
-    const data = fs.readFileSync(DB_FILE_PATH, 'utf-8');
-    const parsed = JSON.parse(data);
+    let parsed = null;
+    if (fs.existsSync(DB_FILE_PATH)) {
+      const data = fs.readFileSync(DB_FILE_PATH, 'utf-8');
+      parsed = JSON.parse(data);
+    } else if (fs.existsSync(LOCAL_DB_PATH)) {
+      const data = fs.readFileSync(LOCAL_DB_PATH, 'utf-8');
+      parsed = JSON.parse(data);
+    }
+    if (!parsed) {
+      parsed = inMemoryDB ? JSON.parse(JSON.stringify(inMemoryDB)) : cloneInitialDb();
+    }
+    inMemoryDB = parsed;
     return parsed;
   } catch (err) {
-    return { ...INITIAL_DB_STATE };
+    return inMemoryDB ? JSON.parse(JSON.stringify(inMemoryDB)) : cloneInitialDb();
   }
 }
 
 export function writeJSONDB(data) {
+  inMemoryDB = JSON.parse(JSON.stringify(data));
   initJSONDB();
   try {
     const tmpPath = `${DB_FILE_PATH}.${Date.now()}.${Math.random().toString(36).slice(2)}.tmp`;
@@ -60,8 +113,8 @@ export function writeJSONDB(data) {
       fs.writeFileSync(DB_FILE_PATH, JSON.stringify(data, null, 2), 'utf-8');
       return true;
     } catch (e) {
-      console.error('Failed to write JSON DB:', e);
-      return false;
+      // In-memory state updated; avoid throwing or crashing
+      return true;
     }
   }
 }

@@ -2,23 +2,25 @@
 
 import React, { useState, useCallback, useMemo, useRef, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Navbar } from '@/components/Navbar';
-import { HeroSection } from '@/components/HeroSection';
-import { Categories } from '@/components/Categories';
-import { PopularProducts } from '@/components/PopularProducts';
-import { FeatureBenefits } from '@/components/FeatureBenefits';
-import { PromoBanner } from '@/components/PromoBanner';
-import { RecentlyViewed } from '@/components/RecentlyViewed';
-import { CatalogPage } from '@/components/CatalogPage';
-import { OffersPage } from '@/components/OffersPage';
-import { CartPage } from '@/components/CartPage';
-import { ProfilePage } from '@/components/ProfilePage';
-import { ContactInquirePage } from '@/components/ContactInquirePage';
-import { QuickViewModal } from '@/components/QuickViewModal';
-import { FloatingCartBar } from '@/components/FloatingCartBar';
-import { Footer } from '@/components/Footer';
-import { Toast } from '@/components/Toast';
-import { BrandLoadingScreen } from '@/components/common/BrandLoadingScreen';
+import {
+  Navbar,
+  HeroSection,
+  Categories,
+  PopularProducts,
+  FeatureBenefits,
+  PromoBanner,
+  RecentlyViewed,
+  CatalogPage,
+  OffersPage,
+  CartPage,
+  ProfilePage,
+  ContactInquirePage,
+  QuickViewModal,
+  FloatingCartBar,
+  Footer,
+  Toast,
+  BrandLoadingScreen,
+} from '@/components';
 import { useCatalog } from '@/context/CatalogContext';
 import { useAuth } from '@/context/AuthContext';
 import { createHelpWhatsAppUrl } from '@/utils/whatsapp';

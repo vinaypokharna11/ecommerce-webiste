@@ -2,10 +2,7 @@
 
 import React, { useState, useCallback, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Navbar } from '@/components/Navbar';
-import { Footer } from '@/components/Footer';
-import { ContactInquirePage } from '@/components/ContactInquirePage';
-import { Toast } from '@/components/Toast';
+import { Navbar, Footer, ContactInquirePage, Toast } from '@/components';
 import { useCatalog } from '@/context/CatalogContext';
 import { createHelpWhatsAppUrl } from '@/utils/whatsapp';
 

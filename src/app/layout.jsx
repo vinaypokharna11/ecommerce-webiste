@@ -2,9 +2,7 @@ import './globals.css';
 import { DM_Sans } from 'next/font/google';
 import { CatalogProvider } from '@/context/CatalogContext';
 import { AuthProvider } from '@/context/AuthContext';
-import { AuthModal } from '@/components/AuthModal';
-import { SmoothScrollProvider } from '@/components/SmoothScrollProvider';
-import { GsapScrollAnimations } from '@/components/GsapScrollAnimations';
+import { AuthModal, SmoothScrollProvider, GsapScrollAnimations } from '@/components';
 
 const dmSans = DM_Sans({
   subsets: ['latin'],

@@ -150,6 +150,7 @@ export const BrandLoadingScreen = ({ onLanded, onComplete }) => {
 
   return (
     <div
+      id="brand-loading-screen"
       role="status"
       aria-live="polite"
       aria-busy={phase !== 'landed'}

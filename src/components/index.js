@@ -15,6 +15,7 @@ export { default as GsapScrollAnimations } from './layout/GsapScrollAnimations';
 export { default as Toast } from './common/Toast';
 export { default as QuickViewModal } from './common/QuickViewModal';
 export { default as AuthModal } from './common/AuthModal';
+export { default as BrandLoadingScreen } from './common/BrandLoadingScreen';
 
 // Product Catalog & Browsing
 export { default as ProductCard } from './product/ProductCard';

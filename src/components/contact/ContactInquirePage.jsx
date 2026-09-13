@@ -12,7 +12,9 @@ import {
   Sparkles,
   CheckCircle2,
   HelpCircle,
-  ChevronDown
+  ChevronDown,
+  Check,
+  Copy
 } from 'lucide-react';
 import { useCatalog } from '@/context/CatalogContext';
 import { 

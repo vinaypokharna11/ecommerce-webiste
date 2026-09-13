@@ -1,10 +1,12 @@
 import mongoose from 'mongoose';
 import dns from 'dns';
 
-// Configure reliable public DNS servers for Node.js SRV cluster resolution on Windows
-try {
-  dns.setServers(['8.8.8.8', '1.1.1.1']);
-} catch (e) {}
+// Configure reliable public DNS servers for Node.js SRV cluster resolution strictly for Windows local development
+if (process.platform === 'win32' && !process.env.VERCEL && !process.env.AWS_LAMBDA_FUNCTION_NAME) {
+  try {
+    dns.setServers(['8.8.8.8', '1.1.1.1']);
+  } catch (e) {}
+}
 
 /**
  * Global cache across hot-reloads and concurrent Next.js API requests.
@@ -48,7 +50,7 @@ export async function connectToDatabase() {
       maxPoolSize: 10,
       minPoolSize: 1,
       socketTimeoutMS: 45000,
-      family: 4, // Force IPv4 to prevent slow Windows/Node DNS IPv6 resolution stalls
+      ...(process.platform === 'win32' && !process.env.VERCEL ? { family: 4 } : {}),
     };
 
     cached.promise = mongoose
