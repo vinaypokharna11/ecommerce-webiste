@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X,
@@ -24,6 +24,8 @@ import { ASSET_GALLERY, BADGE_PRESETS } from './adminConstants';
 import { useCatalog } from '../../context/CatalogContext';
 import { ImageCropperModal } from './ImageCropperModal';
 import { uploadToCloudinary } from '../../lib/uploadClient';
+
+const DRAFT_STORAGE_KEY = 'nakoda_admin_product_draft';
 
 const DEFAULT_FORM_STATE = {
   name: '',
@@ -60,6 +62,7 @@ export const AdminProductModal = ({ isOpen, onClose, product = null }) => {
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
+  const [hasDraftSaved, setHasDraftSaved] = useState(false);
 
   // Image Cropper & Editor State
   const [isCropperOpen, setIsCropperOpen] = useState(false);
@@ -68,29 +71,109 @@ export const AdminProductModal = ({ isOpen, onClose, product = null }) => {
 
   const isEditing = !!product;
 
+  const prevIsOpenRef = useRef(false);
+  const prevProductIdRef = useRef(null);
+
+  // Initialize or restore modal data only when modal opens or target product changes
+  // Crucial: background category/product re-fetches (e.g. from switching tabs) will NOT wipe the user's input!
   useEffect(() => {
-    if (product) {
-      setFormData({
-        ...DEFAULT_FORM_STATE,
-        ...product,
-        tags: Array.isArray(product.tags) ? product.tags.join(', ') : (product.tags || ''),
-        sizes: Array.isArray(product.sizes) ? product.sizes.join(', ') : (product.sizes || ''),
-        colors: product.colors || [],
-        customImageUrl: typeof product.image === 'string' && product.image.startsWith('http') ? product.image : '',
-      });
-    } else {
-      setFormData({
-        ...DEFAULT_FORM_STATE,
-        category: categories[0]?.id || 'clothing',
-        categoryName: categories[0]?.name || 'Clothing',
-        image: ASSET_GALLERY[0].src,
-      });
+    if (!isOpen) {
+      prevIsOpenRef.current = false;
+      prevProductIdRef.current = null;
+      return;
     }
+
+    const justOpened = !prevIsOpenRef.current;
+    const productChanged = (product?.id || null) !== prevProductIdRef.current;
+
+    prevIsOpenRef.current = true;
+    prevProductIdRef.current = product?.id || null;
+
+    if (justOpened || productChanged) {
+      if (product) {
+        setFormData({
+          ...DEFAULT_FORM_STATE,
+          ...product,
+          tags: Array.isArray(product.tags) ? product.tags.join(', ') : (product.tags || ''),
+          sizes: Array.isArray(product.sizes) ? product.sizes.join(', ') : (product.sizes || ''),
+          colors: product.colors || [],
+          customImageUrl: typeof product.image === 'string' && product.image.startsWith('http') ? product.image : '',
+        });
+        setHasDraftSaved(false);
+      } else {
+        // Attempt to restore saved draft from localStorage
+        let restored = null;
+        try {
+          const saved = typeof window !== 'undefined' ? localStorage.getItem(DRAFT_STORAGE_KEY) : null;
+          if (saved) {
+            restored = JSON.parse(saved);
+          }
+        } catch (e) {}
+
+        const hasSavedContent = restored && (
+          (restored.name && restored.name.trim().length > 0) ||
+          (restored.description && restored.description.trim().length > 0) ||
+          (restored.customImageUrl && restored.customImageUrl.trim().length > 0) ||
+          (restored.tags && restored.tags.trim().length > 0) ||
+          (restored.sizes && restored.sizes.trim().length > 0) ||
+          (restored.price !== DEFAULT_FORM_STATE.price)
+        );
+
+        if (hasSavedContent) {
+          setFormData({
+            ...DEFAULT_FORM_STATE,
+            ...restored,
+          });
+          setHasDraftSaved(true);
+        } else {
+          setFormData({
+            ...DEFAULT_FORM_STATE,
+            category: categories[0]?.id || 'clothing',
+            categoryName: categories[0]?.name || 'Clothing',
+            image: ASSET_GALLERY[0].src,
+          });
+          setHasDraftSaved(false);
+        }
+      }
+      setErrors({});
+      setSubmitError('');
+      setIsSubmitting(false);
+      setActiveTab('basic');
+    }
+  }, [isOpen, product, categories]);
+
+  // Auto-save draft to localStorage whenever user modifies form fields in "Add Product" mode
+  useEffect(() => {
+    if (!isOpen || isEditing) return;
+
+    const hasContent = (formData.name && formData.name.trim().length > 0) ||
+      (formData.description && formData.description.trim().length > 0) ||
+      (formData.customImageUrl && formData.customImageUrl.trim().length > 0) ||
+      (formData.tags && formData.tags.trim().length > 0) ||
+      (formData.sizes && formData.sizes.trim().length > 0) ||
+      (formData.price !== DEFAULT_FORM_STATE.price);
+
+    if (hasContent) {
+      try {
+        localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(formData));
+        setHasDraftSaved(true);
+      } catch (e) {}
+    }
+  }, [formData, isOpen, isEditing]);
+
+  const handleClearDraft = () => {
+    try {
+      localStorage.removeItem(DRAFT_STORAGE_KEY);
+    } catch (e) {}
+    setFormData({
+      ...DEFAULT_FORM_STATE,
+      category: categories[0]?.id || 'clothing',
+      categoryName: categories[0]?.name || 'Clothing',
+      image: ASSET_GALLERY[0].src,
+    });
+    setHasDraftSaved(false);
     setErrors({});
-    setSubmitError('');
-    setIsSubmitting(false);
-    setActiveTab('basic');
-  }, [product, isOpen, categories]);
+  };
 
   if (!isOpen) return null;
 
@@ -250,6 +333,14 @@ export const AdminProductModal = ({ isOpen, onClose, product = null }) => {
         return;
       }
 
+      // Success: Clear draft if we were adding a product
+      if (!isEditing) {
+        try {
+          localStorage.removeItem(DRAFT_STORAGE_KEY);
+        } catch (e) {}
+        setHasDraftSaved(false);
+      }
+
       setIsSubmitting(false);
       onClose();
     } catch (err) {
@@ -286,25 +377,45 @@ export const AdminProductModal = ({ isOpen, onClose, product = null }) => {
       >
         {/* Modal Header */}
         <div className="p-6 border-b border-black/10 flex items-center justify-between bg-[#F8FDF0]/50">
-          <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-2xl bg-[#171717] flex items-center justify-center text-[#9FD842] shadow-md">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-11 h-11 rounded-2xl bg-[#171717] flex items-center justify-center text-[#9FD842] shadow-md shrink-0">
               <Package className="w-5 h-5" />
             </div>
-            <div>
-              <h2 className="text-xl font-extrabold text-[#171717]">
-                {isEditing ? 'Edit Catalog Product' : 'Add New Product to Catalog'}
-              </h2>
-              <p className="text-xs text-[#777777]">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-xl font-extrabold text-[#171717]">
+                  {isEditing ? 'Edit Catalog Product' : 'Add New Product to Catalog'}
+                </h2>
+                {!isEditing && hasDraftSaved && (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-100/80 px-2.5 py-0.5 rounded-full border border-emerald-300/60">
+                    <Check className="w-3 h-3 text-emerald-600" />
+                    Draft Saved
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-[#777777] truncate">
                 {isEditing ? `Product SKU: ${product.id}` : 'Fill in the details to publish item on Nakoda Imitation'}
               </p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="w-9 h-9 rounded-full bg-[#EEEEEC] hover:bg-[#E2E2DE] text-[#171717] flex items-center justify-center transition-colors cursor-pointer"
-          >
-            <X className="w-4 h-4" />
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            {!isEditing && hasDraftSaved && (
+              <button
+                type="button"
+                onClick={handleClearDraft}
+                className="hidden sm:inline-flex items-center text-xs font-semibold text-neutral-500 hover:text-rose-600 px-2.5 py-1 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
+                title="Discard saved draft and start fresh"
+              >
+                Clear Draft
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="w-9 h-9 rounded-full bg-[#EEEEEC] hover:bg-[#E2E2DE] text-[#171717] flex items-center justify-center transition-colors cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         {/* Modal Tabs Navigation */}
@@ -785,14 +896,26 @@ export const AdminProductModal = ({ isOpen, onClose, product = null }) => {
 
         {/* Modal Footer Controls */}
         <div className="p-6 border-t border-black/10 bg-[#EEEEEC]/40 flex items-center justify-between">
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={isSubmitting}
-            className="px-6 py-2.5 rounded-full bg-[#EEEEEC] hover:bg-[#E2E2DE] text-[#171717] font-bold text-xs transition-colors cursor-pointer disabled:opacity-50"
-          >
-            Cancel
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isSubmitting}
+              className="px-6 py-2.5 rounded-full bg-[#EEEEEC] hover:bg-[#E2E2DE] text-[#171717] font-bold text-xs transition-colors cursor-pointer disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            {!isEditing && hasDraftSaved && (
+              <button
+                type="button"
+                onClick={handleClearDraft}
+                disabled={isSubmitting}
+                className="sm:hidden px-3.5 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 rounded-full cursor-pointer transition-colors"
+              >
+                Clear Draft
+              </button>
+            )}
+          </div>
 
           <button
             type="button"
