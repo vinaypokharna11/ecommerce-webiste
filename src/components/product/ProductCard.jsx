@@ -119,6 +119,25 @@ export const ProductCardComponent = ({
             </span>
           </div>
 
+          {/* Color Swatches (from admin dashboard) */}
+          {product.colors && product.colors.length > 0 && (
+            <div className="flex items-center gap-1.5 mb-2" onClick={(e) => e.stopPropagation()}>
+              {product.colors.slice(0, 5).map((color, idx) => (
+                <span
+                  key={`${color.hex}-${idx}`}
+                  title={color.name || color.hex}
+                  className="w-4 h-4 sm:w-[18px] sm:h-[18px] rounded-full border-2 border-white shadow-[0_0_0_1px_rgba(0,0,0,0.1)] transition-transform hover:scale-125"
+                  style={{ backgroundColor: color.hex }}
+                />
+              ))}
+              {product.colors.length > 5 && (
+                <span className="text-[10px] font-semibold text-[#86868B] ml-0.5">
+                  +{product.colors.length - 5}
+                </span>
+              )}
+            </div>
+          )}
+
           {/* Sizes Selector (Clothing & Shoes) - Show ALL sizes, diagonal cross on unavailable */}
           {sizes.length > 0 && (
             <div className="relative mb-2.5" onClick={(e) => e.stopPropagation()}>
