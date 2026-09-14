@@ -11,6 +11,7 @@ function AdminPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const activeTabParam = searchParams.get('tab') || 'dashboard';
+  const activeCategoryParam = searchParams.get('category') || 'all';
 
   const [isAuthenticated, setIsAuthenticated] = useState(null); // null = checking, true, false
   const [adminUser, setAdminUser] = useState(null);
@@ -80,8 +81,12 @@ function AdminPageContent() {
     router.push('/admin/login');
   };
 
-  const handleTabChange = (tabId) => {
-    router.push(`/admin?tab=${tabId}`, { scroll: false });
+  const handleTabChange = (tabId, categoryId = null) => {
+    if (categoryId && categoryId !== 'all') {
+      router.push(`/admin?tab=${tabId}&category=${encodeURIComponent(categoryId)}`, { scroll: false });
+    } else {
+      router.push(`/admin?tab=${tabId}`, { scroll: false });
+    }
   };
 
   // Loading state
@@ -158,6 +163,7 @@ function AdminPageContent() {
         onLogout={handleLogout}
         adminUser={adminUser}
         activeTab={activeTabParam}
+        initialCategory={activeCategoryParam}
         onTabChange={handleTabChange}
       />
     </div>

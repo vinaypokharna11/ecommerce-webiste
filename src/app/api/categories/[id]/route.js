@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import { updateCategory, deleteCategory } from '@/lib/db';
 import { verifyAdminAuth, unauthorizedResponse } from '@/lib/auth';
 
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 export async function PUT(request, { params }) {
   try {
     const admin = verifyAdminAuth(request);

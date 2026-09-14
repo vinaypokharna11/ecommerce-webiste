@@ -538,9 +538,9 @@ export const CartPage = ({
   };
 
   return (
-    <section className="pt-18 sm:pt-24 pb-28 sm:pb-20 px-3.5 sm:px-8 lg:px-12 w-full max-w-[1440px] mx-auto min-h-[85vh] bg-[#FBFBFD] text-[#1D1D1F]">
+    <section className="pt-16 xs:pt-18 sm:pt-24 pb-28 sm:pb-20 px-3 xs:px-4 sm:px-8 lg:px-12 w-full max-w-[1440px] mx-auto min-h-[85vh] bg-[#FBFBFD] text-[#1D1D1F]">
       {/* Header with Apple Style Toggle Pill */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-6 sm:mb-8">
         <div>
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[#1D1D1F] tracking-tight font-sans">
             {viewTab === 'cart' ? `Shopping Cart (${cartList.reduce((acc, i) => acc + i.quantity, 0)})` : `Saved Wishlist (${wishlistProducts.length})`}

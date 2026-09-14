@@ -17,6 +17,9 @@ export { default as QuickViewModal } from './common/QuickViewModal';
 export { default as AuthModal } from './common/AuthModal';
 export { default as BrandLoadingScreen } from './common/BrandLoadingScreen';
 export { TextScatter, ScatterItem } from './ui/text-scatter';
+export { Hero17 } from './ui/hero-17';
+export { AccordionGallery } from './ui/AccordionGallery';
+export { InfiniteMenu } from './ui/InfiniteMenu';
 
 // Product Catalog & Browsing
 export { default as ProductCard } from './product/ProductCard';

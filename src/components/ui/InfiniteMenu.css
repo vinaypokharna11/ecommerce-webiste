@@ -1,0 +1,305 @@
+/* InfiniteMenu.css - React Bits Infinite WebGL Menu */
+
+.infinite-menu-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: inherit;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#infinite-grid-menu-canvas {
+  cursor: grab;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+  outline: none;
+  display: block;
+}
+
+#infinite-grid-menu-canvas:active {
+  cursor: grabbing;
+}
+
+/* Active Category Title & Explore Pill */
+.face-title-wrapper {
+  position: absolute;
+  left: 2.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 20;
+  max-width: 22ch;
+  pointer-events: auto;
+}
+
+.face-title-wrapper.active {
+  opacity: 1;
+  transform: translateY(-50%);
+  pointer-events: auto;
+  transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1), transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.face-title-wrapper.inactive {
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-42%);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.face-title-link {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-decoration: none;
+  cursor: pointer;
+  outline: none;
+}
+
+.face-title {
+  user-select: none;
+  margin: 0;
+  font-weight: 900;
+  font-size: clamp(2rem, 3.8vw, 3.4rem);
+  color: #ffffff;
+  text-shadow: 0 4px 24px rgba(0, 0, 0, 0.85);
+  letter-spacing: -0.025em;
+  line-height: 1.08;
+  transition: color 0.25s ease, transform 0.25s ease;
+}
+
+.face-title-link:hover .face-title {
+  color: #60a5fa;
+  transform: translateX(4px);
+}
+
+.face-explore-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  padding: 0.45rem 1rem;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  color: #ffffff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  transition: all 0.25s ease;
+}
+
+.face-explore-pill-arrow {
+  display: inline-block;
+  font-size: 1rem;
+  transition: transform 0.25s ease;
+}
+
+.face-title-link:hover .face-explore-pill {
+  background: var(--infinite-menu-accent, #0071E3);
+  border-color: rgba(255, 255, 255, 0.4);
+  box-shadow: 0 6px 20px rgba(0, 113, 227, 0.5);
+  transform: translateX(4px);
+}
+
+.face-title-link:hover .face-explore-pill-arrow {
+  transform: translateX(3px);
+}
+
+/* Category Description Link */
+.face-description {
+  user-select: none;
+  position: absolute;
+  max-width: 18ch;
+  top: 50%;
+  font-size: clamp(0.95rem, 1.3vw, 1.25rem);
+  font-weight: 500;
+  right: 2.5rem;
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.8);
+  line-height: 1.4;
+  z-index: 20;
+  text-decoration: none;
+  cursor: pointer;
+  transition: opacity 0.4s ease, transform 0.4s ease, color 0.2s ease;
+}
+
+.face-description.active {
+  opacity: 1;
+  transform: translateY(-50%);
+  pointer-events: auto;
+}
+
+.face-description.inactive {
+  pointer-events: none;
+  transform: translateY(-60%);
+  opacity: 0;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.face-description:hover {
+  color: #ffffff;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+/* Bottom Action Button */
+.action-button {
+  position: absolute;
+  left: 50%;
+  z-index: 20;
+  height: 52px;
+  padding: 0 1.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  background: var(--infinite-menu-accent, #0071E3);
+  border: none;
+  border-radius: 9999px;
+  cursor: pointer;
+  text-decoration: none;
+  border: 3px solid var(--infinite-menu-background, #1D1D1F);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.action-button:hover {
+  transform: translateX(-50%) scale(1.06) !important;
+  background: #0077ED;
+  box-shadow: 0 12px 32px rgba(0, 113, 227, 0.6);
+}
+
+.action-button:active {
+  transform: translateX(-50%) scale(0.96) !important;
+}
+
+.action-button.active {
+  bottom: 2.25rem;
+  transform: translateX(-50%) scale(1);
+  opacity: 1;
+  pointer-events: auto;
+  transition: opacity 0.4s ease, transform 0.4s ease, bottom 0.4s ease;
+}
+
+.action-button.inactive {
+  bottom: -80px;
+  transform: translateX(-50%) scale(0);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.action-button-label {
+  color: #ffffff;
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+.action-button-icon {
+  user-select: none;
+  position: relative;
+  color: #ffffff;
+  font-size: 1.15rem;
+  font-weight: 700;
+  line-height: 1;
+  transition: transform 0.2s ease;
+}
+
+.action-button:hover .action-button-icon {
+  transform: translate(2px, -2px);
+}
+
+/* Tablet & Mobile Responsive Positioning */
+@media (max-width: 1024px) {
+  .face-title-wrapper {
+    left: 1.25rem;
+    top: 1.5rem;
+    transform: none !important;
+  }
+  .face-title-wrapper.active {
+    opacity: 1;
+    transform: none !important;
+  }
+  .face-title-wrapper.inactive {
+    opacity: 0;
+    transform: none !important;
+  }
+
+  .face-title {
+    max-width: 16ch;
+    font-size: clamp(1.3rem, 3.5vw, 1.8rem);
+  }
+
+  .face-explore-pill {
+    padding: 0.35rem 0.85rem;
+    font-size: 0.78rem;
+    margin-top: 0.45rem;
+  }
+
+  .face-description {
+    right: 1.25rem;
+    top: 1.75rem;
+    max-width: 22ch;
+    font-size: clamp(0.8rem, 2vw, 0.95rem);
+    text-align: right;
+    transform: none !important;
+  }
+  .face-description.active {
+    opacity: 0.95;
+    transform: none !important;
+  }
+  .face-description.inactive {
+    opacity: 0;
+    transform: none !important;
+  }
+
+  .action-button {
+    height: 48px;
+    padding: 0 1.2rem;
+  }
+  .action-button.active {
+    bottom: 1.5rem;
+  }
+  .action-button-label {
+    font-size: 0.85rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .face-title-wrapper {
+    left: 1rem;
+    top: 1rem;
+  }
+  .face-title {
+    font-size: 1.25rem;
+  }
+  .face-explore-pill {
+    padding: 0.28rem 0.7rem;
+    font-size: 0.72rem;
+    margin-top: 0.35rem;
+  }
+  .face-description {
+    display: none;
+  }
+  .action-button {
+    height: 44px;
+    padding: 0 1rem;
+  }
+  .action-button.active {
+    bottom: 1.25rem;
+  }
+  .action-button-label {
+    font-size: 0.8rem;
+  }
+  .action-button-icon {
+    font-size: 1rem;
+  }
+}

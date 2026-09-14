@@ -50,6 +50,11 @@ export const BrandLoadingScreen = ({ onLanded, onComplete }) => {
             resolve();
           };
           window.addEventListener('load', onLoad);
+          // Fallback safety: don't hang if external assets/images are slow
+          const fallbackTimer = setTimeout(() => {
+            window.removeEventListener('load', onLoad);
+            resolve();
+          }, 2500);
         }
       } else {
         resolve();

@@ -301,94 +301,106 @@ export const Navbar = ({
       {/* Spacer to preserve document layout since header is fixed */}
       <div className="w-full shrink-0 h-[56px] xs:h-[62px] sm:h-[82px]" aria-hidden="true" />
 
-      {/* Mobile Animated Dropdown Drawer */}
+      {/* Mobile Animated Dropdown Drawer & Backdrop */}
       <AnimatePresence>
         {isMobileMenuOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.2 }}
-            className={`fixed inset-x-0 ${scrolled ? 'top-[49px] xs:top-[54px] sm:top-[60px]' : 'top-[56px] xs:top-[62px] sm:top-[82px]'
-              } z-40 bg-white/95 backdrop-blur-2xl border-b border-black/[0.08] shadow-xl md:hidden p-4 sm:p-5 space-y-3 max-h-[calc(100vh-60px)] overflow-y-auto`}
-          >
-            {/* Mobile User Profile Link */}
-            <div
-              onClick={() => handleLinkClick('profile', 'Profile')}
-              className="flex items-center justify-between p-3 rounded-2xl bg-[#F5F5F7] border border-black/[0.04] cursor-pointer"
+          <>
+            {/* Backdrop overlay for outside tap */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="fixed inset-0 bg-black/35 backdrop-blur-xs z-35 lg:hidden"
+              aria-hidden="true"
+            />
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2 }}
+              className={`fixed inset-x-0 ${scrolled ? 'top-[49px] xs:top-[54px] sm:top-[60px]' : 'top-[56px] xs:top-[62px] sm:top-[82px]'
+                } z-40 bg-white/95 backdrop-blur-2xl border-b border-black/[0.08] shadow-xl lg:hidden p-4 sm:p-5 space-y-3 max-h-[calc(100vh-60px)] overflow-y-auto`}
             >
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-8 h-8 rounded-full bg-[#1D1D1F] text-white flex items-center justify-center shrink-0">
-                  <User className="w-4 h-4" />
-                </div>
-                <div className="min-w-0">
-                  <span className="text-xs font-semibold text-[#1D1D1F] block truncate">
-                    {user ? user.name : 'Account Profile'}
-                  </span>
-                  <span className="text-[10px] text-[#86868B] block truncate">
-                    {user ? user.email : 'Sign in to track orders'}
-                  </span>
-                </div>
-              </div>
-              <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-white text-[#1D1D1F] border border-black/5 shrink-0 shadow-xs">
-                {user ? 'View' : 'Sign In'}
-              </span>
-            </div>
-
-            {/* Mobile Wishlist Link */}
-            <div
-              onClick={() => handleLinkClick('wishlist', 'Wishlist')}
-              className="flex items-center justify-between p-3 rounded-2xl bg-[#F5F5F7] border border-black/[0.04] cursor-pointer"
-            >
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-8 h-8 rounded-full bg-rose-50 text-rose-500 flex items-center justify-center shrink-0">
-                  <Heart className="w-4 h-4" fill={wishlistCount > 0 ? 'currentColor' : 'none'} />
-                </div>
-                <div className="min-w-0">
-                  <span className="text-xs font-semibold text-[#1D1D1F] block truncate">
-                    Saved Wishlist
-                  </span>
-                  <span className="text-[10px] text-[#86868B] block truncate">
-                    {wishlistCount} {wishlistCount === 1 ? 'item saved' : 'items saved'}
-                  </span>
-                </div>
-              </div>
-              <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-white text-[#1D1D1F] border border-black/5 shrink-0 shadow-xs">
-                View
-              </span>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              {NAV_ITEMS.map((item) => {
-                const isActive = activeTab === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => handleLinkClick(item.id, item.label)}
-                    className={`py-3 px-4 rounded-xl text-xs font-medium text-left transition-all ${isActive
-                      ? 'bg-[#1D1D1F] text-white font-semibold shadow-xs'
-                      : 'bg-[#F5F5F7] text-[#1D1D1F] hover:bg-[#E8E8ED]'
-                      }`}
-                  >
-                    {item.label}
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="pt-3 border-t border-black/[0.06] flex items-center justify-between text-xs text-[#86868B]">
-              <span>Delivery across India</span>
-              <a
-                href={whatsappUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[#25D366] font-medium flex items-center gap-1"
+              {/* Mobile User Profile Link */}
+              <div
+                onClick={() => handleLinkClick('profile', 'Profile')}
+                className="flex items-center justify-between p-3 rounded-2xl bg-[#F5F5F7] border border-black/[0.04] cursor-pointer active:scale-[0.99] transition-transform min-h-[48px]"
               >
-                <WhatsAppIcon className="w-3.5 h-3.5" />
-                <span>WhatsApp Order</span>
-              </a>
-            </div>
-          </motion.div>
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-9 h-9 rounded-full bg-[#1D1D1F] text-white flex items-center justify-center shrink-0">
+                    <User className="w-4.5 h-4.5" />
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-xs sm:text-sm font-semibold text-[#1D1D1F] block truncate">
+                      {user ? user.name : 'Account Profile'}
+                    </span>
+                    <span className="text-[10px] sm:text-xs text-[#86868B] block truncate">
+                      {user ? user.email : 'Sign in to track orders'}
+                    </span>
+                  </div>
+                </div>
+                <span className="text-xs font-semibold px-3 py-1.5 rounded-full bg-white text-[#1D1D1F] border border-black/5 shrink-0 shadow-xs">
+                  {user ? 'View' : 'Sign In'}
+                </span>
+              </div>
+
+              {/* Mobile Wishlist Link */}
+              <div
+                onClick={() => handleLinkClick('wishlist', 'Wishlist')}
+                className="flex items-center justify-between p-3 rounded-2xl bg-[#F5F5F7] border border-black/[0.04] cursor-pointer active:scale-[0.99] transition-transform min-h-[48px]"
+              >
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-9 h-9 rounded-full bg-rose-50 text-rose-500 flex items-center justify-center shrink-0">
+                    <Heart className="w-4.5 h-4.5" fill={wishlistCount > 0 ? 'currentColor' : 'none'} />
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-xs sm:text-sm font-semibold text-[#1D1D1F] block truncate">
+                      Saved Wishlist
+                    </span>
+                    <span className="text-[10px] sm:text-xs text-[#86868B] block truncate">
+                      {wishlistCount} {wishlistCount === 1 ? 'item saved' : 'items saved'}
+                    </span>
+                  </div>
+                </div>
+                <span className="text-xs font-semibold px-3 py-1.5 rounded-full bg-white text-[#1D1D1F] border border-black/5 shrink-0 shadow-xs">
+                  View
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                {NAV_ITEMS.map((item) => {
+                  const isActive = activeTab === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => handleLinkClick(item.id, item.label)}
+                      className={`min-h-[44px] py-2.5 px-3.5 rounded-xl text-xs sm:text-sm font-medium text-left transition-all flex items-center cursor-pointer ${isActive
+                        ? 'bg-[#1D1D1F] text-white font-semibold shadow-xs'
+                        : 'bg-[#F5F5F7] text-[#1D1D1F] hover:bg-[#E8E8ED] active:bg-[#dedee3]'
+                        }`}
+                    >
+                      {item.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="pt-3 border-t border-black/[0.06] flex items-center justify-between text-xs text-[#86868B]">
+                <span>Delivery across India</span>
+                <a
+                  href={whatsappUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[#25D366] font-medium flex items-center gap-1.5 py-1 px-2 rounded-md hover:bg-emerald-50 active:scale-95 transition-all"
+                >
+                  <WhatsAppIcon className="w-4 h-4" />
+                  <span>WhatsApp Order</span>
+                </a>
+              </div>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
     </>

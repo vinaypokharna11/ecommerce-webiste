@@ -50,7 +50,7 @@ export const PopularProducts = ({
         {/* Apple Style Section Header */}
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 sm:gap-4 mb-6 sm:mb-10">
           <div className="space-y-1.5 sm:space-y-2">
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-[#1D1D1F] font-sans">
+            <h2 className="text-xl xs:text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-[#1D1D1F] font-sans">
               Popular Everyday Products
             </h2>
             <p className="text-xs sm:text-sm text-[#6E6E73] font-normal max-w-lg">
@@ -84,7 +84,7 @@ export const PopularProducts = ({
             <p className="text-xs text-[#6E6E73] mt-1">Our catalog is being updated with fresh arrivals across all categories.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5 lg:gap-6">
+          <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 xs:gap-3.5 sm:gap-5 lg:gap-6">
             {displayProducts.slice(0, 8).map((product) => {
               const currentCartItem = cartItems[product.id];
               const quantity = currentCartItem?.quantity || 0;

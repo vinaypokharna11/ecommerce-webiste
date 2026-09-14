@@ -157,7 +157,15 @@ export const AdminCategories = ({ onNavigateToProducts }) => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
         {categories.map((category) => {
           const Icon = iconMap[category.icon] || Sparkles;
-          const assignedProducts = products.filter((p) => p.category === category.id || p.categoryName?.toLowerCase() === category.name?.toLowerCase());
+          const targetIds = new Set([
+            (category.id || '').toLowerCase(),
+            (category.name || '').toLowerCase(),
+          ]);
+          const assignedProducts = products.filter((p) => {
+            const pCat = (p.category || '').trim().toLowerCase();
+            const pCatName = (p.categoryName || '').trim().toLowerCase();
+            return targetIds.has(pCat) || targetIds.has(pCatName);
+          });
           const itemCount = assignedProducts.length;
 
           return (

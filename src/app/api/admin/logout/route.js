@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { revokeToken } from '@/lib/auth';
 
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 export async function POST(request) {
   let token = request?.cookies?.get?.('admin_token')?.value;
   if (!token) {

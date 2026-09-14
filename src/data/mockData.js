@@ -56,6 +56,22 @@ export const CATALOG_CATEGORIES = [
   { id: 'home-living', name: 'Home & Living', count: 2, icon: 'Armchair', image: heroPlant },
 ];
 
+export const DEFAULT_EXPLORE_SECTION = {
+  title: 'Explore Our Collections',
+  subtitle: 'Find exactly what you’re looking for across our curated lifestyle, grocery, apparel, and travel categories.',
+  enabled: true,
+  collections: [
+    { id: 'bags-luggage', name: 'Bags & Trolleys', categoryId: 'bags-luggage', image: '/assets/images/prod_trolley.jpg', badge: 'Popular', order: 1, isActive: true },
+    { id: 'jewelry', name: 'Jewelry & Watches', categoryId: 'jewelry', image: '/assets/images/nakoda/hero.jpg', badge: 'Trending', order: 2, isActive: true },
+    { id: 'food-grocery', name: 'Papad & Gourmet', categoryId: 'food-grocery', image: '/assets/images/prod_papad.jpg', badge: 'Authentic', order: 3, isActive: true },
+    { id: 'undergarments', name: 'Undergarments', categoryId: 'undergarments', image: '/assets/images/prod_innerwear.jpg', badge: 'Essential', order: 4, isActive: true },
+    { id: 'electronics', name: 'Electronics', categoryId: 'electronics', image: '/assets/images/prod_headphones.jpg', badge: 'Audio', order: 5, isActive: true },
+    { id: 'clothing', name: 'Fashion & Outfits', categoryId: 'clothing', image: '/assets/images/prod_denim_jacket.jpg', badge: 'New', order: 6, isActive: true },
+    { id: 'footwear', name: 'Footwear & Shoes', categoryId: 'footwear', image: '/assets/images/prod_sneakers.jpg', badge: 'Comfort', order: 7, isActive: true },
+    { id: 'home-living', name: 'Home & Living', categoryId: 'home-living', image: '/assets/images/hero_plant.jpg', badge: 'Decor', order: 8, isActive: true },
+  ],
+};
+
 export const CATALOG_PRODUCTS = [
   {
     id: 'prod-trolley',

@@ -13,6 +13,7 @@ import ContactMessage from '../models/ContactMessage.js';
 import StoreConfig from '../models/StoreConfig.js';
 import Wishlist from '../models/Wishlist.js';
 import Cart from '../models/Cart.js';
+import Review from '../models/Review.js';
 import { broadcastCatalogEvent, CATALOG_EVENTS } from './events.js';
 
 const IS_SERVERLESS = Boolean(
@@ -35,6 +36,23 @@ const SEED_TEMPLATE_FILE_PATH = IS_SERVERLESS
 
 // Hot in-memory fallback state to ensure 100% uptime and resilience against read-only filesystems
 let inMemoryDB = null;
+
+// Default Explore Collections section configuration
+export const DEFAULT_EXPLORE_SECTION = {
+  title: 'Explore Our Collections',
+  subtitle: 'Find exactly what you’re looking for across our curated lifestyle, grocery, apparel, and travel categories.',
+  enabled: true,
+  collections: [
+    { id: 'bags-luggage', name: 'Bags & Trolleys', categoryId: 'bags-luggage', image: '/assets/images/prod_trolley.jpg', badge: 'Popular', order: 1, isActive: true },
+    { id: 'jewelry', name: 'Jewelry & Watches', categoryId: 'jewelry', image: '/assets/images/nakoda/hero.jpg', badge: 'Trending', order: 2, isActive: true },
+    { id: 'food-grocery', name: 'Papad & Gourmet', categoryId: 'food-grocery', image: '/assets/images/prod_papad.jpg', badge: 'Authentic', order: 3, isActive: true },
+    { id: 'undergarments', name: 'Undergarments', categoryId: 'undergarments', image: '/assets/images/prod_innerwear.jpg', badge: 'Essential', order: 4, isActive: true },
+    { id: 'electronics', name: 'Electronics', categoryId: 'electronics', image: '/assets/images/prod_headphones.jpg', badge: 'Audio', order: 5, isActive: true },
+    { id: 'clothing', name: 'Fashion & Outfits', categoryId: 'clothing', image: '/assets/images/prod_denim_jacket.jpg', badge: 'New', order: 6, isActive: true },
+    { id: 'footwear', name: 'Footwear & Shoes', categoryId: 'footwear', image: '/assets/images/prod_sneakers.jpg', badge: 'Comfort', order: 7, isActive: true },
+    { id: 'home-living', name: 'Home & Living', categoryId: 'home-living', image: '/assets/images/hero_plant.jpg', badge: 'Decor', order: 8, isActive: true },
+  ],
+};
 
 // Initial baseline mock data for seeding MongoDB and JSON fallback
 export const INITIAL_DB_STATE = {
@@ -648,8 +666,10 @@ export const INITIAL_DB_STATE = {
     address: '6, Honey Complex, Opposite Gunjan Cinema, Koparli Road, Gunjan, G.I.D.C, Vapi, Gujarat 396195',
     hours: 'Mon - Sun: 9:30 AM – 9:30 PM',
     currency: '₹',
+    exploreSection: DEFAULT_EXPLORE_SECTION,
   },
   users: [],
+  reviews: [],
 };
 
 // ─── JSON File Storage Helpers (Fallback & Serverless-Safe) ──────────────────
@@ -797,6 +817,7 @@ export async function getCatalogBundle() {
     categories,
     offers,
     storeConfig,
+    exploreSection: storeConfig?.exploreSection || DEFAULT_EXPLORE_SECTION,
   };
 
   memoryCache.catalogBundle = bundle;
@@ -1123,6 +1144,8 @@ export async function getProductById(id) {
   return (jdb.products || []).find((p) => String(p.id).trim() === cleanId) || null;
 }
 
+export const getProductByIdDB = getProductById;
+
 export async function createProduct(productData) {
   const generateUniqueId = () => `prod-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
   let cleanId = String(productData.id || '').trim();
@@ -1340,6 +1363,221 @@ export async function bulkUpdateProductsDB(ids = [], updates = {}) {
   memoryCache.invalidateCategories();
   broadcastCatalogEvent(CATALOG_EVENTS.PRODUCTS_BULK_UPDATED, { ids: cleanIds, updates: sanitized });
   return { updatedCount: count };
+}
+
+export async function getExistingProductIdsDB() {
+  const db = await connectToDatabase();
+  if (db) {
+    await ensureMongoSeeded();
+    const docs = await Product.find({}, { id: 1 }).lean();
+    return docs.map((d) => String(d.id).trim()).filter(Boolean);
+  }
+  const jdb = readJSONDB();
+  return (jdb.products || []).map((p) => String(p.id).trim()).filter(Boolean);
+}
+
+export async function bulkImportProductsDB({
+  products = [],
+  duplicateMode = 'skip', // 'skip' | 'update' | 'generate_id'
+  importMode = 'create', // 'create' | 'update' | 'upsert'
+}) {
+  if (!Array.isArray(products) || products.length === 0) {
+    return { success: true, total: 0, inserted: 0, updated: 0, skipped: 0, failed: 0, errors: [] };
+  }
+
+  const generateUniqueId = () => `prod-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+  const db = await connectToDatabase();
+  if (db) {
+    await ensureMongoSeeded();
+  }
+
+  // Pre-fetch all existing product IDs
+  const existingIdsList = await getExistingProductIdsDB();
+  const dbIdSet = new Set(existingIdsList);
+
+  const jdb = readJSONDB();
+  const jdbProductMap = new Map((jdb.products || []).map((p) => [String(p.id).trim(), p]));
+
+  let insertedCount = 0;
+  let updatedCount = 0;
+  let skippedCount = 0;
+  let failedCount = 0;
+  const executionErrors = [];
+
+  const seenInCurrentRun = new Set();
+
+  for (let i = 0; i < products.length; i++) {
+    const raw = products[i];
+    const rowNum = raw._rowIndex !== undefined ? raw._rowIndex + 2 : i + 1;
+    const prodName = raw.name || `Row ${rowNum}`;
+
+    try {
+      if (!raw.name || typeof raw.name !== 'string' || !raw.name.trim()) {
+        failedCount++;
+        executionErrors.push({ row: rowNum, product: prodName, error: 'Product name is required' });
+        continue;
+      }
+      const priceNum = Number(raw.price);
+      if (isNaN(priceNum) || priceNum <= 0) {
+        failedCount++;
+        executionErrors.push({ row: rowNum, product: prodName, error: 'Valid price greater than 0 is required' });
+        continue;
+      }
+
+      let cleanId = String(raw.id || '').trim();
+      let isExisting = false;
+
+      if (cleanId) {
+        if (dbIdSet.has(cleanId) || seenInCurrentRun.has(cleanId)) {
+          isExisting = true;
+        }
+      }
+
+      let action = 'insert';
+
+      if (importMode === 'update') {
+        if (!cleanId || !isExisting) {
+          skippedCount++;
+          continue;
+        }
+        action = 'update';
+      } else if (importMode === 'create') {
+        if (isExisting) {
+          if (duplicateMode === 'skip') {
+            skippedCount++;
+            continue;
+          } else if (duplicateMode === 'update') {
+            action = 'update';
+          } else if (duplicateMode === 'generate_id') {
+            cleanId = generateUniqueId();
+            while (dbIdSet.has(cleanId) || seenInCurrentRun.has(cleanId)) {
+              cleanId = generateUniqueId();
+            }
+            action = 'insert';
+          }
+        } else {
+          if (!cleanId) {
+            cleanId = generateUniqueId();
+            while (dbIdSet.has(cleanId) || seenInCurrentRun.has(cleanId)) {
+              cleanId = generateUniqueId();
+            }
+          }
+          action = 'insert';
+        }
+      } else {
+        // upsert
+        if (isExisting) {
+          action = 'update';
+        } else {
+          if (!cleanId) {
+            cleanId = generateUniqueId();
+            while (dbIdSet.has(cleanId) || seenInCurrentRun.has(cleanId)) {
+              cleanId = generateUniqueId();
+            }
+          }
+          action = 'insert';
+        }
+      }
+
+      const sanitized = sanitizeProductPayload(raw);
+      const price = Number(sanitized.price) || 0;
+      const oldPrice = Number(sanitized.oldPrice) || 0;
+      const discountPercent =
+        oldPrice > price && oldPrice > 0
+          ? Math.round(((oldPrice - price) / oldPrice) * 100)
+          : Number(sanitized.discountPercent) || 0;
+      const stockCount = Number(sanitized.stockCount) || 0;
+      const stockStatus = stockCount <= 0 ? 'out_of_stock' : stockCount < 5 ? 'low_stock' : 'in_stock';
+
+      const finalProduct = {
+        ...sanitized,
+        id: cleanId,
+        price,
+        oldPrice: oldPrice || undefined,
+        discountPercent,
+        stockCount,
+        stockStatus,
+        rating: Number(sanitized.rating) || 4.8,
+        reviews: Number(sanitized.reviews) || 0,
+        isPopular: !!sanitized.isPopular,
+        isFeatured: !!sanitized.isFeatured,
+        tags: Array.isArray(sanitized.tags) ? sanitized.tags : [],
+        sizes: Array.isArray(sanitized.sizes) ? sanitized.sizes : [],
+        variants: Array.isArray(sanitized.variants) ? sanitized.variants : [],
+        colors: Array.isArray(sanitized.colors) ? sanitized.colors : [],
+        createdAt: sanitized.createdAt || new Date().toISOString(),
+      };
+
+      delete finalProduct._rowIndex;
+      delete finalProduct._isValid;
+      delete finalProduct._errors;
+      delete finalProduct._warnings;
+      delete finalProduct._isDuplicate;
+      delete finalProduct._duplicateType;
+
+      if (action === 'insert') {
+        if (db) {
+          try {
+            await Product.create(finalProduct);
+          } catch (createErr) {
+            if (createErr.code === 11000 || (createErr.message && createErr.message.includes('E11000'))) {
+              finalProduct.id = generateUniqueId();
+              await Product.create(finalProduct);
+            } else {
+              throw createErr;
+            }
+          }
+        }
+        dbIdSet.add(finalProduct.id);
+        seenInCurrentRun.add(finalProduct.id);
+        jdbProductMap.set(finalProduct.id, finalProduct);
+        insertedCount++;
+      } else if (action === 'update') {
+        if (db) {
+          await Product.findOneAndUpdate(
+            { id: cleanId },
+            { $set: finalProduct },
+            { returnDocument: 'after' }
+          );
+        }
+        const existingJdb = jdbProductMap.get(cleanId) || {};
+        jdbProductMap.set(cleanId, { ...existingJdb, ...finalProduct, id: cleanId });
+        updatedCount++;
+      }
+    } catch (err) {
+      failedCount++;
+      executionErrors.push({
+        row: rowNum,
+        product: prodName,
+        error: err.message || 'Database write error',
+      });
+    }
+  }
+
+  // Sync to local JSON DB
+  jdb.products = Array.from(jdbProductMap.values());
+  writeJSONDB(jdb);
+
+  // Invalidate caches
+  memoryCache.invalidateProducts();
+  memoryCache.invalidateCategories();
+
+  // Broadcast event
+  broadcastCatalogEvent(CATALOG_EVENTS.PRODUCTS_BULK_UPDATED, {
+    count: insertedCount + updatedCount,
+    insertedCount,
+    updatedCount,
+  });
+
+  return {
+    success: true,
+    total: products.length,
+    inserted: insertedCount,
+    updated: updatedCount,
+    skipped: skippedCount,
+    failed: failedCount,
+    errors: executionErrors,
+  };
 }
 
 // ─── CATEGORIES CRUD ─────────────────────────────────────────────────────────
@@ -1923,6 +2161,9 @@ export async function getStoreConfig() {
     if (config) {
       const { _id, __v, ...rest } = config;
       if (!rest.name || rest.name === 'ShopEase') rest.name = 'Nakoda Imitation';
+      if (!rest.exploreSection || !rest.exploreSection.collections || rest.exploreSection.collections.length === 0) {
+        rest.exploreSection = DEFAULT_EXPLORE_SECTION;
+      }
       if (envWhatsapp) rest.whatsappNumber = envWhatsapp;
       if (envWhatsappDisplay) rest.whatsappDisplay = envWhatsappDisplay;
       if (envWhatsappLink) rest.whatsappLink = envWhatsappLink;
@@ -1934,6 +2175,9 @@ export async function getStoreConfig() {
   const jdb = readJSONDB();
   const cfg = { ...(jdb.storeConfig || INITIAL_DB_STATE.storeConfig) };
   if (!cfg.name || cfg.name === 'ShopEase') cfg.name = 'Nakoda Imitation';
+  if (!cfg.exploreSection || !cfg.exploreSection.collections || cfg.exploreSection.collections.length === 0) {
+    cfg.exploreSection = DEFAULT_EXPLORE_SECTION;
+  }
   if (envWhatsapp) cfg.whatsappNumber = envWhatsapp;
   if (envWhatsappDisplay) cfg.whatsappDisplay = envWhatsappDisplay;
   if (envWhatsappLink) cfg.whatsappLink = envWhatsappLink;
@@ -1947,6 +2191,10 @@ export async function updateStoreConfig(configData) {
   if (db) {
     let config = await StoreConfig.findOne();
     if (config) {
+      if (configData.exploreSection) {
+        config.exploreSection = configData.exploreSection;
+        config.markModified('exploreSection');
+      }
       Object.assign(config, configData);
       await config.save();
       const { _id, __v, ...rest } = config.toObject();
@@ -1968,6 +2216,24 @@ export async function updateStoreConfig(configData) {
   memoryCache.invalidateConfig();
   broadcastCatalogEvent(CATALOG_EVENTS.CONFIG_UPDATED, { storeConfig: jdb.storeConfig });
   return jdb.storeConfig;
+}
+
+export async function getExploreSection() {
+  const config = await getStoreConfig();
+  return config?.exploreSection || DEFAULT_EXPLORE_SECTION;
+}
+
+export async function updateExploreSection(exploreData) {
+  const currentConfig = await getStoreConfig();
+  const updatedSection = {
+    ...(currentConfig.exploreSection || DEFAULT_EXPLORE_SECTION),
+    ...exploreData,
+  };
+  const updatedConfig = await updateStoreConfig({
+    exploreSection: updatedSection,
+  });
+  broadcastCatalogEvent(CATALOG_EVENTS.EXPLORE_UPDATED, { exploreSection: updatedConfig.exploreSection });
+  return updatedConfig.exploreSection;
 }
 
 // ─── CUSTOMER AUTHENTICATION (MongoDB + JSON fallback) ───────────────────────
@@ -2460,6 +2726,731 @@ export async function verifyAdminCredentials(email, password) {
   } catch (e) {}
 
   return null;
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ─── REVIEWS & RATINGS SUBSYSTEM ──────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Recalculates and updates product rating and review count from all approved reviews.
+ * Synchronizes across MongoDB Atlas and JSON DB fallback.
+ * @param {string} productId
+ * @returns {Promise<{ averageRating: number, totalReviews: number }>}
+ */
+export async function recalculateProductRatingDB(productId) {
+  if (!productId) return { averageRating: 0, totalReviews: 0 };
+
+  let totalReviews = 0;
+  let averageRating = 0;
+
+  try {
+    const db = await connectToDatabase();
+    if (db) {
+      const stats = await Review.aggregate([
+        { $match: { productId: String(productId), status: 'approved' } },
+        {
+          $group: {
+            _id: '$productId',
+            totalReviews: { $sum: 1 },
+            averageRating: { $avg: '$rating' },
+          },
+        },
+      ]);
+
+      if (stats.length > 0) {
+        totalReviews = stats[0].totalReviews || 0;
+        averageRating = Math.round((stats[0].averageRating || 0) * 10) / 10;
+      }
+
+      await Product.updateOne(
+        { id: String(productId) },
+        { $set: { rating: averageRating, reviews: totalReviews } }
+      );
+    }
+  } catch (err) {
+    console.warn('MongoDB recalculateProductRatingDB fallback:', err.message);
+  }
+
+  // JSON DB sync
+  try {
+    const jdb = readJSONDB();
+    if (!jdb.reviews) jdb.reviews = [];
+    const prodReviews = jdb.reviews.filter(
+      (r) => String(r.productId) === String(productId) && (r.status || 'approved') === 'approved'
+    );
+    totalReviews = prodReviews.length;
+    if (totalReviews > 0) {
+      const sum = prodReviews.reduce((acc, r) => acc + (Number(r.rating) || 0), 0);
+      averageRating = Math.round((sum / totalReviews) * 10) / 10;
+    } else {
+      averageRating = 0;
+    }
+
+    if (Array.isArray(jdb.products)) {
+      const idx = jdb.products.findIndex((p) => String(p.id) === String(productId));
+      if (idx !== -1) {
+        jdb.products[idx].rating = averageRating;
+        jdb.products[idx].reviews = totalReviews;
+        writeJSONDB(jdb);
+      }
+    }
+  } catch (e) {}
+
+  memoryCache.invalidateProducts();
+  broadcastCatalogEvent(CATALOG_EVENTS.PRODUCT_UPDATED, {
+    id: productId,
+    rating: averageRating,
+    reviews: totalReviews,
+  });
+
+  return { averageRating, totalReviews };
+}
+
+/**
+ * Checks server-side whether a customer has a verified purchase for a product.
+ * Inspects all completed/valid orders matching customerId or customerEmail.
+ * @param {string} productId
+ * @param {string} customerId
+ * @param {string} customerEmail
+ * @returns {Promise<{ verified: boolean, orderId: string|null }>}
+ */
+export async function checkCustomerVerifiedPurchaseDB(productId, customerId, customerEmail) {
+  if (!productId || (!customerId && !customerEmail)) {
+    return { verified: false, orderId: null };
+  }
+
+  const cleanEmail = (customerEmail || '').trim().toLowerCase();
+  const cId = customerId ? String(customerId) : null;
+
+  try {
+    const db = await connectToDatabase();
+    if (db) {
+      const orClauses = [];
+      if (cId) {
+        orClauses.push({ userId: cId }, { customerId: cId });
+      }
+      if (cleanEmail) {
+        orClauses.push({ customerEmail: cleanEmail });
+      }
+
+      const order = await Order.findOne({
+        $or: orClauses,
+        'items.id': String(productId),
+      }).sort({ createdAt: -1 });
+
+      if (order) {
+        return { verified: true, orderId: order.id || String(order._id) };
+      }
+    }
+  } catch (e) {
+    console.warn('MongoDB checkCustomerVerifiedPurchaseDB fallback:', e.message);
+  }
+
+  // Fallback: check JSON DB
+  try {
+    const jdb = readJSONDB();
+    const orders = jdb.orders || [];
+    const matchingOrder = orders.find((o) => {
+      const matchCustomer =
+        (cId && (String(o.userId) === cId || String(o.customerId) === cId)) ||
+        (cleanEmail && (o.customerEmail || '').toLowerCase() === cleanEmail);
+      if (!matchCustomer) return false;
+      return (o.items || []).some((item) => String(item.id) === String(productId));
+    });
+
+    if (matchingOrder) {
+      return { verified: true, orderId: matchingOrder.id || null };
+    }
+  } catch (e) {}
+
+  return { verified: false, orderId: null };
+}
+
+/**
+ * Finds a specific customer's review for a given product (if any).
+ */
+export async function getCustomerReviewForProductDB(productId, customerId) {
+  if (!productId || !customerId) return null;
+
+  try {
+    const db = await connectToDatabase();
+    if (db) {
+      const doc = await Review.findOne({
+        productId: String(productId),
+        customerId: String(customerId),
+      });
+      if (doc) {
+        const obj = doc.toObject();
+        delete obj._id;
+        delete obj.__v;
+        return obj;
+      }
+    }
+  } catch (e) {}
+
+  try {
+    const jdb = readJSONDB();
+    const found = (jdb.reviews || []).find(
+      (r) => String(r.productId) === String(productId) && String(r.customerId) === String(customerId)
+    );
+    return found || null;
+  } catch (e) {}
+
+  return null;
+}
+
+/**
+ * Creates a new real customer review with single-review enforcement and rating recalculation.
+ */
+export async function createReviewDB({ productId, customerId, customerName, customerEmail, rating, title, comment }) {
+  if (!productId) throw new Error('Product ID is required');
+  if (!customerId) throw new Error('Customer authentication is required to review');
+  if (!customerName || !customerName.trim()) throw new Error('Customer name is required');
+
+  const numRating = Math.round(Number(rating));
+  if (!Number.isInteger(numRating) || numRating < 1 || numRating > 5) {
+    throw new Error('Rating must be an integer from 1 to 5 stars');
+  }
+
+  const cleanComment = (comment || '').trim();
+  if (cleanComment.length < 5) {
+    throw new Error('Review comment must be at least 5 characters');
+  }
+  if (cleanComment.length > 2000) {
+    throw new Error('Review comment cannot exceed 2000 characters');
+  }
+
+  // 1. Verify product exists
+  const product = await getProductByIdDB(productId);
+  if (!product) {
+    throw new Error(`Product not found with ID "${productId}"`);
+  }
+
+  // 2. Prevent duplicate reviews (1 review per customer per product)
+  const existingReview = await getCustomerReviewForProductDB(productId, customerId);
+  if (existingReview) {
+    throw new Error('You have already reviewed this product. You can edit your existing review.');
+  }
+
+  // 3. Server-side verified purchase check
+  const verification = await checkCustomerVerifiedPurchaseDB(productId, customerId, customerEmail);
+
+  const reviewId = `rev-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+  const now = new Date().toISOString();
+
+  const reviewRecord = {
+    id: reviewId,
+    productId: String(productId),
+    productName: product.name || '',
+    customerId: String(customerId),
+    customerName: customerName.trim(),
+    customerEmail: (customerEmail || '').toLowerCase().trim(),
+    rating: numRating,
+    title: (title || '').trim(),
+    comment: cleanComment,
+    verifiedPurchase: verification.verified,
+    orderId: verification.orderId || null,
+    helpfulVotes: [],
+    helpfulCount: 0,
+    status: 'approved',
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  // Persist to MongoDB
+  try {
+    const db = await connectToDatabase();
+    if (db) {
+      await Review.create(reviewRecord);
+    }
+  } catch (err) {
+    if (err.code === 11000) {
+      throw new Error('You have already submitted a review for this product.');
+    }
+    console.warn('MongoDB createReviewDB fallback:', err.message);
+  }
+
+  // Persist to JSON DB
+  try {
+    const jdb = readJSONDB();
+    if (!Array.isArray(jdb.reviews)) jdb.reviews = [];
+    jdb.reviews.unshift(reviewRecord);
+    writeJSONDB(jdb);
+  } catch (e) {}
+
+  // Recalculate product rating & review count
+  const updatedStats = await recalculateProductRatingDB(productId);
+
+  broadcastCatalogEvent(CATALOG_EVENTS.REVIEW_CREATED, {
+    productId,
+    review: reviewRecord,
+    ...updatedStats,
+  });
+
+  return {
+    success: true,
+    review: reviewRecord,
+    ...updatedStats,
+  };
+}
+
+/**
+ * Updates an existing review (owner-only).
+ */
+export async function updateReviewDB(reviewId, customerId, { rating, title, comment }) {
+  if (!reviewId) throw new Error('Review ID is required');
+  if (!customerId) throw new Error('Authentication required');
+
+  const numRating = rating !== undefined ? Math.round(Number(rating)) : null;
+  if (numRating !== null && (!Number.isInteger(numRating) || numRating < 1 || numRating > 5)) {
+    throw new Error('Rating must be an integer from 1 to 5 stars');
+  }
+
+  const cleanComment = comment !== undefined ? comment.trim() : null;
+  if (cleanComment !== null) {
+    if (cleanComment.length < 5) throw new Error('Review comment must be at least 5 characters');
+    if (cleanComment.length > 2000) throw new Error('Review comment cannot exceed 2000 characters');
+  }
+
+  let reviewToUpdate = null;
+  let productId = null;
+
+  // Check MongoDB
+  try {
+    const db = await connectToDatabase();
+    if (db) {
+      const doc = await Review.findOne({ id: String(reviewId) });
+      if (doc) {
+        if (String(doc.customerId) !== String(customerId)) {
+          throw new Error('Unauthorized: You can only edit your own reviews');
+        }
+        productId = doc.productId;
+        if (numRating !== null) doc.rating = numRating;
+        if (title !== undefined) doc.title = title.trim();
+        if (cleanComment !== null) doc.comment = cleanComment;
+        doc.updatedAt = new Date();
+        await doc.save();
+        reviewToUpdate = doc.toObject();
+      }
+    }
+  } catch (err) {
+    if (err.message.startsWith('Unauthorized:')) throw err;
+    console.warn('MongoDB updateReviewDB fallback:', err.message);
+  }
+
+  // Update JSON DB
+  try {
+    const jdb = readJSONDB();
+    if (Array.isArray(jdb.reviews)) {
+      const idx = jdb.reviews.findIndex((r) => String(r.id) === String(reviewId));
+      if (idx !== -1) {
+        if (String(jdb.reviews[idx].customerId) !== String(customerId)) {
+          throw new Error('Unauthorized: You can only edit your own reviews');
+        }
+        productId = productId || jdb.reviews[idx].productId;
+        if (numRating !== null) jdb.reviews[idx].rating = numRating;
+        if (title !== undefined) jdb.reviews[idx].title = title.trim();
+        if (cleanComment !== null) jdb.reviews[idx].comment = cleanComment;
+        jdb.reviews[idx].updatedAt = new Date().toISOString();
+        if (!reviewToUpdate) reviewToUpdate = jdb.reviews[idx];
+        writeJSONDB(jdb);
+      }
+    }
+  } catch (e) {
+    if (e.message.startsWith('Unauthorized:')) throw e;
+  }
+
+  if (!reviewToUpdate) {
+    throw new Error('Review not found');
+  }
+
+  const updatedStats = await recalculateProductRatingDB(productId);
+
+  broadcastCatalogEvent(CATALOG_EVENTS.REVIEW_UPDATED, {
+    productId,
+    review: reviewToUpdate,
+    ...updatedStats,
+  });
+
+  return { success: true, review: reviewToUpdate, ...updatedStats };
+}
+
+/**
+ * Deletes a review (owner or admin).
+ */
+export async function deleteReviewDB(reviewId, customerId, isAdmin = false) {
+  if (!reviewId) throw new Error('Review ID is required');
+
+  let productId = null;
+  let deleted = false;
+
+  // Delete from MongoDB
+  try {
+    const db = await connectToDatabase();
+    if (db) {
+      const doc = await Review.findOne({ id: String(reviewId) });
+      if (doc) {
+        if (!isAdmin && String(doc.customerId) !== String(customerId)) {
+          throw new Error('Unauthorized: You can only delete your own reviews');
+        }
+        productId = doc.productId;
+        await Review.deleteOne({ id: String(reviewId) });
+        deleted = true;
+      }
+    }
+  } catch (err) {
+    if (err.message.startsWith('Unauthorized:')) throw err;
+    console.warn('MongoDB deleteReviewDB fallback:', err.message);
+  }
+
+  // Delete from JSON DB
+  try {
+    const jdb = readJSONDB();
+    if (Array.isArray(jdb.reviews)) {
+      const idx = jdb.reviews.findIndex((r) => String(r.id) === String(reviewId));
+      if (idx !== -1) {
+        if (!isAdmin && String(jdb.reviews[idx].customerId) !== String(customerId)) {
+          throw new Error('Unauthorized: You can only delete your own reviews');
+        }
+        productId = productId || jdb.reviews[idx].productId;
+        jdb.reviews.splice(idx, 1);
+        writeJSONDB(jdb);
+        deleted = true;
+      }
+    }
+  } catch (e) {
+    if (e.message.startsWith('Unauthorized:')) throw e;
+  }
+
+  if (!deleted && !productId) {
+    throw new Error('Review not found');
+  }
+
+  const updatedStats = productId ? await recalculateProductRatingDB(productId) : { averageRating: 0, totalReviews: 0 };
+
+  broadcastCatalogEvent(CATALOG_EVENTS.REVIEW_DELETED, {
+    productId,
+    reviewId,
+    ...updatedStats,
+  });
+
+  return { success: true, deletedId: reviewId, productId, ...updatedStats };
+}
+
+/**
+ * Toggles helpful vote on a review.
+ */
+export async function voteReviewHelpfulDB(reviewId, customerId) {
+  if (!reviewId || !customerId) throw new Error('Review ID and Customer ID are required');
+
+  const cId = String(customerId);
+  let updatedReview = null;
+
+  try {
+    const db = await connectToDatabase();
+    if (db) {
+      const doc = await Review.findOne({ id: String(reviewId) });
+      if (doc) {
+        const votes = doc.helpfulVotes || [];
+        const hasVoted = votes.includes(cId);
+        if (hasVoted) {
+          doc.helpfulVotes = votes.filter((id) => id !== cId);
+        } else {
+          doc.helpfulVotes.push(cId);
+        }
+        doc.helpfulCount = doc.helpfulVotes.length;
+        await doc.save();
+        updatedReview = doc.toObject();
+      }
+    }
+  } catch (e) {
+    console.warn('MongoDB voteReviewHelpfulDB fallback:', e.message);
+  }
+
+  // JSON DB sync
+  try {
+    const jdb = readJSONDB();
+    if (Array.isArray(jdb.reviews)) {
+      const r = jdb.reviews.find((x) => String(x.id) === String(reviewId));
+      if (r) {
+        if (!Array.isArray(r.helpfulVotes)) r.helpfulVotes = [];
+        const hasVoted = r.helpfulVotes.includes(cId);
+        if (hasVoted) {
+          r.helpfulVotes = r.helpfulVotes.filter((id) => id !== cId);
+        } else {
+          r.helpfulVotes.push(cId);
+        }
+        r.helpfulCount = r.helpfulVotes.length;
+        if (!updatedReview) updatedReview = r;
+        writeJSONDB(jdb);
+      }
+    }
+  } catch (e) {}
+
+  if (!updatedReview) throw new Error('Review not found');
+
+  return {
+    success: true,
+    helpfulCount: updatedReview.helpfulCount,
+    hasVoted: (updatedReview.helpfulVotes || []).includes(cId),
+  };
+}
+
+/**
+ * Fetches real customer reviews for a product with ratings distribution and pagination.
+ */
+export async function getProductReviewsDB(
+  productId,
+  { page = 1, limit = 10, sortBy = 'recent', ratingFilter = null, currentCustomerId = null } = {}
+) {
+  if (!productId) return { reviews: [], totalReviews: 0, averageRating: 0 };
+
+  const pId = String(productId);
+  const p = Math.max(1, parseInt(page, 10) || 1);
+  const lim = Math.max(1, Math.min(50, parseInt(limit, 10) || 10));
+
+  let allApprovedReviews = [];
+
+  // 1. Fetch from MongoDB if available
+  try {
+    const db = await connectToDatabase();
+    if (db) {
+      const docs = await Review.find({ productId: pId, status: 'approved' }).sort({ createdAt: -1 });
+      allApprovedReviews = docs.map((d) => {
+        const obj = d.toObject();
+        delete obj._id;
+        delete obj.__v;
+        return obj;
+      });
+    }
+  } catch (e) {
+    console.warn('MongoDB getProductReviewsDB fallback:', e.message);
+  }
+
+  // 2. Fallback to JSON DB
+  if (allApprovedReviews.length === 0) {
+    try {
+      const jdb = readJSONDB();
+      allApprovedReviews = (jdb.reviews || []).filter(
+        (r) => String(r.productId) === pId && (r.status || 'approved') === 'approved'
+      );
+    } catch (e) {}
+  }
+
+  // Real aggregate calculations
+  const totalApproved = allApprovedReviews.length;
+  let totalRatingSum = 0;
+  const distribution = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+
+  for (const r of allApprovedReviews) {
+    const star = Math.round(Number(r.rating)) || 0;
+    if (star >= 1 && star <= 5) {
+      distribution[star] = (distribution[star] || 0) + 1;
+      totalRatingSum += star;
+    }
+  }
+
+  const averageRating = totalApproved > 0 ? Math.round((totalRatingSum / totalApproved) * 10) / 10 : 0;
+
+  const percentages = {
+    5: totalApproved > 0 ? Math.round((distribution[5] / totalApproved) * 100) : 0,
+    4: totalApproved > 0 ? Math.round((distribution[4] / totalApproved) * 100) : 0,
+    3: totalApproved > 0 ? Math.round((distribution[3] / totalApproved) * 100) : 0,
+    2: totalApproved > 0 ? Math.round((distribution[2] / totalApproved) * 100) : 0,
+    1: totalApproved > 0 ? Math.round((distribution[1] / totalApproved) * 100) : 0,
+  };
+
+  // Find userReview if currentCustomerId is authenticated
+  let userReview = null;
+  if (currentCustomerId) {
+    userReview = allApprovedReviews.find((r) => String(r.customerId) === String(currentCustomerId)) || null;
+  }
+
+  // Apply optional rating filter
+  let filtered = [...allApprovedReviews];
+  if (ratingFilter && [1, 2, 3, 4, 5].includes(Number(ratingFilter))) {
+    filtered = filtered.filter((r) => Math.round(Number(r.rating)) === Number(ratingFilter));
+  }
+
+  // Sort
+  if (sortBy === 'highest') {
+    filtered.sort((a, b) => b.rating - a.rating || new Date(b.createdAt) - new Date(a.createdAt));
+  } else if (sortBy === 'lowest') {
+    filtered.sort((a, b) => a.rating - b.rating || new Date(b.createdAt) - new Date(a.createdAt));
+  } else if (sortBy === 'helpful') {
+    filtered.sort((a, b) => (b.helpfulCount || 0) - (a.helpfulCount || 0) || new Date(b.createdAt) - new Date(a.createdAt));
+  } else {
+    // Default 'recent'
+    filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  }
+
+  const filteredCount = filtered.length;
+  const totalPages = Math.ceil(filteredCount / lim) || 1;
+  const startIndex = (p - 1) * lim;
+  const paginatedReviews = filtered.slice(startIndex, startIndex + lim);
+
+  return {
+    reviews: paginatedReviews,
+    totalReviews: totalApproved,
+    filteredCount,
+    averageRating,
+    distribution,
+    percentages,
+    page: p,
+    limit: lim,
+    totalPages,
+    hasMore: p < totalPages,
+    userReview,
+  };
+}
+
+/**
+ * Admin view: Fetch all reviews across the store with search, filters, and moderation stats.
+ */
+export async function getAllReviewsAdminDB({
+  page = 1,
+  limit = 20,
+  search = '',
+  productId = '',
+  rating = '',
+  verifiedOnly = false,
+  status = '',
+} = {}) {
+  const p = Math.max(1, parseInt(page, 10) || 1);
+  const lim = Math.max(1, Math.min(100, parseInt(limit, 10) || 20));
+
+  let allReviews = [];
+
+  try {
+    const db = await connectToDatabase();
+    if (db) {
+      const docs = await Review.find().sort({ createdAt: -1 });
+      allReviews = docs.map((d) => {
+        const obj = d.toObject();
+        delete obj._id;
+        delete obj.__v;
+        return obj;
+      });
+    }
+  } catch (e) {
+    console.warn('MongoDB getAllReviewsAdminDB fallback:', e.message);
+  }
+
+  if (allReviews.length === 0) {
+    try {
+      const jdb = readJSONDB();
+      allReviews = jdb.reviews || [];
+    } catch (e) {}
+  }
+
+  // Summary Metrics
+  const totalReviews = allReviews.length;
+  const verifiedCount = allReviews.filter((r) => r.verifiedPurchase).length;
+  const pendingCount = allReviews.filter((r) => r.status === 'pending').length;
+  const approvedList = allReviews.filter((r) => (r.status || 'approved') === 'approved');
+  const sumRating = approvedList.reduce((acc, r) => acc + (Number(r.rating) || 0), 0);
+  const averageStoreRating = approvedList.length > 0 ? Math.round((sumRating / approvedList.length) * 10) / 10 : 0;
+
+  // Filter
+  let filtered = [...allReviews];
+
+  if (productId) {
+    filtered = filtered.filter((r) => String(r.productId) === String(productId));
+  }
+
+  if (rating) {
+    const rNum = Number(rating);
+    filtered = filtered.filter((r) => Math.round(Number(r.rating)) === rNum);
+  }
+
+  if (verifiedOnly) {
+    filtered = filtered.filter((r) => r.verifiedPurchase);
+  }
+
+  if (status) {
+    filtered = filtered.filter((r) => (r.status || 'approved') === status);
+  }
+
+  if (search && search.trim()) {
+    const q = search.trim().toLowerCase();
+    filtered = filtered.filter((r) => {
+      return (
+        (r.customerName || '').toLowerCase().includes(q) ||
+        (r.customerEmail || '').toLowerCase().includes(q) ||
+        (r.productName || '').toLowerCase().includes(q) ||
+        (r.productId || '').toLowerCase().includes(q) ||
+        (r.comment || '').toLowerCase().includes(q) ||
+        (r.title || '').toLowerCase().includes(q)
+      );
+    });
+  }
+
+  filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+  const totalFiltered = filtered.length;
+  const totalPages = Math.ceil(totalFiltered / lim) || 1;
+  const startIndex = (p - 1) * lim;
+  const paginated = filtered.slice(startIndex, startIndex + lim);
+
+  return {
+    reviews: paginated,
+    totalReviews,
+    totalFiltered,
+    averageStoreRating,
+    verifiedCount,
+    pendingCount,
+    page: p,
+    limit: lim,
+    totalPages,
+    hasMore: p < totalPages,
+  };
+}
+
+/**
+ * Admin: Update review moderation status.
+ */
+export async function moderateReviewAdminDB(reviewId, status) {
+  if (!reviewId || !['approved', 'pending', 'rejected'].includes(status)) {
+    throw new Error('Valid review ID and status (approved/pending/rejected) are required');
+  }
+
+  let productId = null;
+  let updatedReview = null;
+
+  try {
+    const db = await connectToDatabase();
+    if (db) {
+      const doc = await Review.findOne({ id: String(reviewId) });
+      if (doc) {
+        doc.status = status;
+        productId = doc.productId;
+        await doc.save();
+        updatedReview = doc.toObject();
+      }
+    }
+  } catch (e) {}
+
+  try {
+    const jdb = readJSONDB();
+    if (Array.isArray(jdb.reviews)) {
+      const r = jdb.reviews.find((x) => String(x.id) === String(reviewId));
+      if (r) {
+        r.status = status;
+        productId = productId || r.productId;
+        if (!updatedReview) updatedReview = r;
+        writeJSONDB(jdb);
+      }
+    }
+  } catch (e) {}
+
+  if (!updatedReview) throw new Error('Review not found');
+
+  if (productId) {
+    await recalculateProductRatingDB(productId);
+  }
+
+  return { success: true, review: updatedReview };
 }
 
 export function resetDatabase() {

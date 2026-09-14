@@ -1,5 +1,22 @@
 import mongoose from 'mongoose';
 
+const ExploreCollectionSchema = new mongoose.Schema({
+  id: { type: String, required: true },
+  name: { type: String, required: true },
+  image: { type: String, default: '/assets/images/prod_backpack.jpg' },
+  categoryId: { type: String, required: true },
+  badge: { type: String, default: '' },
+  order: { type: Number, default: 0 },
+  isActive: { type: Boolean, default: true },
+});
+
+const ExploreSectionSchema = new mongoose.Schema({
+  title: { type: String, default: 'Explore Our Collections' },
+  subtitle: { type: String, default: 'Find exactly what you’re looking for across our curated lifestyle, grocery, apparel, and travel categories.' },
+  enabled: { type: Boolean, default: true },
+  collections: [ExploreCollectionSchema],
+});
+
 const StoreConfigSchema = new mongoose.Schema(
   {
     name: { type: String, default: 'Nakoda Imitation' },
@@ -11,6 +28,7 @@ const StoreConfigSchema = new mongoose.Schema(
     currency: { type: String, default: '₹' },
     isInitialized: { type: Boolean, default: true },
     seedVersion: { type: Number, default: 1 },
+    exploreSection: { type: ExploreSectionSchema, default: () => ({}) },
   },
   { timestamps: true }
 );

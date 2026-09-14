@@ -38,7 +38,7 @@ export const ProductCardComponent = ({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
       transition={{ duration: 0.25 }}
-      className={`group relative bg-white rounded-2xl sm:rounded-3xl p-3 sm:p-4 lg:p-5 border border-black/[0.06] shadow-[0_2px_14px_rgba(0,0,0,0.04)] hover:shadow-[0_16px_36px_rgba(0,0,0,0.08)] transition-all duration-300 flex flex-col justify-between cursor-pointer ${
+      className={`group relative bg-white rounded-2xl sm:rounded-3xl p-2.5 xs:p-3 sm:p-4 lg:p-5 border border-black/[0.06] shadow-[0_2px_14px_rgba(0,0,0,0.04)] hover:shadow-[0_16px_36px_rgba(0,0,0,0.08)] transition-all duration-300 flex flex-col justify-between cursor-pointer ${
         isOutOfStock ? 'opacity-85' : 'hover:-translate-y-1'
       }`}
       onClick={() => onQuickView && onQuickView(product)}
@@ -209,7 +209,7 @@ export const ProductCardComponent = ({
                           ? `Size ${sz} (Selected)` 
                           : `Select Size ${sz}`
                       }
-                      className={`relative text-[11px] font-sans font-bold px-2.5 py-1 rounded-lg transition-all duration-200 overflow-hidden cursor-pointer ${
+                      className={`relative text-[10px] xs:text-[11px] font-sans font-bold px-2 xs:px-2.5 py-0.5 xs:py-1 rounded-lg transition-all duration-200 overflow-hidden cursor-pointer ${
                         !isAvailable
                           ? 'text-[#86868B] bg-black/[0.03] border border-dashed border-black/15 cursor-not-allowed opacity-45'
                           : isSelected
@@ -247,19 +247,19 @@ export const ProductCardComponent = ({
         {/* Price & Action Row */}
         <div className="pt-2 border-t border-black/[0.05]">
           <div className="flex items-baseline justify-between gap-1 mb-2.5">
-            <div className="flex items-baseline gap-1.5 sm:gap-2 flex-wrap">
-              <span className="font-sans text-sm sm:text-base lg:text-lg font-bold text-[#1D1D1F]">
+            <div className="flex items-baseline gap-1 xs:gap-1.5 sm:gap-2 flex-wrap">
+              <span className="font-sans text-xs xs:text-sm sm:text-base lg:text-lg font-bold text-[#1D1D1F]">
                 {formatPrice(product.price, STORE_CONFIG.currency)}
               </span>
               {product.oldPrice && (
-                <span className="text-[10px] sm:text-xs font-sans text-[#86868B] line-through">
+                <span className="text-[9px] xs:text-[10px] sm:text-xs font-sans text-[#86868B] line-through">
                   {formatPrice(product.oldPrice, STORE_CONFIG.currency)}
                 </span>
               )}
             </div>
 
             {product.discountPercent && (
-              <span className="text-[9px] sm:text-[10px] font-sans font-bold text-[#34C759] bg-[#34C759]/10 px-1.5 sm:px-2 py-0.5 rounded-full shrink-0">
+              <span className="text-[8px] xs:text-[9px] sm:text-[10px] font-sans font-bold text-[#34C759] bg-[#34C759]/10 px-1.5 sm:px-2 py-0.5 rounded-full shrink-0">
                 {product.discountPercent}% OFF
               </span>
             )}
@@ -273,7 +273,7 @@ export const ProductCardComponent = ({
                   e.stopPropagation();
                   onWhatsAppInquiry && onWhatsAppInquiry(product);
                 }}
-                className="w-full py-2 sm:py-2.5 px-2.5 sm:px-3 rounded-full bg-[#F5F5F7] hover:bg-[#E8E8ED] text-[#1D1D1F] text-[11px] sm:text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer border border-black/[0.06] shadow-xs"
+                className="w-full py-2 sm:py-2.5 px-2 xs:px-2.5 sm:px-3 rounded-full bg-[#F5F5F7] hover:bg-[#E8E8ED] text-[#1D1D1F] text-[10px] xs:text-[11px] sm:text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer border border-black/[0.06] shadow-xs"
                 title="Out of Stock - Click to inquire"
               >
                 <span>Out of Stock</span>
@@ -294,7 +294,7 @@ export const ProductCardComponent = ({
                     selectedVariant: selectedSize,
                   });
                 }}
-                className="w-full py-2 sm:py-2.5 px-2.5 sm:px-4 rounded-full bg-[#1D1D1F] hover:bg-black text-white font-medium text-[11px] sm:text-xs font-sans tracking-wide flex items-center justify-center gap-1.5 sm:gap-2 shadow-xs active:scale-95 transition-all cursor-pointer"
+                className="w-full py-2 sm:py-2.5 px-2 xs:px-2.5 sm:px-4 rounded-full bg-[#1D1D1F] hover:bg-black text-white font-medium text-[10px] xs:text-[11px] sm:text-xs font-sans tracking-wide flex items-center justify-center gap-1 sm:gap-2 shadow-xs active:scale-95 transition-all cursor-pointer"
               >
                 <ShoppingBag className="w-3.5 h-3.5 shrink-0" />
                 <span className="truncate">Add to Cart</span>

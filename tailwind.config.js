@@ -55,7 +55,7 @@ export default {
         'float-bottom': '0 -4px 28px -4px rgba(0, 0, 0, 0.06)',
       },
       screens: {
-        xs: '480px',
+        xs: '375px',
       },
       spacing: {
         '3.5': '0.875rem',

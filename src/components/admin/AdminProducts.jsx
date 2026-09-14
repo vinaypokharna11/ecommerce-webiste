@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search,
@@ -26,13 +26,18 @@ import {
   ExternalLink,
   ChevronDown,
   MessageCircle,
+  Upload,
+  Download,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { useCatalog } from '../../context/CatalogContext';
 import { AdminProductModal } from './AdminProductModal';
+import { AdminBulkImportModal } from './AdminBulkImportModal';
+import { generateProductImportTemplate } from '../../utils/excelTemplate';
 import { STORE_CONFIG } from '../../data/mockData';
 import { createProductWhatsAppUrl } from '../../utils/whatsapp';
 
-export const AdminProducts = ({ onPreviewStore }) => {
+export const AdminProducts = ({ onPreviewStore, initialCategory = 'all', onCategoryChange }) => {
   const {
     products,
     categories,
@@ -56,8 +61,23 @@ export const AdminProducts = ({ onPreviewStore }) => {
 
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedCategory, setSelectedCategory] = useState(initialCategory || 'all');
   const [stockFilter, setStockFilter] = useState('all'); // 'all', 'in_stock', 'low_stock', 'out_of_stock'
+
+  // Sync category filter if navigating from another tab/card (e.g. Category "View Items")
+  useEffect(() => {
+    if (initialCategory !== undefined) {
+      if (initialCategory === 'all') {
+        setSelectedCategory('all');
+      } else {
+        const catLower = (initialCategory || '').trim().toLowerCase();
+        const match = categories.find(
+          (c) => (c.id || '').toLowerCase() === catLower || (c.name || '').toLowerCase() === catLower
+        );
+        setSelectedCategory(match ? match.id : initialCategory);
+      }
+    }
+  }, [initialCategory, categories]);
   const [featuredFilter, setFeaturedFilter] = useState('all'); // 'all', 'featured', 'popular'
   const [sortBy, setSortBy] = useState('newest'); // 'newest', 'price-asc', 'price-desc', 'stock-asc', 'rating'
   const [viewMode, setViewMode] = useState('table'); // 'table' or 'grid'
@@ -66,6 +86,7 @@ export const AdminProducts = ({ onPreviewStore }) => {
   const [selectedProductIds, setSelectedProductIds] = useState([]);
   const [editingProduct, setEditingProduct] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isBulkImportModalOpen, setIsBulkImportModalOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
@@ -91,8 +112,22 @@ export const AdminProducts = ({ onPreviewStore }) => {
       }
 
       // Category filter
-      if (selectedCategory !== 'all' && p.category !== selectedCategory) {
-        return false;
+      if (selectedCategory && selectedCategory !== 'all') {
+        const catLower = selectedCategory.trim().toLowerCase();
+        const selectedCatObj = categories.find(
+          (c) => (c.id || '').toLowerCase() === catLower || (c.name || '').toLowerCase() === catLower
+        );
+        const validValues = new Set([catLower]);
+        if (selectedCatObj) {
+          if (selectedCatObj.id) validValues.add(selectedCatObj.id.toLowerCase());
+          if (selectedCatObj.name) validValues.add(selectedCatObj.name.toLowerCase());
+        }
+
+        const pCat = (p.category || '').trim().toLowerCase();
+        const pCatName = (p.categoryName || '').trim().toLowerCase();
+
+        const matchesCategory = validValues.has(pCat) || validValues.has(pCatName);
+        if (!matchesCategory) return false;
       }
 
       // Stock status filter
@@ -244,6 +279,26 @@ export const AdminProducts = ({ onPreviewStore }) => {
           )}
 
           <button
+            type="button"
+            onClick={() => generateProductImportTemplate(categories)}
+            className="inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-2.5 rounded-full bg-white hover:bg-gray-50 text-[#171717] border border-black/10 text-xs font-extrabold shadow-sm active:scale-95 transition-all cursor-pointer"
+            title="Download formatted sample Excel template"
+          >
+            <Download className="w-3.5 h-3.5 text-[#709E1E]" />
+            <span>Download Template</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setIsBulkImportModalOpen(true)}
+            className="inline-flex items-center gap-1.5 px-4 sm:px-5 py-2.5 rounded-full bg-[#F3FCDA] hover:bg-[#EAF9C0] text-[#547910] border border-[#9FD842]/40 text-xs font-extrabold shadow-sm hover:scale-105 active:scale-95 transition-all cursor-pointer"
+            title="Bulk import products from CSV or Excel"
+          >
+            <Upload className="w-3.5 h-3.5" />
+            <span>Bulk Import</span>
+          </button>
+
+          <button
             onClick={handleOpenAddModal}
             className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-full bg-[#171717] hover:bg-black text-white font-extrabold text-xs sm:text-sm shadow-md hover:scale-105 active:scale-95 transition-all cursor-pointer"
           >
@@ -252,6 +307,35 @@ export const AdminProducts = ({ onPreviewStore }) => {
           </button>
         </div>
       </div>
+
+      {/* ── Active Category Filter Banner (Full Width) ── */}
+      {selectedCategory !== 'all' && (
+        <motion.div
+          initial={{ opacity: 0, y: -5 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-center justify-between p-3.5 px-5 rounded-2xl bg-[#F3FCDA] border border-[#9FD842]/50 text-xs text-[#547910] shadow-xs"
+        >
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <span className="font-extrabold text-[#171717]">Showing category:</span>
+            <span className="px-3 py-1 rounded-full bg-[#9FD842] text-[#171717] font-extrabold text-xs shadow-xs">
+              {categories.find((c) => (c.id || '').toLowerCase() === selectedCategory.toLowerCase() || (c.name || '').toLowerCase() === selectedCategory.toLowerCase())?.name || selectedCategory}
+            </span>
+            <span className="text-xs text-[#709E1E] font-bold">
+              • {filteredProducts.length} {filteredProducts.length === 1 ? 'product' : 'products'} found
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedCategory('all');
+              if (onCategoryChange) onCategoryChange('all');
+            }}
+            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white hover:bg-black/5 text-[#171717] font-extrabold text-xs border border-black/10 transition-all cursor-pointer shrink-0"
+          >
+            <span>Show All Categories</span>
+          </button>
+        </motion.div>
+      )}
 
       {/* ── Search, Filters & View Mode Bar ── */}
       <div className="p-4 sm:p-5 rounded-[28px] bg-white border border-black/10 shadow-[0_4px_20px_rgba(0,0,0,0.02)] space-y-3">
@@ -273,12 +357,20 @@ export const AdminProducts = ({ onPreviewStore }) => {
           <div className="lg:col-span-3">
             <select
               value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
+              onChange={(e) => {
+                setSelectedCategory(e.target.value);
+                if (onCategoryChange) onCategoryChange(e.target.value);
+              }}
               className="w-full px-4 py-2.5 rounded-full bg-[#EEEEEC] border border-black/5 text-xs font-semibold text-[#171717] focus:outline-none focus:ring-2 focus:ring-[#9FD842] cursor-pointer"
             >
               <option value="all">All Categories ({products.length})</option>
               {categories.map((c) => {
-                const count = products.filter((p) => p.category === c.id || p.categoryName?.toLowerCase() === c.name?.toLowerCase()).length;
+                const count = products.filter(
+                  (p) =>
+                    (p.category || '').toLowerCase() === c.id.toLowerCase() ||
+                    (p.categoryName || '').toLowerCase() === (c.name || '').toLowerCase() ||
+                    (p.category || '').toLowerCase() === (c.name || '').toLowerCase()
+                ).length;
                 return (
                   <option key={c.id} value={c.id}>
                     {c.name} ({count})
@@ -735,6 +827,12 @@ export const AdminProducts = ({ onPreviewStore }) => {
           setEditingProduct(null);
         }}
         product={editingProduct}
+      />
+
+      {/* ── Bulk Import Modal ── */}
+      <AdminBulkImportModal
+        isOpen={isBulkImportModalOpen}
+        onClose={() => setIsBulkImportModalOpen(false)}
       />
 
       {/* ── Delete Confirmation Modal ── */}

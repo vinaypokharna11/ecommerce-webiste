@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   X, 
+  ArrowLeft,
   ShoppingBag, 
   Heart, 
   Plus, 
@@ -24,20 +25,25 @@ import {
   getProductAvailableSizes, 
   isProductSizeAvailable 
 } from '@/utils/productOptions';
+import { ProductReviews } from '@/components/product/ProductReviews';
+import Lenis from 'lenis';
 
 export const QuickViewModal = ({
   product,
   isOpen,
   onClose,
   onAddToCart,
+  cartQuantity = 0,
+  onUpdateQuantity,
   isFavorite = false,
   onToggleFavorite,
   onNotify,
 }) => {
   const [selectedSize, setSelectedSize] = useState(null);
   const [showSizeWarning, setShowSizeWarning] = useState(false);
-  const [localQty, setLocalQty] = useState(1);
+  const [localQty, setLocalQty] = useState(cartQuantity || 0);
   const [isAdded, setIsAdded] = useState(false);
+  const [liveReviewStats, setLiveReviewStats] = useState(null);
 
   useEffect(() => {
     if (product) {
@@ -46,13 +52,71 @@ export const QuickViewModal = ({
           ? product.selectedSize
           : null
       );
-      setLocalQty(1);
+      // By default without adding it to cart, show 0 (or existing cart quantity)
+      setLocalQty(cartQuantity || 0);
       setIsAdded(false);
       setShowSizeWarning(false);
+      setLiveReviewStats(null);
     }
-  }, [product]);
+  }, [product, cartQuantity]);
 
   const isClosingViaBackRef = useRef(false);
+  const modalContainerRef = useRef(null);
+  const contentScrollRef = useRef(null);
+  const modalContentRef = useRef(null);
+  const modalLenisRef = useRef(null);
+
+  // Initialize independent butter-smooth Lenis instance for internal modal scrolling
+  useEffect(() => {
+    if (!isOpen || !product) return;
+
+    let lenisInstance = null;
+
+    const wrapper = contentScrollRef.current;
+    const container = modalContainerRef.current;
+    const content = modalContentRef.current;
+
+    if (wrapper && container) {
+      lenisInstance = new Lenis({
+        wrapper: wrapper,
+        content: content || wrapper.firstElementChild || wrapper,
+        eventsTarget: container,
+        autoRaf: true,
+        smoothWheel: true,
+        duration: 0.85,
+        easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+        wheelMultiplier: 1.0,
+        touchMultiplier: 1.0,
+        syncTouch: false,
+        infinite: false,
+        overscroll: false,
+      });
+
+      modalLenisRef.current = lenisInstance;
+    }
+
+    // Refresh dimensions as modal dialog springs into view
+    const t1 = setTimeout(() => modalLenisRef.current?.resize(), 60);
+    const t2 = setTimeout(() => modalLenisRef.current?.resize(), 200);
+    const t3 = setTimeout(() => modalLenisRef.current?.resize(), 500);
+
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+      if (lenisInstance) {
+        lenisInstance.destroy();
+        modalLenisRef.current = null;
+      }
+    };
+  }, [isOpen, product]);
+
+  // Recalculate dimensions whenever reviews update or expand
+  useEffect(() => {
+    if (modalLenisRef.current) {
+      modalLenisRef.current.resize();
+    }
+  }, [liveReviewStats]);
 
   const handleModalClose = useCallback(() => {
     if (typeof window !== 'undefined' && window.history.state?.modal === 'product-quickview') {
@@ -125,7 +189,8 @@ export const QuickViewModal = ({
   if (!isOpen || !product) return null;
 
   const isOutOfStock = product.stockStatus === 'out_of_stock';
-  const totalPrice = (product.price || 0) * localQty;
+  const displayQty = localQty > 0 ? localQty : 1;
+  const totalPrice = (product.price || 0) * displayQty;
   const allSizes = getAllProductSizes(product);
   const availableSizes = getProductAvailableSizes(product);
   const whatsappUrl = createProductWhatsAppUrl(
@@ -145,19 +210,21 @@ export const QuickViewModal = ({
       }
       return;
     }
+    const qtyToAdd = localQty > 0 ? localQty : 1;
     onAddToCart && onAddToCart({
       ...product,
       selectedVariant: selectedSize || '',
       selectedSize: selectedSize || '',
-      quantity: localQty,
+      quantity: qtyToAdd,
     });
+    setLocalQty(qtyToAdd);
     setIsAdded(true);
     setTimeout(() => setIsAdded(false), 2000);
   };
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain">
+      <div className="fixed inset-0 z-50 overflow-hidden">
         {/* Backdrop */}
         <motion.div
           initial={{ opacity: 0 }}
@@ -169,11 +236,12 @@ export const QuickViewModal = ({
 
         {/* Scroll Centering Wrapper */}
         <div 
-          className="min-h-full flex items-center justify-center p-3 sm:p-6 py-6 sm:py-10"
+          className="h-full w-full flex items-center justify-center p-2 xs:p-3 sm:p-6 py-4 sm:py-8"
           onClick={handleModalClose}
         >
-          {/* Apple Modal Container */}
+          {/* Apple Modal Container with Internal Scroll */}
           <motion.div
+            ref={modalContainerRef}
             role="dialog"
             aria-modal="true"
             aria-label={product?.name || "Product Quick View"}
@@ -182,223 +250,281 @@ export const QuickViewModal = ({
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ type: 'spring', damping: 26, stiffness: 320 }}
             onClick={(e) => e.stopPropagation()}
-            className="product-quickview-modal relative w-full max-w-3xl bg-white border border-black/[0.08] shadow-[0_25px_60px_rgba(0,0,0,0.18)] rounded-2xl sm:rounded-[2rem] z-10 p-4 xs:p-5 sm:p-7 md:p-8 my-auto"
+            className="product-quickview-modal relative w-full max-w-3xl max-h-[92vh] sm:max-h-[88vh] flex flex-col bg-white border border-black/[0.08] shadow-[0_25px_60px_rgba(0,0,0,0.18)] rounded-2xl sm:rounded-[2rem] z-10 my-auto overflow-hidden"
           >
-          {/* Close button */}
-          <button
-            onClick={handleModalClose}
-            className="absolute top-3.5 right-3.5 sm:top-5 sm:right-5 w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-[#F5F5F7] hover:bg-[#E8E8ED] text-[#1D1D1F] flex items-center justify-center transition-colors z-20 cursor-pointer shadow-xs"
-            aria-label="Close modal"
-          >
-            <X className="w-4 h-4" />
-          </button>
+            {/* Top Navigation Bar: Back & Close Buttons (Completely outside the image) */}
+            <div className="flex items-center justify-between px-3.5 xs:px-4 sm:px-6 py-2.5 sm:py-3 border-b border-black/[0.06] bg-white z-30 shrink-0">
+              <button
+                onClick={handleModalClose}
+                className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-[#F5F5F7] hover:bg-[#E8E8ED] text-[#1D1D1F] flex items-center justify-center transition-colors cursor-pointer group shadow-2xs"
+                aria-label="Back"
+                title="Back to products"
+              >
+                <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
+              </button>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-8 items-start">
-            {/* Image Showcase */}
-            <div className="relative aspect-square w-full rounded-xl sm:rounded-2xl overflow-hidden bg-[#F5F5F7] border border-black/[0.04]">
-              <Image
-                src={product.image || '/assets/images/prod_backpack.jpg'}
-                alt={product.name}
-                fill
-                className="object-cover"
-                sizes="(max-width: 768px) 100vw, 400px"
-              />
-              {product.badge && (
-                <div className="absolute top-3.5 left-3.5 sm:top-5 sm:left-5 px-3.5 py-1.5 sm:px-4 sm:py-1.5 bg-[#1D1D1F] text-white text-xs sm:text-sm font-sans font-bold tracking-wider uppercase rounded-full shadow-md">
-                  {product.badge}
-                </div>
-              )}
+              <span className="text-xs font-semibold text-[#86868B] uppercase tracking-wider hidden sm:inline-block">
+                {product.categoryName || 'Product Details'}
+              </span>
+
+              <button
+                onClick={handleModalClose}
+                className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-[#F5F5F7] hover:bg-[#E8E8ED] text-[#1D1D1F] flex items-center justify-center transition-colors cursor-pointer shadow-2xs"
+                aria-label="Close modal"
+                title="Close"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
 
-            {/* Product Details & Actions */}
-            <div className="flex flex-col justify-between space-y-4 sm:space-y-6">
-              <div className="space-y-2 sm:space-y-2.5">
-                <span className="text-[10px] sm:text-[11px] font-sans font-semibold uppercase tracking-wider text-[#86868B]">
-                  {product.categoryName || 'Product'}
-                </span>
-
-                <h1 className="font-sans text-lg xs:text-xl sm:text-2xl font-bold text-[#1D1D1F] leading-snug">
-                  {product.name}
-                </h1>
-
-                {/* Rating & reviews */}
-                <div className="flex items-center gap-2 text-xs">
-                  <div className="flex items-center text-[#FF9500]">
-                    <Star className="w-3.5 h-3.5 fill-current" />
-                    <span className="ml-1 font-bold text-[#1D1D1F]">{product.rating || '4.8'}</span>
-                  </div>
-                  <span className="text-[#86868B]">·</span>
-                  <span className="text-[#86868B]">
-                    {product.reviews || '80'} verified buyers
-                  </span>
-                </div>
-
-                {/* Price Display */}
-                <div className="flex items-baseline gap-2.5 sm:gap-3 pt-1 sm:pt-2">
-                  <span className="font-sans text-xl sm:text-2xl font-bold text-[#1D1D1F]">
-                    {formatPrice(product.price, STORE_CONFIG.currency)}
-                  </span>
-                  {product.oldPrice && (
-                    <span className="font-sans text-xs sm:text-sm text-[#86868B] line-through">
-                      {formatPrice(product.oldPrice, STORE_CONFIG.currency)}
-                    </span>
-                  )}
-                  {product.discountPercent && (
-                    <span className="text-[10px] font-bold text-[#34C759] bg-[#34C759]/10 px-2 py-0.5 rounded-full">
-                      {product.discountPercent}% OFF
-                    </span>
+            {/* Scrollable Modal Body Container (Mouse wheel scrollable over entire product) */}
+            <div 
+              ref={contentScrollRef}
+              className="overflow-y-auto overscroll-contain p-3.5 xs:p-5 sm:p-7 md:p-8 flex-1 custom-scrollbar"
+              style={{ willChange: 'scroll-position', scrollBehavior: 'auto' }}
+            >
+              <div ref={modalContentRef} className="w-full">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 xs:gap-5 sm:gap-8 items-start">
+                {/* Image Showcase */}
+                <div className="relative aspect-4/3 xs:aspect-square md:aspect-square w-full rounded-xl sm:rounded-2xl overflow-hidden bg-[#F5F5F7] border border-black/[0.04] max-h-[260px] xs:max-h-[320px] md:max-h-none">
+                  <Image
+                    src={product.image || '/assets/images/prod_backpack.jpg'}
+                    alt={product.name}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 100vw, 400px"
+                  />
+                  {product.badge && (
+                    <div className="absolute top-3.5 left-3.5 sm:top-4 sm:left-4 px-3.5 py-1.5 sm:px-4 sm:py-1.5 bg-[#1D1D1F] text-white text-xs sm:text-sm font-sans font-bold tracking-wider uppercase rounded-full shadow-md z-20">
+                      {product.badge}
+                    </div>
                   )}
                 </div>
 
-                {/* Description */}
-                <p className="font-sans text-xs sm:text-sm text-[#6E6E73] leading-relaxed pt-1">
-                  {product.description ||
-                    'Premium quality, verified for durability, comfort and everyday brilliance.'}
-                </p>
-              </div>
-
-              {/* Sizing Selection (Clothing & Footwear Only) */}
-              {allSizes.length > 0 && (
-                <div className="space-y-1.5 sm:space-y-2 pt-2 border-t border-black/[0.06]">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-sans font-semibold text-[#1D1D1F]">
-                      Size:
+                {/* Product Details & Actions */}
+                <div className="flex flex-col justify-between space-y-4 sm:space-y-6">
+                  <div className="space-y-2 sm:space-y-2.5">
+                    <span className="text-[10px] sm:text-[11px] font-sans font-semibold uppercase tracking-wider text-[#86868B]">
+                      {product.categoryName || 'Product'}
                     </span>
-                    {selectedSize ? (
-                      <span className="text-[11px] font-sans font-bold text-[#0071E3] bg-[#0071E3]/10 px-2 py-0.5 rounded">
-                        Selected: <strong className="text-[#0071E3]">{selectedSize}</strong>
+
+                    <h1 className="font-sans text-lg xs:text-xl sm:text-2xl font-bold text-[#1D1D1F] leading-snug pr-8">
+                      {product.name}
+                    </h1>
+
+                    {/* Rating & reviews with live database sync */}
+                    <div className="flex items-center gap-2 text-xs">
+                      <div className="flex items-center text-[#FF9500]">
+                        <Star className="w-3.5 h-3.5 fill-current" />
+                        <span className="ml-1 font-bold text-[#1D1D1F]">
+                          {liveReviewStats !== null
+                            ? Number(liveReviewStats.averageRating || 0).toFixed(1)
+                            : product.rating
+                            ? Number(product.rating).toFixed(1)
+                            : '0.0'}
+                        </span>
+                      </div>
+                      <span className="text-[#86868B]">·</span>
+                      <span className="text-[#86868B]">
+                        {(liveReviewStats !== null ? liveReviewStats.totalReviews : product.reviews) || 0} customer{' '}
+                        {((liveReviewStats !== null ? liveReviewStats.totalReviews : product.reviews) || 0) === 1
+                          ? 'review'
+                          : 'reviews'}
                       </span>
-                    ) : (
-                      <span className="text-[11px] font-sans font-medium text-amber-600">
-                        Please select a size
+                    </div>
+
+                    {/* Price Display */}
+                    <div className="flex items-baseline gap-2.5 sm:gap-3 pt-1 sm:pt-2">
+                      <span className="font-sans text-xl sm:text-2xl font-bold text-[#1D1D1F]">
+                        {formatPrice(product.price, STORE_CONFIG.currency)}
                       </span>
-                    )}
+                      {product.oldPrice && (
+                        <span className="font-sans text-xs sm:text-sm text-[#86868B] line-through">
+                          {formatPrice(product.oldPrice, STORE_CONFIG.currency)}
+                        </span>
+                      )}
+                      {product.discountPercent && (
+                        <span className="text-[10px] font-bold text-[#34C759] bg-[#34C759]/10 px-2 py-0.5 rounded-full">
+                          {product.discountPercent}% OFF
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Description */}
+                    <p className="font-sans text-xs sm:text-sm text-[#6E6E73] leading-relaxed pt-1">
+                      {product.description ||
+                        'Premium quality, verified for durability, comfort and everyday brilliance.'}
+                    </p>
                   </div>
 
-                  <AnimatePresence>
-                    {showSizeWarning && (
-                      <motion.div
-                        initial={{ opacity: 0, y: -4 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -4 }}
-                        className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-xs font-bold text-rose-700 flex items-center gap-2"
+                  {/* Sizing Selection (Clothing & Footwear Only) */}
+                  {allSizes.length > 0 && (
+                    <div className="space-y-1.5 sm:space-y-2 pt-2 border-t border-black/[0.06]">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-sans font-semibold text-[#1D1D1F]">
+                          Size:
+                        </span>
+                        {selectedSize ? (
+                          <span className="text-[11px] font-sans font-bold text-[#0071E3] bg-[#0071E3]/10 px-2 py-0.5 rounded">
+                            Selected: <strong className="text-[#0071E3]">{selectedSize}</strong>
+                          </span>
+                        ) : (
+                          <span className="text-[11px] font-sans font-medium text-amber-600">
+                            Please select a size
+                          </span>
+                        )}
+                      </div>
+
+                      <AnimatePresence>
+                        {showSizeWarning && (
+                          <motion.div
+                            initial={{ opacity: 0, y: -4 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -4 }}
+                            className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-xs font-bold text-rose-700 flex items-center gap-2"
+                          >
+                            <AlertCircle className="w-4 h-4 flex-shrink-0 text-rose-600" />
+                            <span>Please select a size before adding to cart!</span>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+
+                      <motion.div 
+                        animate={showSizeWarning ? { x: [-4, 4, -4, 4, 0] } : {}}
+                        transition={{ duration: 0.35 }}
+                        className={`flex flex-wrap gap-1.5 sm:gap-2 p-1 rounded-xl transition-all ${
+                          showSizeWarning ? 'bg-rose-50 ring-2 ring-rose-500/80' : ''
+                        }`}
                       >
-                        <AlertCircle className="w-4 h-4 flex-shrink-0 text-rose-600" />
-                        <span>Please select a size before adding to cart!</span>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                        {allSizes.map((sz) => {
+                          const isAvailable = isProductSizeAvailable(product, sz);
+                          const isSelected = selectedSize === sz;
 
-                  <motion.div 
-                    animate={showSizeWarning ? { x: [-4, 4, -4, 4, 0] } : {}}
-                    transition={{ duration: 0.35 }}
-                    className={`flex flex-wrap gap-1.5 sm:gap-2 p-1 rounded-xl transition-all ${
-                      showSizeWarning ? 'bg-rose-50 ring-2 ring-rose-500/80' : ''
-                    }`}
-                  >
-                    {allSizes.map((sz) => {
-                      const isAvailable = isProductSizeAvailable(product, sz);
-                      const isSelected = selectedSize === sz;
-
-                      return (
-                        <button
-                          key={sz}
-                          type="button"
-                          disabled={!isAvailable}
-                          onClick={() => {
-                            if (isAvailable) {
-                              setSelectedSize(sz);
-                              setShowSizeWarning(false);
-                            }
-                          }}
-                          title={isAvailable ? `Select Size ${sz}` : `Size ${sz} is out of stock`}
-                          className={`relative overflow-hidden px-3 sm:px-3.5 py-1 sm:py-1.5 rounded-full text-xs font-sans font-medium transition-all ${
-                            !isAvailable
-                              ? 'bg-black/[0.03] text-[#86868B] border border-dashed border-black/15 cursor-not-allowed opacity-60'
-                              : isSelected
-                              ? 'bg-[#1D1D1F] text-white shadow-xs scale-105 cursor-pointer'
-                              : 'bg-[#F5F5F7] text-[#1D1D1F] hover:bg-[#E8E8ED] border border-black/[0.05] cursor-pointer'
-                          }`}
-                        >
-                          <span>{sz}</span>
-                          {!isAvailable && (
-                            <svg
-                              className="absolute inset-0 w-full h-full pointer-events-none text-black/40"
-                              viewBox="0 0 100 100"
-                              preserveAspectRatio="none"
-                              aria-hidden="true"
+                          return (
+                            <button
+                              key={sz}
+                              type="button"
+                              disabled={!isAvailable}
+                              onClick={() => {
+                                if (isAvailable) {
+                                  setSelectedSize(sz);
+                                  setShowSizeWarning(false);
+                                }
+                              }}
+                              title={isAvailable ? `Select Size ${sz}` : `Size ${sz} is out of stock`}
+                              className={`relative overflow-hidden px-3 sm:px-3.5 py-1 sm:py-1.5 rounded-full text-xs font-sans font-medium transition-all ${
+                                !isAvailable
+                                  ? 'bg-black/[0.03] text-[#86868B] border border-dashed border-black/15 cursor-not-allowed opacity-60'
+                                  : isSelected
+                                  ? 'bg-[#1D1D1F] text-white shadow-xs scale-105 cursor-pointer'
+                                  : 'bg-[#F5F5F7] text-[#1D1D1F] hover:bg-[#E8E8ED] border border-black/[0.05] cursor-pointer'
+                              }`}
                             >
-                              <line
-                                x1="0"
-                                y1="100"
-                                x2="100"
-                                y2="0"
-                                stroke="currentColor"
-                                strokeWidth="1.5"
-                                vectorEffect="non-scaling-stroke"
-                              />
-                            </svg>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </motion.div>
-                </div>
-              )}
+                              <span>{sz}</span>
+                              {!isAvailable && (
+                                <svg
+                                  className="absolute inset-0 w-full h-full pointer-events-none text-black/40"
+                                  viewBox="0 0 100 100"
+                                  preserveAspectRatio="none"
+                                  aria-hidden="true"
+                                >
+                                  <line
+                                    x1="0"
+                                    y1="100"
+                                    x2="100"
+                                    y2="0"
+                                    stroke="currentColor"
+                                    strokeWidth="1.5"
+                                    vectorEffect="non-scaling-stroke"
+                                  />
+                                </svg>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </motion.div>
+                    </div>
+                  )}
 
-              {/* Quantity Counter & Wishlist */}
-              <div className="flex items-center gap-3 sm:gap-4 pt-2 border-t border-black/[0.06]">
-                <span className="text-xs font-sans font-semibold text-[#1D1D1F]">
-                  Quantity:
-                </span>
-                <div className="flex items-center bg-[#F5F5F7] border border-black/[0.05] rounded-full p-1">
-                  <button
-                    onClick={() => setLocalQty((q) => Math.max(1, q - 1))}
-                    className="w-7 h-7 rounded-full bg-white text-[#1D1D1F] flex items-center justify-center shadow-xs transition-colors hover:bg-black/5 cursor-pointer"
-                    aria-label="Decrease quantity"
-                  >
-                    <Minus className="w-3.5 h-3.5" />
-                  </button>
-                  <span className="px-3 sm:px-4 text-xs font-sans font-bold text-[#1D1D1F]">
-                    {localQty}
-                  </span>
-                  <button
-                    onClick={() => setLocalQty((q) => q + 1)}
-                    className="w-7 h-7 rounded-full bg-white text-[#1D1D1F] flex items-center justify-center shadow-xs transition-colors hover:bg-black/5 cursor-pointer"
-                    aria-label="Increase quantity"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                  </button>
-                </div>
+                  {/* Quantity Counter & Wishlist (Starts at 0 by default when not in bag) */}
+                  <div className="flex items-center gap-3 sm:gap-4 pt-2 border-t border-black/[0.06]">
+                    <span className="text-xs font-sans font-semibold text-[#1D1D1F]">
+                      Quantity:
+                    </span>
+                    <div className="flex items-center bg-[#F5F5F7] border border-black/[0.05] rounded-full p-1">
+                      <button
+                        onClick={() => {
+                          const next = Math.max(0, localQty - 1);
+                          setLocalQty(next);
+                          if (cartQuantity > 0 && onUpdateQuantity) {
+                            onUpdateQuantity(product.id, next);
+                          }
+                        }}
+                        disabled={localQty <= 0}
+                        className="w-7 h-7 rounded-full bg-white text-[#1D1D1F] disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center shadow-xs transition-colors hover:bg-black/5 cursor-pointer"
+                        aria-label="Decrease quantity"
+                      >
+                        <Minus className="w-3.5 h-3.5" />
+                      </button>
+                      <span className="px-3 sm:px-4 text-xs font-sans font-bold text-[#1D1D1F] min-w-[20px] text-center">
+                        {localQty}
+                      </span>
+                      <button
+                        onClick={() => {
+                          const next = localQty + 1;
+                          setLocalQty(next);
+                          if (cartQuantity > 0 && onUpdateQuantity) {
+                            onUpdateQuantity(product.id, next);
+                          }
+                        }}
+                        className="w-7 h-7 rounded-full bg-white text-[#1D1D1F] flex items-center justify-center shadow-xs transition-colors hover:bg-black/5 cursor-pointer"
+                        aria-label="Increase quantity"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
 
-                <button
-                  onClick={() => onToggleFavorite && onToggleFavorite(product)}
-                  className={`p-2 sm:p-2.5 rounded-full border transition-colors cursor-pointer ${
-                    isFavorite
-                      ? 'bg-rose-50 border-rose-200 text-rose-500'
-                      : 'bg-[#F5F5F7] border-black/[0.06] text-[#86868B] hover:text-rose-500'
-                  }`}
-                  aria-label="Wishlist"
-                >
-                  <Heart className="w-4 h-4" fill={isFavorite ? 'currentColor' : 'none'} />
-                </button>
+                    <button
+                      onClick={() => onToggleFavorite && onToggleFavorite(product)}
+                      className={`p-2 sm:p-2.5 rounded-full border transition-colors cursor-pointer ${
+                        isFavorite
+                          ? 'bg-rose-50 border-rose-200 text-rose-500'
+                          : 'bg-[#F5F5F7] border-black/[0.06] text-[#86868B] hover:text-rose-500'
+                      }`}
+                      aria-label="Wishlist"
+                    >
+                      <Heart className="w-4 h-4" fill={isFavorite ? 'currentColor' : 'none'} />
+                    </button>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="space-y-2 sm:space-y-2.5 pt-2">
+                    <button
+                      onClick={handleAdd}
+                      disabled={isOutOfStock}
+                      className="w-full py-2.5 sm:py-3 btn-apple-primary justify-center text-xs sm:text-sm cursor-pointer"
+                    >
+                      <ShoppingBag className="w-4 h-4 mr-2" />
+                      <span>
+                        {isAdded
+                          ? 'Added to Bag ✓'
+                          : `Add to Bag · ${formatPrice(totalPrice, STORE_CONFIG.currency)}`}
+                      </span>
+                    </button>
+                  </div>
+                </div>
               </div>
 
-              {/* Action Buttons */}
-              <div className="space-y-2 sm:space-y-2.5 pt-2">
-                <button
-                  onClick={handleAdd}
-                  disabled={isOutOfStock}
-                  className="w-full py-2.5 sm:py-3 btn-apple-primary justify-center text-xs sm:text-sm cursor-pointer"
-                >
-                  <ShoppingBag className="w-4 h-4 mr-2" />
-                  <span>{isAdded ? 'Added to Bag ✓' : `Add to Bag · ${formatPrice(totalPrice, STORE_CONFIG.currency)}`}</span>
-                </button>
-
+              {/* ── Real Customer Reviews & Ratings Section ── */}
+              <div className="mt-8 pt-6 border-t border-black/10">
+                <ProductReviews 
+                  productId={product.id} 
+                  productName={product.name} 
+                  onStatsLoaded={setLiveReviewStats}
+                />
+              </div>
+              </div>
             </div>
-
-            </div>
-          </div>
           </motion.div>
         </div>
       </div>

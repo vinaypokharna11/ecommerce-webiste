@@ -9,6 +9,7 @@ import {
   recordFailedLogin,
   resetAccountLockout,
 } from '@/lib/rateLimit';
+import { validateAndSanitizeLogin } from '@/lib/validations/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,14 +21,15 @@ export async function POST(request) {
       return rateLimitExceededResponse(rateLimit.retryAfterSec, 'Too many admin login attempts. Please wait before retrying.');
     }
 
-    const { email, password } = await request.json();
+    const rawBody = await request.json().catch(() => null);
 
-    if (!email || !password) {
-      return NextResponse.json(
-        { success: false, error: 'Email and password are required' },
-        { status: 400 }
-      );
+    // Server-side input validation & sanitization via Zod
+    const validation = validateAndSanitizeLogin(rawBody, ip, 'POST /api/admin/login');
+    if (!validation.isValid) {
+      return validation.response;
     }
+
+    const { email, password } = validation.data;
 
     // Check account-level lockout to prevent distributed brute-force against admin account
     const accountLock = checkAccountLockout(email, 5);

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { registerCustomer } from '@/lib/db';
 import { signToken } from '@/lib/auth';
 import { checkRateLimit, getClientIp, rateLimitExceededResponse } from '@/lib/rateLimit';
+import { validateAndSanitizeSignup } from '@/lib/validations/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,49 +14,24 @@ export async function POST(request) {
       return rateLimitExceededResponse(rateLimit.retryAfterSec, 'Too many registration attempts. Please wait before creating another account.');
     }
 
-    const body = await request.json();
-    const { name, email, password, phone, address, city, pincode } = body;
+    const rawBody = await request.json().catch(() => null);
 
-    if (!name || !email || !password) {
-      return NextResponse.json(
-        { success: false, error: 'Name, email, and password are required' },
-        { status: 400 }
-      );
+    // Server-side input validation & sanitization via Zod
+    const validation = validateAndSanitizeSignup(rawBody, ip, 'POST /api/auth/signup');
+    if (!validation.isValid) {
+      return validation.response;
     }
 
-    if (/[^a-zA-Z\s]/.test(name.trim())) {
-      return NextResponse.json(
-        { success: false, error: 'Name must only contain letters and spaces (no special characters or numbers)' },
-        { status: 400 }
-      );
-    }
-
-    let cleanPhone = '';
-    if (phone && String(phone).trim() !== '') {
-      cleanPhone = String(phone).replace(/\D/g, '');
-      if (cleanPhone.length !== 10) {
-        return NextResponse.json(
-          { success: false, error: 'Phone number must be exactly 10 digits' },
-          { status: 400 }
-        );
-      }
-    }
-
-    if (password.length < 6) {
-      return NextResponse.json(
-        { success: false, error: 'Password must be at least 6 characters' },
-        { status: 400 }
-      );
-    }
+    const { name, email, password, phone, address, city, pincode } = validation.data;
 
     const user = await registerCustomer({ 
-      name: name.trim(), 
-      email: email.trim().toLowerCase(), 
+      name, 
+      email, 
       password, 
-      phone: cleanPhone, 
-      address, 
-      city, 
-      pincode 
+      phone: phone || '', 
+      address: address || '', 
+      city: city || '', 
+      pincode: pincode || '' 
     });
 
     // Generate JWT token

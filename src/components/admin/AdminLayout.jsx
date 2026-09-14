@@ -20,6 +20,8 @@ import {
   Clock,
   RefreshCw,
   Radio,
+  FileSpreadsheet,
+  Compass,
 } from 'lucide-react';
 import { useCatalog } from '../../context/CatalogContext';
 import { AdminDashboard } from './AdminDashboard';
@@ -30,17 +32,22 @@ import { AdminFeatured } from './AdminFeatured';
 import { AdminInventory } from './AdminInventory';
 import { AdminInquiries } from './AdminInquiries';
 import { AdminSettings } from './AdminSettings';
+import { AdminExcelImport } from './AdminExcelImport';
 import { AdminProductModal } from './AdminProductModal';
+import { AdminReviews } from './AdminReviews';
+import { AdminExplore } from './AdminExplore';
 
 export const AdminLayout = ({ 
   onExitAdmin, 
   onLogout, 
   adminUser, 
   activeTab = 'dashboard', 
+  initialCategory = 'all',
   onTabChange 
 }) => {
   const { catalogStats, storeConfig, isLiveConnected, refreshCatalog } = useCatalog();
   const [activeNav, setActiveNav] = useState(activeTab);
+  const [productCategoryFilter, setProductCategoryFilter] = useState(initialCategory || 'all');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -52,20 +59,34 @@ export const AdminLayout = ({
     }
   }, [activeTab]);
 
+  useEffect(() => {
+    if (initialCategory !== undefined) {
+      setProductCategoryFilter(initialCategory || 'all');
+    }
+  }, [initialCategory]);
+
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'inquiries', label: 'Inquiries & Messages', icon: MessageSquare },
     { id: 'products', label: 'Products Catalog', icon: Package, badge: catalogStats.totalProducts },
     { id: 'categories', label: 'Categories', icon: Layers, badge: catalogStats.totalCategoriesCount },
+    { id: 'explore', label: 'Explore Collections', icon: Compass },
     { id: 'offers', label: 'Offers & Coupons', icon: Tag, badge: catalogStats.activeOffersCount },
     { id: 'featured', label: 'Featured & Badges', icon: Star, badge: catalogStats.featuredCount },
+    { id: 'reviews', label: 'Customer Reviews', icon: MessageSquare },
     { id: 'inventory', label: 'Inventory & Stock', icon: Boxes, alert: catalogStats.lowStockCount + catalogStats.outOfStockCount > 0 },
+    { id: 'excel-import', label: 'Excel Import', icon: FileSpreadsheet },
     { id: 'settings', label: 'Store Settings', icon: Settings },
   ];
 
   const handleNavClick = (id) => {
     setActiveNav(id);
-    if (onTabChange) {
+    if (id === 'products') {
+      setProductCategoryFilter('all');
+      if (onTabChange) {
+        onTabChange('products', 'all');
+      }
+    } else if (onTabChange) {
       onTabChange(id);
     }
     setIsSidebarOpen(false);
@@ -81,14 +102,14 @@ export const AdminLayout = ({
   };
 
   return (
-    <div className="min-h-screen bg-[#F6F5F0] text-[#171717] flex flex-col font-sans selection:bg-[#9FD842] selection:text-[#171717]">
+    <div className="min-h-screen bg-[#F6F5F0] text-[#171717] flex flex-col font-sans selection:bg-[#9FD842] selection:text-[#171717] overflow-x-clip max-w-full">
       
       {/* Background Ambient Glows */}
       <div className="fixed top-0 left-1/3 w-[800px] h-[500px] bg-[#9FD842]/10 rounded-full blur-[150px] pointer-events-none -z-10" />
       <div className="fixed bottom-10 right-0 w-[600px] h-[600px] bg-[#8EC731]/10 rounded-full blur-[150px] pointer-events-none -z-10" />
 
       {/* ── Top Header Bar ── */}
-      <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-xl border-b border-black/10 px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between shadow-xs">
+      <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-xl border-b border-black/10 px-3 xs:px-4 sm:px-6 lg:px-8 py-3 sm:py-3.5 flex items-center justify-between shadow-xs">
         
         {/* Left: Mobile Menu Trigger + Brand Logo */}
         <div className="flex items-center gap-3">
@@ -324,11 +345,32 @@ export const AdminLayout = ({
               )}
 
               {activeNav === 'products' && (
-                <AdminProducts onPreviewStore={onExitAdmin} />
+                <AdminProducts 
+                  onPreviewStore={onExitAdmin} 
+                  initialCategory={productCategoryFilter}
+                  onCategoryChange={(catId) => {
+                    setProductCategoryFilter(catId);
+                    if (onTabChange) onTabChange('products', catId);
+                  }}
+                />
               )}
 
               {activeNav === 'categories' && (
-                <AdminCategories onNavigateToProducts={(catId) => handleNavClick('products')} />
+                <AdminCategories 
+                  onNavigateToProducts={(catId) => {
+                    const targetCat = catId || 'all';
+                    setProductCategoryFilter(targetCat);
+                    setActiveNav('products');
+                    if (onTabChange) {
+                      onTabChange('products', targetCat);
+                    }
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }} 
+                />
+              )}
+
+              {activeNav === 'explore' && (
+                <AdminExplore />
               )}
 
               {activeNav === 'offers' && (
@@ -347,8 +389,16 @@ export const AdminLayout = ({
                 <AdminInquiries />
               )}
 
+              {activeNav === 'reviews' && (
+                <AdminReviews />
+              )}
+
               {activeNav === 'settings' && (
                 <AdminSettings />
+              )}
+
+              {activeNav === 'excel-import' && (
+                <AdminExcelImport />
               )}
             </motion.div>
           </AnimatePresence>

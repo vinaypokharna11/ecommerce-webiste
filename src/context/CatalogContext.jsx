@@ -6,6 +6,7 @@ import {
   CATALOG_CATEGORIES as DEFAULT_CATALOG_CATEGORIES, 
   CATEGORIES as DEFAULT_HOME_CATEGORIES,
   STORE_CONFIG as DEFAULT_STORE_CONFIG,
+  DEFAULT_EXPLORE_SECTION,
   HERO_ASSETS
 } from '../data/mockData';
 
@@ -147,6 +148,7 @@ export const CatalogProvider = ({ children }) => {
   const [categories, setCategories] = useState(INITIAL_CATEGORIES);
   const [offers, setOffers] = useState(DEFAULT_OFFERS);
   const [storeConfig, setStoreConfig] = useState(DEFAULT_STORE_CONFIG);
+  const [exploreSection, setExploreSection] = useState(DEFAULT_EXPLORE_SECTION);
   const [activities, setActivities] = useState(() => [
     { id: 1, title: 'Store Catalog Initialized', time: 'Just now', type: 'system', icon: 'Sparkles' },
     { id: 2, title: '16 default products loaded', time: 'Just now', type: 'product', icon: 'Package' },
@@ -267,6 +269,11 @@ export const CatalogProvider = ({ children }) => {
           }
           setStoreConfig(cfg);
         }
+        if (data.exploreSection) {
+          setExploreSection(data.exploreSection);
+        } else if (data.storeConfig?.exploreSection) {
+          setExploreSection(data.storeConfig.exploreSection);
+        }
       }
     } catch (err) {
       console.info('Using local client cache for catalog');
@@ -372,6 +379,14 @@ export const CatalogProvider = ({ children }) => {
       case 'CONFIG_UPDATED':
         if (payload?.storeConfig) {
           setStoreConfig(payload.storeConfig);
+          if (payload.storeConfig.exploreSection) {
+            setExploreSection(payload.storeConfig.exploreSection);
+          }
+        }
+        break;
+      case 'EXPLORE_UPDATED':
+        if (payload?.exploreSection) {
+          setExploreSection(payload.exploreSection);
         }
         break;
       case 'CATALOG_SEEDED':
@@ -1080,6 +1095,30 @@ export const CatalogProvider = ({ children }) => {
     } catch (e) {}
   }, [getAuthHeaders, broadcastLocal, logActivity]);
 
+  const updateExploreSection = useCallback(async (updatedExplore) => {
+    setExploreSection((prev) => ({ ...prev, ...updatedExplore }));
+    broadcastLocal('EXPLORE_UPDATED', { exploreSection: updatedExplore });
+    logActivity('Updated explore collections section', 'settings', 'Compass');
+
+    try {
+      const res = await fetch('/api/explore', {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(updatedExplore),
+      });
+      const data = await res.json();
+      if (data.success && data.exploreSection) {
+        setExploreSection(data.exploreSection);
+        broadcastLocal('EXPLORE_UPDATED', { exploreSection: data.exploreSection });
+        return { success: true, exploreSection: data.exploreSection };
+      }
+      return { success: false, error: data.error };
+    } catch (err) {
+      console.error('Failed to save explore section', err);
+      return { success: false, error: err.message };
+    }
+  }, [getAuthHeaders, broadcastLocal, logActivity]);
+
   const restoreMasterSeed = useCallback(async () => {
     logActivity('Restoring master seed catalog into live database...', 'system', 'RotateCcw');
     try {
@@ -1264,6 +1303,9 @@ export const CatalogProvider = ({ children }) => {
     deleteOffer,
     toggleOfferActive,
     updateStoreConfig,
+    exploreSection,
+    updateExploreSection,
+    setExploreSection,
     restoreMasterSeed,
     saveCurrentAsMasterSeed,
     clearAllCatalog,
