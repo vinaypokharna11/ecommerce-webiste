@@ -31,6 +31,15 @@ function InquireContent() {
       router.push('/admin');
       return;
     }
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('nakoda:scroll-to-top'));
+      if (window.__lenis) {
+        window.__lenis.scrollTo(0, { immediate: true });
+      }
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    }
     if (id === 'contact') {
       router.push('/contact');
       return;

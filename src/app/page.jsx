@@ -77,6 +77,29 @@ function StorefrontContent() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, [quickViewProduct]);
 
+  // Ensure the page always starts from the top whenever switching tabs/pages from navbar
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const resetScroll = () => {
+      window.dispatchEvent(new Event('nakoda:scroll-to-top'));
+      if (window.__lenis) {
+        window.__lenis.scrollTo(0, { immediate: true });
+      }
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    };
+
+    resetScroll();
+    const raf = requestAnimationFrame(resetScroll);
+    const timer = setTimeout(resetScroll, 60);
+
+    return () => {
+      cancelAnimationFrame(raf);
+      clearTimeout(timer);
+    };
+  }, [activeTab]);
+
   // Cart & Wishlist state: strictly isolated per user session
   const [cartItems, setCartItems] = useState({});
   const [wishlist, setWishlist] = useState({});
@@ -302,7 +325,7 @@ function StorefrontContent() {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 
-  // Nav item interaction with smooth browser URL synchronization
+  // Nav item interaction with smooth browser URL synchronization and instant top scroll
   const handleNavClick = (id, label) => {
     if (id === 'admin') {
       router.push('/admin');
@@ -315,8 +338,14 @@ function StorefrontContent() {
       const newUrl = id === 'home' ? '/' : `/?tab=${id}`;
       if (typeof window !== 'undefined') {
         window.history.pushState({ tab: id }, '', newUrl);
+        window.dispatchEvent(new Event('nakoda:scroll-to-top'));
+        if (window.__lenis) {
+          window.__lenis.scrollTo(0, { immediate: true });
+        }
+        window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+        document.documentElement.scrollTop = 0;
+        document.body.scrollTop = 0;
       }
-      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
@@ -592,7 +621,13 @@ function StorefrontContent() {
       : '/?tab=catalog';
     if (typeof window !== 'undefined') {
       window.history.pushState({ tab: 'catalog', category: categoryId }, '', newUrl);
-      window.scrollTo(0, 0);
+      window.dispatchEvent(new Event('nakoda:scroll-to-top'));
+      if (window.__lenis) {
+        window.__lenis.scrollTo(0, { immediate: true });
+      }
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
     }
   };
 

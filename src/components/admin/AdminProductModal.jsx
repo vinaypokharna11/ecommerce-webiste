@@ -35,7 +35,7 @@ const DEFAULT_FORM_STATE = {
   oldPrice: 1499,
   discountPercent: 33,
   rating: 4.9,
-  reviews: 18,
+  reviews: 0,
   badge: 'NEW',
   badgeType: 'new',
   stockStatus: 'in_stock',
@@ -590,35 +590,6 @@ export const AdminProductModal = ({ isOpen, onClose, product = null }) => {
                 </div>
               </div>
 
-              {/* Rating & Reviews */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-[#171717] mb-1.5 uppercase tracking-wider">
-                    Rating (1.0 to 5.0)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    min="1"
-                    max="5"
-                    value={formData.rating}
-                    onChange={(e) => setFormData({ ...formData, rating: parseFloat(e.target.value) || 4.9 })}
-                    className="w-full px-4 py-3 rounded-2xl border border-black/10 bg-[#EEEEEC]/50 text-sm text-[#171717] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#9FD842]"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-[#171717] mb-1.5 uppercase tracking-wider">
-                    Review Count
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.reviews}
-                    onChange={(e) => setFormData({ ...formData, reviews: parseInt(e.target.value, 10) || 0 })}
-                    className="w-full px-4 py-3 rounded-2xl border border-black/10 bg-[#EEEEEC]/50 text-sm text-[#171717] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#9FD842]"
-                  />
-                </div>
-              </div>
 
               {/* Badges Section */}
               <div>

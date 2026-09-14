@@ -54,13 +54,12 @@ test.describe('Admin Explore Collections Manager', () => {
     await expect(previewBtn).toBeVisible({ timeout: 8000 });
     await previewBtn.click();
 
-    // Verify Live simulation banner appears
+    // Verify Live simulation banner and 3D InfiniteMenu preview container appear
     const simulationNotice = page.getByText(/Storefront Simulation/i);
     await expect(simulationNotice).toBeVisible();
 
-    // Verify preview card for Bags & Trolleys is displayed
-    const previewBagCard = page.locator('.aspect-\\[4\\/5\\]', { hasText: 'Bags & Trolleys' });
-    await expect(previewBagCard).toBeVisible();
+    const canvas = page.locator('canvas').first();
+    await expect(canvas).toBeVisible({ timeout: 10000 });
   });
 
   test('add new collection card modal opens and cancels cleanly', async ({ page }) => {

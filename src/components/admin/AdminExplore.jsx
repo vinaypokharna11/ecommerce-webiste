@@ -45,7 +45,7 @@ const PRESET_IMAGES = [
 ];
 
 export const AdminExplore = () => {
-  const { exploreSection, updateExploreSection, categories } = useCatalog();
+  const { exploreSection, updateExploreSection, categories, getAuthHeaders } = useCatalog();
 
   // Local Form State
   const [formData, setFormData] = useState(() => {
@@ -56,9 +56,11 @@ export const AdminExplore = () => {
     return exploreSection?.collections || DEFAULT_EXPLORE_SECTION.collections;
   });
 
+  const isSavingRef = useRef(false);
+
   // Sync with context if external changes happen
   useEffect(() => {
-    if (exploreSection) {
+    if (exploreSection && !isSavingRef.current) {
       setFormData(exploreSection);
       if (Array.isArray(exploreSection.collections)) {
         setCollections(exploreSection.collections);
@@ -85,16 +87,17 @@ export const AdminExplore = () => {
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef(null);
 
-  // Save changes to server
-  const handleSaveAll = async () => {
+  // Central Persistence Function: saves directly to server & context
+  const persistExploreData = async (newCollections, newFormData = formData) => {
+    isSavingRef.current = true;
     setIsSaving(true);
     setStatusMessage(null);
 
     const payload = {
-      title: formData.title || 'Explore Our Collections',
-      subtitle: formData.subtitle || '',
-      enabled: formData.enabled !== false,
-      collections: collections.map((col, index) => ({
+      title: newFormData.title || 'Explore Our Collections',
+      subtitle: newFormData.subtitle || '',
+      enabled: newFormData.enabled !== false,
+      collections: newCollections.map((col, index) => ({
         ...col,
         order: index + 1,
       })),
@@ -105,25 +108,36 @@ export const AdminExplore = () => {
       if (result && result.success !== false) {
         setStatusMessage({
           type: 'success',
-          text: 'Explore section successfully saved and updated across all storefront tabs!',
+          text: 'Explore collections updated and saved live across the store!',
         });
+        return true;
       } else {
         setStatusMessage({
           type: 'error',
           text: result?.error || 'Failed to save changes.',
         });
+        return false;
       }
     } catch (err) {
       setStatusMessage({
         type: 'error',
-        text: err.message || 'An unexpected error occurred.',
+        text: err.message || 'An unexpected error occurred while saving.',
       });
+      return false;
     } finally {
       setIsSaving(false);
       setTimeout(() => {
+        isSavingRef.current = false;
+      }, 600);
+      setTimeout(() => {
         setStatusMessage((prev) => (prev?.type === 'success' ? null : prev));
-      }, 5000);
+      }, 4000);
     }
+  };
+
+  // Save changes to server
+  const handleSaveAll = async () => {
+    await persistExploreData(collections, formData);
   };
 
   // Reset to default collections
@@ -133,17 +147,21 @@ export const AdminExplore = () => {
     try {
       const res = await fetch('/api/explore', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders ? getAuthHeaders() : { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ action: 'reset_defaults' }),
       });
       const data = await res.json();
       if (data.success && data.exploreSection) {
         setFormData(data.exploreSection);
         setCollections(data.exploreSection.collections);
+        await updateExploreSection(data.exploreSection);
         setStatusMessage({
           type: 'success',
           text: 'Restored factory default explore collections.',
         });
+      } else {
+        setStatusMessage({ type: 'error', text: data.error || 'Failed to reset defaults.' });
       }
     } catch (e) {
       setStatusMessage({ type: 'error', text: 'Failed to reset defaults.' });
@@ -153,23 +171,25 @@ export const AdminExplore = () => {
   };
 
   // Move Collection Up/Down
-  const handleMove = (index, direction) => {
+  const handleMove = async (index, direction) => {
     const targetIndex = direction === 'up' ? index - 1 : index + 1;
     if (targetIndex < 0 || targetIndex >= collections.length) return;
     const updated = [...collections];
     const temp = updated[index];
     updated[index] = updated[targetIndex];
     updated[targetIndex] = temp;
-    // Update order values
     const reordered = updated.map((item, idx) => ({ ...item, order: idx + 1 }));
     setCollections(reordered);
+    await persistExploreData(reordered);
   };
 
   // Toggle active status for card
-  const handleToggleActive = (id) => {
-    setCollections((prev) =>
-      prev.map((col) => (col.id === id ? { ...col, isActive: !col.isActive } : col))
+  const handleToggleActive = async (id) => {
+    const updated = collections.map((col) =>
+      col.id === id ? { ...col, isActive: !col.isActive } : col
     );
+    setCollections(updated);
+    await persistExploreData(updated);
   };
 
   // Open Modal for Add
@@ -216,8 +236,8 @@ export const AdminExplore = () => {
     }
   };
 
-  // Save Modal Card
-  const handleSaveModalCard = (e) => {
+  // Save Modal Card (Add or Edit)
+  const handleSaveModalCard = async (e) => {
     e.preventDefault();
     if (!modalName.trim()) {
       setModalError('Collection Name is required');
@@ -228,21 +248,20 @@ export const AdminExplore = () => {
       return;
     }
 
+    let updatedList;
     if (editingCard) {
       // Update existing
-      setCollections((prev) =>
-        prev.map((c) =>
-          c.id === editingCard.id
-            ? {
-                ...c,
-                name: modalName.trim(),
-                categoryId: modalCategoryId,
-                image: modalImage || '/assets/images/prod_backpack.jpg',
-                badge: modalBadge.trim(),
-                isActive: modalIsActive,
-              }
-            : c
-        )
+      updatedList = collections.map((c) =>
+        c.id === editingCard.id
+          ? {
+              ...c,
+              name: modalName.trim(),
+              categoryId: modalCategoryId,
+              image: modalImage || '/assets/images/prod_backpack.jpg',
+              badge: modalBadge.trim(),
+              isActive: modalIsActive,
+            }
+          : c
       );
     } else {
       // Add new
@@ -256,16 +275,20 @@ export const AdminExplore = () => {
         order: collections.length + 1,
         isActive: modalIsActive,
       };
-      setCollections((prev) => [...prev, newCard]);
+      updatedList = [...collections, newCard];
     }
 
+    setCollections(updatedList);
     setIsModalOpen(false);
+    await persistExploreData(updatedList);
   };
 
   // Delete Card
-  const handleDeleteCard = (id) => {
-    setCollections((prev) => prev.filter((c) => c.id !== id));
+  const handleDeleteCard = async (id) => {
+    const updatedList = collections.filter((c) => c.id !== id);
+    setCollections(updatedList);
     setDeleteConfirmId(null);
+    await persistExploreData(updatedList);
   };
 
   // Filter and sort active collections for preview

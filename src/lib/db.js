@@ -2161,8 +2161,10 @@ export async function getStoreConfig() {
     if (config) {
       const { _id, __v, ...rest } = config;
       if (!rest.name || rest.name === 'ShopEase') rest.name = 'Nakoda Imitation';
-      if (!rest.exploreSection || !rest.exploreSection.collections || rest.exploreSection.collections.length === 0) {
+      if (!rest.exploreSection) {
         rest.exploreSection = DEFAULT_EXPLORE_SECTION;
+      } else if (!Array.isArray(rest.exploreSection.collections)) {
+        rest.exploreSection.collections = DEFAULT_EXPLORE_SECTION.collections;
       }
       if (envWhatsapp) rest.whatsappNumber = envWhatsapp;
       if (envWhatsappDisplay) rest.whatsappDisplay = envWhatsappDisplay;
@@ -2175,8 +2177,10 @@ export async function getStoreConfig() {
   const jdb = readJSONDB();
   const cfg = { ...(jdb.storeConfig || INITIAL_DB_STATE.storeConfig) };
   if (!cfg.name || cfg.name === 'ShopEase') cfg.name = 'Nakoda Imitation';
-  if (!cfg.exploreSection || !cfg.exploreSection.collections || cfg.exploreSection.collections.length === 0) {
+  if (!cfg.exploreSection) {
     cfg.exploreSection = DEFAULT_EXPLORE_SECTION;
+  } else if (!Array.isArray(cfg.exploreSection.collections)) {
+    cfg.exploreSection.collections = DEFAULT_EXPLORE_SECTION.collections;
   }
   if (envWhatsapp) cfg.whatsappNumber = envWhatsapp;
   if (envWhatsappDisplay) cfg.whatsappDisplay = envWhatsappDisplay;
@@ -2200,12 +2204,22 @@ export async function updateStoreConfig(configData) {
       const { _id, __v, ...rest } = config.toObject();
       memoryCache.invalidateConfig();
       broadcastCatalogEvent(CATALOG_EVENTS.CONFIG_UPDATED, { storeConfig: rest });
+      try {
+        const jdb = readJSONDB();
+        jdb.storeConfig = { ...(jdb.storeConfig || {}), ...configData };
+        writeJSONDB(jdb);
+      } catch (e) {}
       return rest;
     } else {
       const created = await StoreConfig.create(configData);
       const { _id, __v, ...rest } = created.toObject();
       memoryCache.invalidateConfig();
       broadcastCatalogEvent(CATALOG_EVENTS.CONFIG_UPDATED, { storeConfig: rest });
+      try {
+        const jdb = readJSONDB();
+        jdb.storeConfig = { ...(jdb.storeConfig || {}), ...configData };
+        writeJSONDB(jdb);
+      } catch (e) {}
       return rest;
     }
   }

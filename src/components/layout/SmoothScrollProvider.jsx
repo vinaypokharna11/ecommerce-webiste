@@ -105,6 +105,35 @@ export function SmoothScrollProvider({ children }) {
     return () => clearTimeout(timer);
   }, [pathname]);
 
+  // Instant scroll-to-top handler for navbar tab switches & popstate navigation
+  useEffect(() => {
+    const handleScrollToTop = () => {
+      if (lenisRef.current) {
+        lenisRef.current.scrollTo(0, { immediate: true });
+      }
+      if (typeof window !== 'undefined') {
+        window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+        document.documentElement.scrollTop = 0;
+        document.body.scrollTop = 0;
+      }
+      setTimeout(() => {
+        if (lenisRef.current) {
+          lenisRef.current.scrollTo(0, { immediate: true });
+        }
+        import('gsap/ScrollTrigger').then(({ ScrollTrigger }) => {
+          ScrollTrigger.refresh();
+        }).catch(() => {});
+      }, 50);
+    };
+
+    window.addEventListener('nakoda:scroll-to-top', handleScrollToTop);
+    window.addEventListener('popstate', handleScrollToTop);
+    return () => {
+      window.removeEventListener('nakoda:scroll-to-top', handleScrollToTop);
+      window.removeEventListener('popstate', handleScrollToTop);
+    };
+  }, []);
+
   return (
     <SmoothScrollContext.Provider value={lenisRef.current}>
       {children}

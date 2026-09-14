@@ -137,6 +137,7 @@ const STORAGE_KEYS = {
   CATEGORIES: 'shopease_admin_categories_v1',
   OFFERS: 'shopease_admin_offers_v1',
   CONFIG: 'shopease_admin_config_v1',
+  EXPLORE: 'shopease_admin_explore_v1',
   ACTIVITY: 'shopease_admin_activity_v1',
 };
 
@@ -181,6 +182,16 @@ export const CatalogProvider = ({ children }) => {
         } catch (e) {}
       }
 
+      const savedExplore = localStorage.getItem(STORAGE_KEYS.EXPLORE);
+      if (savedExplore) {
+        try {
+          const parsed = JSON.parse(savedExplore);
+          if (parsed && Array.isArray(parsed.collections)) {
+            setExploreSection(parsed);
+          }
+        } catch (e) {}
+      }
+
       const savedAct = localStorage.getItem(STORAGE_KEYS.ACTIVITY);
       if (savedAct) setActivities(JSON.parse(savedAct));
     } catch (e) {
@@ -216,6 +227,15 @@ export const CatalogProvider = ({ children }) => {
       console.warn('Failed to save config to localStorage', e);
     }
   }, [storeConfig]);
+
+  useEffect(() => {
+    if (!isHydratedRef.current || !exploreSection) return;
+    try {
+      localStorage.setItem(STORAGE_KEYS.EXPLORE, JSON.stringify(exploreSection));
+    } catch (e) {
+      console.warn('Failed to save exploreSection to localStorage', e);
+    }
+  }, [exploreSection]);
 
   const [isLiveConnected, setIsLiveConnected] = useState(false);
   const broadcastChannelRef = useRef(null);
@@ -1104,18 +1124,23 @@ export const CatalogProvider = ({ children }) => {
       const res = await fetch('/api/explore', {
         method: 'PUT',
         headers: getAuthHeaders(),
+        credentials: 'include',
         body: JSON.stringify(updatedExplore),
       });
-      const data = await res.json();
-      if (data.success && data.exploreSection) {
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success && data.exploreSection) {
         setExploreSection(data.exploreSection);
+        setStoreConfig((prev) => ({ ...prev, exploreSection: data.exploreSection }));
         broadcastLocal('EXPLORE_UPDATED', { exploreSection: data.exploreSection });
+        try {
+          localStorage.setItem(STORAGE_KEYS.EXPLORE, JSON.stringify(data.exploreSection));
+        } catch (e) {}
         return { success: true, exploreSection: data.exploreSection };
       }
-      return { success: false, error: data.error };
+      return { success: false, error: data.error || `Failed to update explore section (HTTP ${res.status})` };
     } catch (err) {
       console.error('Failed to save explore section', err);
-      return { success: false, error: err.message };
+      return { success: false, error: err.message || 'Network error updating explore section' };
     }
   }, [getAuthHeaders, broadcastLocal, logActivity]);
 
@@ -1315,6 +1340,7 @@ export const CatalogProvider = ({ children }) => {
     exportCatalogJson,
     importCatalogJson,
     logActivity,
+    getAuthHeaders,
   };
 
   return (
