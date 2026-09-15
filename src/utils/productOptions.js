@@ -136,3 +136,112 @@ export const getProductAvailableSizes = (product) => {
 // Maintain backwards compatibility: getProductSizes returns all sizes
 export const getProductSizes = getAllProductSizes;
 
+/**
+ * Common color name to hex mapping for jewelry, apparel & lifestyle products
+ */
+export const COLOR_HEX_MAP = {
+  black: '#171717',
+  'matte black': '#0F172A',
+  white: '#FFFFFF',
+  red: '#EF4444',
+  blue: '#3B82F6',
+  'navy blue': '#1E293B',
+  navy: '#1E293B',
+  grey: '#68696E',
+  gray: '#68696E',
+  'deep blue-green': '#0F565D',
+  'dark purple': '#581C87',
+  purple: '#A855F7',
+  green: '#10B981',
+  yellow: '#EAB308',
+  pink: '#EC4899',
+  maroon: '#800000',
+  gold: '#D4AF37',
+  'gold polish': '#D4AF37',
+  silver: '#C0C0C0',
+  'silver tone': '#C0C0C0',
+  rose: '#F472B6',
+  'rose gold': '#B76E79',
+  ruby: '#9B111E',
+  emerald: '#50C878',
+  bronze: '#CD7F32',
+  copper: '#B87333',
+  antique: '#917254',
+  pearl: '#F0EAD6',
+  orange: '#F97316',
+  brown: '#78350F',
+  teal: '#14B8A6',
+  lavender: '#C4B5FD',
+  peach: '#FDBA74',
+  olive: '#65A30D',
+  cream: '#FFFDD0',
+  beige: '#F5F5DC',
+};
+
+/**
+ * Returns an array of standardized color objects: [{ name: 'Red', hex: '#EF4444' }]
+ * Extracts colors from:
+ * 1. product.colors (array of objects {name, hex}, or array of strings, or comma-separated string)
+ * 2. product.availableColors
+ */
+export const getProductColors = (product) => {
+  if (!product) return [];
+
+  let rawColors = product.colors;
+  if (!rawColors && product.availableColors) rawColors = product.availableColors;
+  if (!rawColors) return [];
+
+  // If string, parse by commas
+  if (typeof rawColors === 'string') {
+    const parts = rawColors.split(',').map((s) => s.trim()).filter(Boolean);
+    return parts.map((part) => {
+      if (part.includes(':')) {
+        const [name, hex] = part.split(':').map((s) => s.trim());
+        let cleanHex = hex;
+        if (cleanHex && !cleanHex.startsWith('#') && /^[0-9A-Fa-f]{6}$/.test(cleanHex)) {
+          cleanHex = `#${cleanHex}`;
+        }
+        return { name, hex: cleanHex || COLOR_HEX_MAP[name.toLowerCase()] || '#1D1D1F' };
+      }
+      const lower = part.toLowerCase();
+      return { name: part, hex: COLOR_HEX_MAP[lower] || '#1D1D1F' };
+    });
+  }
+
+  if (Array.isArray(rawColors)) {
+    return rawColors
+      .map((col) => {
+        if (!col) return null;
+        if (typeof col === 'string') {
+          const lower = col.trim().toLowerCase();
+          return { name: col.trim(), hex: COLOR_HEX_MAP[lower] || '#1D1D1F' };
+        }
+        if (typeof col === 'object') {
+          const name = col.name || col.color || col.label || '';
+          if (!name) return null;
+          const lower = String(name).trim().toLowerCase();
+          let hex = col.hex || col.colorHex || COLOR_HEX_MAP[lower] || '#1D1D1F';
+          if (hex && !hex.startsWith('#') && /^[0-9A-Fa-f]{6}$/.test(hex)) {
+            hex = `#${hex}`;
+          }
+          return { name: String(name).trim(), hex };
+        }
+        return null;
+      })
+      .filter(Boolean);
+  }
+
+  return [];
+};
+
+/**
+ * Retrieves the hex code for a given color name from product's color list
+ */
+export const getProductColorHex = (product, colorName) => {
+  if (!colorName) return '#1D1D1F';
+  const colors = getProductColors(product);
+  const found = colors.find((c) => c.name.toLowerCase() === String(colorName).toLowerCase());
+  if (found && found.hex) return found.hex;
+  return COLOR_HEX_MAP[String(colorName).toLowerCase()] || '#1D1D1F';
+};
+

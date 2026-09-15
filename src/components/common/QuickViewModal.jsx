@@ -23,7 +23,8 @@ import { formatPrice } from '@/utils/formatPrice';
 import { 
   getAllProductSizes, 
   getProductAvailableSizes, 
-  isProductSizeAvailable 
+  isProductSizeAvailable,
+  getProductColors,
 } from '@/utils/productOptions';
 import { ProductReviews } from '@/components/product/ProductReviews';
 import Lenis from 'lenis';
@@ -40,7 +41,9 @@ export const QuickViewModal = ({
   onNotify,
 }) => {
   const [selectedSize, setSelectedSize] = useState(null);
+  const [selectedColor, setSelectedColor] = useState(null);
   const [showSizeWarning, setShowSizeWarning] = useState(false);
+  const [showColorWarning, setShowColorWarning] = useState(false);
   const [localQty, setLocalQty] = useState(cartQuantity || 0);
   const [isAdded, setIsAdded] = useState(false);
   const [liveReviewStats, setLiveReviewStats] = useState(null);
@@ -52,10 +55,18 @@ export const QuickViewModal = ({
           ? product.selectedSize
           : null
       );
-      // By default without adding it to cart, show 0 (or existing cart quantity)
-      setLocalQty(cartQuantity || 0);
+      const productColors = getProductColors(product);
+      setSelectedColor(
+        product.selectedColor || (productColors.length === 1 ? productColors[0].name : null)
+      );
+      // By default without adding it to cart, show 0 (or existing cart quantity capped to stock)
+      const maxS = typeof product.stockCount === 'number'
+        ? Math.max(0, product.stockCount)
+        : (product.stockStatus === 'out_of_stock' ? 0 : 99);
+      setLocalQty(Math.min(maxS, cartQuantity || 0));
       setIsAdded(false);
       setShowSizeWarning(false);
+      setShowColorWarning(false);
       setLiveReviewStats(null);
     }
   }, [product, cartQuantity]);
@@ -188,20 +199,29 @@ export const QuickViewModal = ({
 
   if (!isOpen || !product) return null;
 
-  const isOutOfStock = product.stockStatus === 'out_of_stock';
-  const displayQty = localQty > 0 ? localQty : 1;
+  const maxStock = typeof product.stockCount === 'number'
+    ? Math.max(0, product.stockCount)
+    : (product.stockStatus === 'out_of_stock' ? 0 : 99);
+  const isOutOfStock = product.stockStatus === 'out_of_stock' || (typeof product.stockCount === 'number' && product.stockCount <= 0);
+  const displayQty = isOutOfStock ? 0 : Math.min(maxStock, localQty > 0 ? localQty : 1);
   const totalPrice = (product.price || 0) * displayQty;
   const allSizes = getAllProductSizes(product);
   const availableSizes = getProductAvailableSizes(product);
+  const productColors = getProductColors(product);
   const whatsappUrl = createProductWhatsAppUrl(
     product,
     selectedSize ? `Size: ${selectedSize}` : null,
-    null,
+    selectedColor || null,
     STORE_CONFIG?.whatsappNumber
   );
 
   const handleAdd = () => {
-    if (isOutOfStock) return;
+    if (isOutOfStock || maxStock <= 0) {
+      if (onNotify) {
+        onNotify('error', 'Out of Stock ⚠️', `${product.name} is currently out of stock.`);
+      }
+      return;
+    }
     if (allSizes.length > 0 && !selectedSize) {
       setShowSizeWarning(true);
       setTimeout(() => setShowSizeWarning(false), 3500);
@@ -210,10 +230,19 @@ export const QuickViewModal = ({
       }
       return;
     }
-    const qtyToAdd = localQty > 0 ? localQty : 1;
+    if (productColors.length > 0 && !selectedColor) {
+      setShowColorWarning(true);
+      setTimeout(() => setShowColorWarning(false), 3500);
+      if (onNotify) {
+        onNotify('error', 'Select Color First ⚠️', `Please choose a color for ${product.name} before adding to cart.`);
+      }
+      return;
+    }
+    const qtyToAdd = Math.min(maxStock, localQty > 0 ? localQty : 1);
     onAddToCart && onAddToCart({
       ...product,
-      selectedVariant: selectedSize || '',
+      selectedColor: selectedColor || '',
+      selectedVariant: [selectedColor, selectedSize].filter(Boolean).join(' / ') || selectedSize || selectedColor || '',
       selectedSize: selectedSize || '',
       quantity: qtyToAdd,
     });
@@ -313,25 +342,34 @@ export const QuickViewModal = ({
                     </h1>
 
                     {/* Rating & reviews with live database sync */}
-                    <div className="flex items-center gap-2 text-xs">
-                      <div className="flex items-center text-[#FF9500]">
-                        <Star className="w-3.5 h-3.5 fill-current" />
-                        <span className="ml-1 font-bold text-[#1D1D1F]">
-                          {liveReviewStats !== null
-                            ? Number(liveReviewStats.averageRating || 0).toFixed(1)
-                            : product.rating
-                            ? Number(product.rating).toFixed(1)
-                            : '0.0'}
-                        </span>
-                      </div>
-                      <span className="text-[#86868B]">·</span>
-                      <span className="text-[#86868B]">
-                        {(liveReviewStats !== null ? liveReviewStats.totalReviews : product.reviews) || 0} customer{' '}
-                        {((liveReviewStats !== null ? liveReviewStats.totalReviews : product.reviews) || 0) === 1
-                          ? 'review'
-                          : 'reviews'}
-                      </span>
-                    </div>
+                    {(() => {
+                      const totalRev = (liveReviewStats !== null ? liveReviewStats.totalReviews : product.reviews) || 0;
+                      const avgRat = liveReviewStats !== null
+                        ? Number(liveReviewStats.averageRating || 0)
+                        : Number(product.rating || 0);
+
+                      if (totalRev > 0 && avgRat > 0) {
+                        return (
+                          <div className="flex items-center gap-2 text-xs">
+                            <div className="flex items-center text-[#FF9500]">
+                              <Star className="w-3.5 h-3.5 fill-current" />
+                              <span className="ml-1 font-bold text-[#1D1D1F]">
+                                {avgRat.toFixed(1)}
+                              </span>
+                            </div>
+                            <span className="text-[#86868B]">·</span>
+                            <span className="text-[#86868B]">
+                              {totalRev} customer {totalRev === 1 ? 'review' : 'reviews'}
+                            </span>
+                          </div>
+                        );
+                      }
+                      return (
+                        <div className="flex items-center gap-1.5 text-xs text-[#86868B]">
+                          <span>No reviews yet</span>
+                        </div>
+                      );
+                    })()}
 
                     {/* Price Display */}
                     <div className="flex items-baseline gap-2.5 sm:gap-3 pt-1 sm:pt-2">
@@ -446,42 +484,132 @@ export const QuickViewModal = ({
                     </div>
                   )}
 
+                  {/* Color Selection */}
+                  {productColors.length > 0 && (
+                    <div className="space-y-1.5 sm:space-y-2 pt-2 border-t border-black/[0.06]">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-sans font-semibold text-[#1D1D1F]">
+                          Color:
+                        </span>
+                        {selectedColor ? (
+                          <span className="text-[11px] font-sans font-bold text-[#0071E3] bg-[#0071E3]/10 px-2 py-0.5 rounded">
+                            Selected: <strong className="text-[#0071E3] uppercase">{selectedColor}</strong>
+                          </span>
+                        ) : (
+                          <span className="text-[11px] font-sans font-medium text-amber-600">
+                            Please select a color
+                          </span>
+                        )}
+                      </div>
+
+                      <AnimatePresence>
+                        {showColorWarning && (
+                          <motion.div
+                            initial={{ opacity: 0, y: -4 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -4 }}
+                            className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-xs font-bold text-rose-700 flex items-center gap-2"
+                          >
+                            <AlertCircle className="w-4 h-4 flex-shrink-0 text-rose-600" />
+                            <span>Please select a color before adding to cart!</span>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+
+                      <motion.div 
+                        animate={showColorWarning ? { x: [-4, 4, -4, 4, 0] } : {}}
+                        transition={{ duration: 0.35 }}
+                        className={`flex flex-wrap gap-1.5 sm:gap-2 p-1 rounded-xl transition-all ${
+                          showColorWarning ? 'bg-rose-50 ring-2 ring-rose-500/80' : ''
+                        }`}
+                      >
+                        {productColors.map((c) => {
+                          const isSelected = selectedColor === c.name;
+
+                          return (
+                            <button
+                              key={c.name}
+                              type="button"
+                              onClick={() => {
+                                setSelectedColor(c.name);
+                                setShowColorWarning(false);
+                              }}
+                              title={`Select Color: ${c.name}`}
+                              className={`flex items-center gap-2 px-3 sm:px-3.5 py-1 sm:py-1.5 rounded-full text-xs font-sans font-medium transition-all cursor-pointer ${
+                                isSelected
+                                  ? 'bg-[#1D1D1F] text-white shadow-xs scale-105 ring-2 ring-[#1D1D1F] ring-offset-1'
+                                  : 'bg-[#F5F5F7] text-[#1D1D1F] hover:bg-[#E8E8ED] border border-black/[0.05]'
+                              }`}
+                            >
+                              <span
+                                className="w-3.5 h-3.5 rounded-full border border-black/15 shadow-2xs shrink-0"
+                                style={{ backgroundColor: c.hex }}
+                              />
+                              <span className="uppercase text-[11px] font-semibold">{c.name}</span>
+                            </button>
+                          );
+                        })}
+                      </motion.div>
+                    </div>
+                  )}
+
                   {/* Quantity Counter & Wishlist (Starts at 0 by default when not in bag) */}
-                  <div className="flex items-center gap-3 sm:gap-4 pt-2 border-t border-black/[0.06]">
-                    <span className="text-xs font-sans font-semibold text-[#1D1D1F]">
-                      Quantity:
-                    </span>
-                    <div className="flex items-center bg-[#F5F5F7] border border-black/[0.05] rounded-full p-1">
-                      <button
-                        onClick={() => {
-                          const next = Math.max(0, localQty - 1);
-                          setLocalQty(next);
-                          if (cartQuantity > 0 && onUpdateQuantity) {
-                            onUpdateQuantity(product.id, next);
-                          }
-                        }}
-                        disabled={localQty <= 0}
-                        className="w-7 h-7 rounded-full bg-white text-[#1D1D1F] disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center shadow-xs transition-colors hover:bg-black/5 cursor-pointer"
-                        aria-label="Decrease quantity"
-                      >
-                        <Minus className="w-3.5 h-3.5" />
-                      </button>
-                      <span className="px-3 sm:px-4 text-xs font-sans font-bold text-[#1D1D1F] min-w-[20px] text-center">
-                        {localQty}
+                  <div className="flex items-center justify-between gap-3 sm:gap-4 pt-2 border-t border-black/[0.06] flex-wrap">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-sans font-semibold text-[#1D1D1F]">
+                        Quantity:
                       </span>
-                      <button
-                        onClick={() => {
-                          const next = localQty + 1;
-                          setLocalQty(next);
-                          if (cartQuantity > 0 && onUpdateQuantity) {
-                            onUpdateQuantity(product.id, next);
-                          }
-                        }}
-                        className="w-7 h-7 rounded-full bg-white text-[#1D1D1F] flex items-center justify-center shadow-xs transition-colors hover:bg-black/5 cursor-pointer"
-                        aria-label="Increase quantity"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                      </button>
+                      <div className="flex items-center bg-[#F5F5F7] border border-black/[0.05] rounded-full p-1">
+                        <button
+                          onClick={() => {
+                            const next = Math.max(0, localQty - 1);
+                            setLocalQty(next);
+                            if (cartQuantity > 0 && onUpdateQuantity) {
+                              onUpdateQuantity(product.id, next);
+                            }
+                          }}
+                          disabled={localQty <= 0 || isOutOfStock}
+                          className="w-7 h-7 rounded-full bg-white text-[#1D1D1F] disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center shadow-xs transition-colors hover:bg-black/5 cursor-pointer"
+                          aria-label="Decrease quantity"
+                        >
+                          <Minus className="w-3.5 h-3.5" />
+                        </button>
+                        <span className="px-3 sm:px-4 text-xs font-sans font-bold text-[#1D1D1F] min-w-[20px] text-center">
+                          {localQty}
+                        </span>
+                        <button
+                          onClick={() => {
+                            if (localQty >= maxStock) {
+                              if (onNotify) {
+                                onNotify('info', 'Stock Limit Reached ⚠️', `Only ${maxStock} unit${maxStock === 1 ? '' : 's'} available in stock.`);
+                              }
+                              return;
+                            }
+                            const next = Math.min(maxStock, localQty + 1);
+                            setLocalQty(next);
+                            if (cartQuantity > 0 && onUpdateQuantity) {
+                              onUpdateQuantity(product.id, next);
+                            }
+                          }}
+                          disabled={localQty >= maxStock || isOutOfStock}
+                          className="w-7 h-7 rounded-full bg-white text-[#1D1D1F] disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center shadow-xs transition-colors hover:bg-black/5 cursor-pointer"
+                          aria-label="Increase quantity"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+
+                      {/* Stock availability indicator */}
+                      {maxStock > 0 && maxStock <= 5 && (
+                        <span className="text-[11px] font-bold text-amber-600 bg-amber-50 border border-amber-200/60 px-2.5 py-0.5 rounded-full">
+                          Only {maxStock} left in stock
+                        </span>
+                      )}
+                      {isOutOfStock && (
+                        <span className="text-[11px] font-bold text-rose-600 bg-rose-50 border border-rose-200/60 px-2.5 py-0.5 rounded-full">
+                          Out of stock
+                        </span>
+                      )}
                     </div>
 
                     <button

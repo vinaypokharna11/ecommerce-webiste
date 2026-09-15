@@ -311,7 +311,7 @@ export const AdminProductModal = ({ isOpen, onClose, product = null }) => {
         price: Number(formData.price),
         oldPrice: Number(formData.oldPrice) || undefined,
         stockCount: Number(formData.stockCount) || 0,
-        rating: Number(formData.rating) || 4.9,
+        rating: Number(formData.rating) || 0,
         reviews: Number(formData.reviews) || 0,
         image: formData.customImageUrl?.trim() || formData.image,
         tags: typeof formData.tags === 'string'

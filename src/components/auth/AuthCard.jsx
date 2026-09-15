@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { ShoppingBag } from 'lucide-react';
 import { AuthTabs } from './AuthTabs';
 import { AuthMessage } from './AuthMessage';
 import { LoginForm } from './LoginForm';
@@ -43,8 +42,8 @@ export function AuthCard({
     >
       {/* Brand Icon Header */}
       <div className="text-center mb-6">
-        <div className="w-12 h-12 rounded-full bg-[#171717] text-[#9FD842] flex items-center justify-center mx-auto mb-3 shadow-md">
-          <ShoppingBag className="w-5 h-5" />
+        <div className="w-12 h-12 rounded-[16px] bg-[#171717] flex items-center justify-center mx-auto mb-3 shadow-md">
+          <span className="text-[#9FD842] text-xl font-black tracking-tight">N</span>
         </div>
         <h1 className="text-2xl font-extrabold text-[#171717] tracking-tight">
           {activeTab === 'login' ? 'Welcome Back' : 'Create an Account'}

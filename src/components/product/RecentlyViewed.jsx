@@ -16,14 +16,17 @@ export const RecentlyViewed = ({
   onQuickView,
   onToggleFavorite,
   onExploreCatalog,
+  onClearRecent,
 }) => {
-  const viewedList = recentlyViewedIds.length > 0
-    ? recentlyViewedIds
-        .map((id) => products.find((p) => p.id === id))
-        .filter(Boolean)
-    : products.slice(0, 4);
+  // Only show products the user has actually visited — no fallback
+  if (!recentlyViewedIds || recentlyViewedIds.length === 0) return null;
 
-  if (!viewedList || viewedList.length === 0) return null;
+  const viewedList = recentlyViewedIds
+    .map((id) => products.find((p) => String(p.id).trim() === String(id).trim()))
+    .filter(Boolean);
+
+  if (viewedList.length === 0) return null;
+
 
   return (
     <section className="py-10 sm:py-16 px-3.5 sm:px-8 lg:px-12 w-full max-w-[1440px] mx-auto bg-[#FBFBFD] border-t border-black/[0.05]">
@@ -35,13 +38,24 @@ export const RecentlyViewed = ({
           </h2>
         </div>
 
-        <button
-          onClick={onExploreCatalog}
-          className="self-start sm:self-auto text-xs sm:text-sm font-semibold text-[#0071E3] hover:text-[#0077ED] flex items-center gap-1.5 transition-colors group cursor-pointer"
-        >
-          <span>View All in Catalog</span>
-          <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-        </button>
+        <div className="flex items-center gap-3.5 sm:gap-4 self-start sm:self-auto">
+          {onClearRecent && (
+            <button
+              onClick={onClearRecent}
+              className="text-xs sm:text-sm font-medium text-[#86868B] hover:text-rose-600 transition-colors cursor-pointer"
+            >
+              Clear
+            </button>
+          )}
+
+          <button
+            onClick={onExploreCatalog}
+            className="text-xs sm:text-sm font-semibold text-[#0071E3] hover:text-[#0077ED] flex items-center gap-1.5 transition-colors group cursor-pointer"
+          >
+            <span>View All in Catalog</span>
+            <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+          </button>
+        </div>
       </div>
 
       {/* Grid */}

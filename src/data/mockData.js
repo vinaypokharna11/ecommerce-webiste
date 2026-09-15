@@ -72,6 +72,57 @@ export const DEFAULT_EXPLORE_SECTION = {
   ],
 };
 
+export const DEFAULT_HERO_SHOWCASE = [
+  {
+    id: 'trolley',
+    title: 'Cabin Spinner Suitcase',
+    category: 'BAGS & TROLLEYS',
+    badge: 'BESTSELLER',
+    badgeBg: 'bg-black',
+    image: '/assets/images/prod_trolley_wide.jpg',
+    imageFit: 'cover',
+    linkCategory: 'bags-luggage',
+    order: 0,
+    isActive: true,
+  },
+  {
+    id: 'jewelry',
+    title: 'Polki & Emerald Choker',
+    category: 'JEWELRY & HEIRLOOMS',
+    badge: 'LUXURY',
+    badgeBg: 'bg-[#FF9500]',
+    image: '/assets/images/nakoda/hero.jpg',
+    imageFit: 'cover',
+    linkCategory: 'jewelry',
+    order: 1,
+    isActive: true,
+  },
+  {
+    id: 'papad',
+    title: 'Spiced Urad Dal Papad',
+    category: 'PAPAD & SNACKS',
+    badge: 'FRESH CRISP',
+    badgeBg: 'bg-[#34C759]',
+    image: '/assets/images/prod_papad.jpg',
+    imageFit: 'cover',
+    linkCategory: 'food-grocery',
+    order: 2,
+    isActive: true,
+  },
+  {
+    id: 'innerwear',
+    title: 'Cotton Trunks (Pack of 3)',
+    category: 'UNDERGARMENTS',
+    badge: '100% COTTON',
+    badgeBg: 'bg-[#0071E3]',
+    image: '/assets/images/prod_innerwear.jpg',
+    imageFit: 'cover',
+    linkCategory: 'undergarments',
+    order: 3,
+    isActive: true,
+  },
+];
+
 export const CATALOG_PRODUCTS = [
   {
     id: 'prod-trolley',

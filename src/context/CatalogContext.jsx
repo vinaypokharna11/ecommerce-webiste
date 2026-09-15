@@ -7,6 +7,7 @@ import {
   CATEGORIES as DEFAULT_HOME_CATEGORIES,
   STORE_CONFIG as DEFAULT_STORE_CONFIG,
   DEFAULT_EXPLORE_SECTION,
+  DEFAULT_HERO_SHOWCASE,
   HERO_ASSETS
 } from '../data/mockData';
 
@@ -138,6 +139,7 @@ const STORAGE_KEYS = {
   OFFERS: 'shopease_admin_offers_v1',
   CONFIG: 'shopease_admin_config_v1',
   EXPLORE: 'shopease_admin_explore_v1',
+  HERO_SHOWCASE: 'shopease_admin_hero_showcase_v1',
   ACTIVITY: 'shopease_admin_activity_v1',
 };
 
@@ -150,6 +152,7 @@ export const CatalogProvider = ({ children }) => {
   const [offers, setOffers] = useState(DEFAULT_OFFERS);
   const [storeConfig, setStoreConfig] = useState(DEFAULT_STORE_CONFIG);
   const [exploreSection, setExploreSection] = useState(DEFAULT_EXPLORE_SECTION);
+  const [heroShowcase, setHeroShowcase] = useState(DEFAULT_HERO_SHOWCASE);
   const [activities, setActivities] = useState(() => [
     { id: 1, title: 'Store Catalog Initialized', time: 'Just now', type: 'system', icon: 'Sparkles' },
     { id: 2, title: '16 default products loaded', time: 'Just now', type: 'product', icon: 'Package' },
@@ -188,6 +191,16 @@ export const CatalogProvider = ({ children }) => {
           const parsed = JSON.parse(savedExplore);
           if (parsed && Array.isArray(parsed.collections)) {
             setExploreSection(parsed);
+          }
+        } catch (e) {}
+      }
+
+      const savedHero = localStorage.getItem(STORAGE_KEYS.HERO_SHOWCASE);
+      if (savedHero) {
+        try {
+          const parsed = JSON.parse(savedHero);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setHeroShowcase(parsed);
           }
         } catch (e) {}
       }
@@ -293,6 +306,11 @@ export const CatalogProvider = ({ children }) => {
           setExploreSection(data.exploreSection);
         } else if (data.storeConfig?.exploreSection) {
           setExploreSection(data.storeConfig.exploreSection);
+        }
+        if (Array.isArray(data.heroShowcase) && data.heroShowcase.length > 0) {
+          setHeroShowcase(data.heroShowcase);
+        } else if (Array.isArray(data.storeConfig?.heroShowcase) && data.storeConfig.heroShowcase.length > 0) {
+          setHeroShowcase(data.storeConfig.heroShowcase);
         }
       }
     } catch (err) {
@@ -409,6 +427,11 @@ export const CatalogProvider = ({ children }) => {
           setExploreSection(payload.exploreSection);
         }
         break;
+      case 'HERO_SHOWCASE_UPDATED':
+        if (Array.isArray(payload?.heroShowcase)) {
+          setHeroShowcase(payload.heroShowcase);
+        }
+        break;
       case 'CATALOG_SEEDED':
       case 'CATALOG_CLEARED':
       case 'SEED_TEMPLATE_UPDATED':
@@ -521,7 +544,7 @@ export const CatalogProvider = ({ children }) => {
     const newProduct = {
       ...productData,
       id: cleanId,
-      rating: Number(productData.rating) || 5.0,
+      rating: Number(productData.rating) || 0,
       reviews: Number(productData.reviews) || 0,
       discountPercent: productData.oldPrice && productData.price && productData.oldPrice > productData.price
         ? Math.round(((productData.oldPrice - productData.price) / productData.oldPrice) * 100)
@@ -1144,6 +1167,36 @@ export const CatalogProvider = ({ children }) => {
     }
   }, [getAuthHeaders, broadcastLocal, logActivity]);
 
+  const updateHeroShowcase = useCallback(async (updatedCards) => {
+    const cardsToSave = Array.isArray(updatedCards) ? updatedCards : DEFAULT_HERO_SHOWCASE;
+    setHeroShowcase(cardsToSave);
+    broadcastLocal('HERO_SHOWCASE_UPDATED', { heroShowcase: cardsToSave });
+    logActivity('Updated hero showcase 2x2 cards', 'settings', 'Sparkles');
+
+    try {
+      const res = await fetch('/api/hero-showcase', {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+        body: JSON.stringify(cardsToSave),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success && Array.isArray(data.heroShowcase)) {
+        setHeroShowcase(data.heroShowcase);
+        setStoreConfig((prev) => ({ ...prev, heroShowcase: data.heroShowcase }));
+        broadcastLocal('HERO_SHOWCASE_UPDATED', { heroShowcase: data.heroShowcase });
+        try {
+          localStorage.setItem(STORAGE_KEYS.HERO_SHOWCASE, JSON.stringify(data.heroShowcase));
+        } catch (e) {}
+        return { success: true, heroShowcase: data.heroShowcase };
+      }
+      return { success: false, error: data.error || `Failed to update hero showcase (HTTP ${res.status})` };
+    } catch (err) {
+      console.error('Failed to save hero showcase', err);
+      return { success: false, error: err.message || 'Network error updating hero showcase' };
+    }
+  }, [getAuthHeaders, broadcastLocal, logActivity]);
+
   const restoreMasterSeed = useCallback(async () => {
     logActivity('Restoring master seed catalog into live database...', 'system', 'RotateCcw');
     try {
@@ -1331,6 +1384,9 @@ export const CatalogProvider = ({ children }) => {
     exploreSection,
     updateExploreSection,
     setExploreSection,
+    heroShowcase,
+    updateHeroShowcase,
+    setHeroShowcase,
     restoreMasterSeed,
     saveCurrentAsMasterSeed,
     clearAllCatalog,

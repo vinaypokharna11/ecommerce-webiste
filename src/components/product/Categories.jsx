@@ -23,7 +23,10 @@ export const Categories = ({
     return null;
   }
 
-  const sectionTitle = exploreSection?.title || 'Explore Our Collections';
+  const rawTitle = exploreSection?.title;
+  const sectionTitle = (!rawTitle || rawTitle.toLowerCase().includes('test'))
+    ? 'Explore Our Collections'
+    : rawTitle;
   const sectionSubtitle = exploreSection?.subtitle || 'Find exactly what you’re looking for across our curated lifestyle, grocery, apparel, and travel categories.';
 
   const rawCollections = (exploreSection?.collections && exploreSection.collections.length > 0)

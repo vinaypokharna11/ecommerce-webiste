@@ -17,6 +17,19 @@ const ExploreSectionSchema = new mongoose.Schema({
   collections: [ExploreCollectionSchema],
 });
 
+const HeroShowcaseItemSchema = new mongoose.Schema({
+  id: { type: String, required: true },
+  title: { type: String, required: true },
+  category: { type: String, required: true },
+  badge: { type: String, default: '' },
+  badgeBg: { type: String, default: 'bg-black' },
+  image: { type: String, default: '/assets/images/prod_trolley_wide.jpg' },
+  imageFit: { type: String, default: 'cover' },
+  linkCategory: { type: String, default: 'all' },
+  order: { type: Number, default: 0 },
+  isActive: { type: Boolean, default: true },
+});
+
 const StoreConfigSchema = new mongoose.Schema(
   {
     name: { type: String, default: 'Nakoda Imitation' },
@@ -29,6 +42,7 @@ const StoreConfigSchema = new mongoose.Schema(
     isInitialized: { type: Boolean, default: true },
     seedVersion: { type: Number, default: 1 },
     exploreSection: { type: ExploreSectionSchema, default: () => ({}) },
+    heroShowcase: [HeroShowcaseItemSchema],
   },
   { timestamps: true }
 );

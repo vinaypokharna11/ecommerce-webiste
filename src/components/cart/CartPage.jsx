@@ -29,18 +29,18 @@ import { useCatalog } from '@/context/CatalogContext';
 import { firePartyPopper } from '@/utils/confetti';
 import { orderService } from '@/services/orderService';
 import { formatPrice } from '@/utils/formatPrice';
-import { getProductSizes, isProductSizeAvailable } from '@/utils/productOptions';
+import { getProductSizes, isProductSizeAvailable, getProductColors, getProductColorHex } from '@/utils/productOptions';
 import { createCartWhatsAppUrl } from '@/utils/whatsapp';
 
 const SHIPPING_THRESHOLD = 999;
 
 const VALID_PROMOS = {
-  ELEC20: { discount: 0.20, label: 'Electronics 20% OFF' },
-  FASH30: { discount: 0.30, label: 'Fashion 30% OFF' },
-  HOME15: { discount: 0.15, label: 'Home & Living 15% OFF' },
-  ACC25: { discount: 0.25, label: 'Accessories 25% OFF' },
-  FEET35: { discount: 0.35, label: 'Footwear 35% OFF' },
-  GIFT10: { discount: 0.10, label: 'Gift Hampers 10% OFF' },
+  ELEC20: { discount: 0.20, label: 'Electronics 20% OFF',   categories: ['electronics'] },
+  FASH30: { discount: 0.30, label: 'Fashion 30% OFF',        categories: ['clothing', 'fashion'] },
+  HOME15: { discount: 0.15, label: 'Home & Living 15% OFF', categories: ['home-living', 'home'] },
+  ACC25:  { discount: 0.25, label: 'Accessories 25% OFF',   categories: ['accessories', 'jewelry', 'bags-luggage'] },
+  FEET35: { discount: 0.35, label: 'Footwear 35% OFF',       categories: ['footwear'] },
+  GIFT10: { discount: 0.10, label: 'Gift Hampers 10% OFF',   categories: ['gift-hampers', 'food-grocery', 'papad'] },
 };
 
 // ─── Checkout Modal ───────────────────────────────────────────────────────────
@@ -307,6 +307,15 @@ const CheckoutModal = ({ cartList, products = [], subtotal, promoDiscountAmount,
                                 Size: {itemSize}
                               </span>
                             )}
+                            {item.selectedColor && (
+                              <span className="bg-white px-2 py-0.5 rounded-full border border-black/5 font-semibold text-[#1D1D1F] flex items-center gap-1">
+                                <span
+                                  className="w-2 h-2 rounded-full border border-black/20 shrink-0"
+                                  style={{ backgroundColor: getProductColorHex(fullProduct, item.selectedColor) }}
+                                />
+                                Color: {item.selectedColor}
+                              </span>
+                            )}
                           </div>
                         </div>
                         <span className="font-extrabold text-[#1D1D1F] shrink-0">
@@ -443,6 +452,7 @@ export const CartPage = ({
   products = [],
   onUpdateQuantity,
   onUpdateSize,
+  onUpdateColor,
   onAddToCart,
   onToggleFavorite,
   onQuickView,
@@ -475,8 +485,22 @@ export const CartPage = ({
   const cartList = Object.values(cartItems).filter((item) => item.quantity > 0);
   const subtotal = cartList.reduce((sum, item) => sum + (item.price || 0) * item.quantity, 0);
 
+  // Eligible cart items for active promo (matching coupon's categories)
+  const eligibleCartItems = appliedPromo && VALID_PROMOS[appliedPromo]
+    ? cartList.filter((item) => {
+        const itemCat = (item.category || item.categoryId || '').toLowerCase();
+        return (VALID_PROMOS[appliedPromo].categories || []).some(
+          (c) => itemCat === c || itemCat.includes(c) || c.includes(itemCat)
+        );
+      })
+    : [];
+
+  const eligibleSubtotal = eligibleCartItems.reduce(
+    (sum, item) => sum + (item.price || 0) * item.quantity, 0
+  );
+
   const promoDiscountAmount = appliedPromo && VALID_PROMOS[appliedPromo]
-    ? Math.round(subtotal * VALID_PROMOS[appliedPromo].discount)
+    ? Math.round(eligibleSubtotal * VALID_PROMOS[appliedPromo].discount)
     : 0;
 
   const shippingFee = subtotal >= SHIPPING_THRESHOLD || subtotal === 0 ? 0 : 99;
@@ -514,12 +538,26 @@ export const CartPage = ({
   const handleApplyPromo = () => {
     const code = promoCode.trim().toUpperCase();
     if (!code) return;
-    if (VALID_PROMOS[code]) {
-      setAppliedPromo(code);
-      setPromoError('');
-    } else {
-      setPromoError('Invalid promo code. Try ELEC20, FASH30, HOME15, ACC25');
+    if (!VALID_PROMOS[code]) {
+      setPromoError('Invalid promo code. Try ELEC20, FASH30, HOME15, ACC25, FEET35, GIFT10');
+      return;
     }
+    // Check that at least one cart item belongs to the coupon's categories
+    const promo = VALID_PROMOS[code];
+    const hasMatchingItem = cartList.some((item) => {
+      const itemCat = (item.category || item.categoryId || '').toLowerCase();
+      return (promo.categories || []).some(
+        (c) => itemCat === c || itemCat.includes(c) || c.includes(itemCat)
+      );
+    });
+    if (!hasMatchingItem) {
+      setPromoError(
+        `This coupon is only valid for: ${promo.label.split(' ')[0]} products. No matching items found in your cart.`
+      );
+      return;
+    }
+    setAppliedPromo(code);
+    setPromoError('');
   };
 
   const handleCheckoutClick = () => {
@@ -718,6 +756,58 @@ export const CartPage = ({
                               </div>
                             )}
 
+                            {/* Color Option Selector (if product has colors) */}
+                            {(() => {
+                              const productColors = getProductColors(fullProduct);
+                              const activeColor = item.selectedColor || (productColors.length === 1 ? productColors[0].name : null);
+                              if (productColors.length === 0 && !item.selectedColor) return null;
+
+                              return (
+                                <div className="mt-2 flex items-center gap-1.5 flex-wrap">
+                                  <span className="text-[11px] font-bold text-[#777777] uppercase tracking-wider">
+                                    Color:
+                                  </span>
+                                  {productColors.length > 0 ? (
+                                    <div className="flex flex-wrap items-center gap-1">
+                                      {productColors.map((c) => {
+                                        const isColSelected = String(activeColor || '').toLowerCase() === c.name.toLowerCase();
+                                        return (
+                                          <button
+                                            key={c.name}
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              if (onUpdateColor) onUpdateColor(item.id, c.name);
+                                            }}
+                                            title={`Select Color: ${c.name}`}
+                                            className={`flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold transition-all cursor-pointer ${
+                                              isColSelected
+                                                ? 'bg-[#1D1D1F] text-white shadow-xs scale-105 ring-1 ring-[#1D1D1F]'
+                                                : 'bg-[#F5F5F7] text-[#555555] hover:bg-[#E8E8ED] hover:text-[#1D1D1F] border border-black/5'
+                                            }`}
+                                          >
+                                            <span
+                                              className="w-2.5 h-2.5 rounded-full border border-black/15 shrink-0"
+                                              style={{ backgroundColor: c.hex }}
+                                            />
+                                            <span className="uppercase text-[10px]">{c.name}</span>
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
+                                  ) : (
+                                    <span className="inline-flex items-center gap-1 bg-[#F5F5F7] px-2.5 py-0.5 rounded-full text-[11px] font-bold text-[#1D1D1F]">
+                                      <span
+                                        className="w-2.5 h-2.5 rounded-full border border-black/15"
+                                        style={{ backgroundColor: getProductColorHex(fullProduct, item.selectedColor) }}
+                                      />
+                                      <span className="uppercase text-[10px]">{item.selectedColor}</span>
+                                    </span>
+                                  )}
+                                </div>
+                              );
+                            })()}
+
                           <div className="flex items-center justify-between mt-3 gap-2 flex-wrap">
                             <span className="text-sm sm:text-base font-extrabold text-[#1D1D1F]">
                               {formatPrice(item.price * item.quantity, STORE_CONFIG.currency)}
@@ -734,12 +824,26 @@ export const CartPage = ({
                                 <span className="text-xs font-bold text-[#1D1D1F] px-2">
                                   {item.quantity}
                                 </span>
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); onUpdateQuantity(item.id, item.quantity + 1); }}
-                                  className="w-6 h-6 rounded-full bg-[#1D1D1F] text-white flex items-center justify-center font-bold hover:bg-[#000000] transition-colors"
-                                >
-                                  <Plus className="w-3 h-3" />
-                                </button>
+                                {(() => {
+                                  const maxStock = typeof fullProduct?.stockCount === 'number'
+                                    ? Math.max(0, fullProduct.stockCount)
+                                    : (typeof item.stockCount === 'number' ? Math.max(0, item.stockCount) : 99);
+
+                                  return (
+                                    <button
+                                      disabled={item.quantity >= maxStock}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (item.quantity >= maxStock) return;
+                                        onUpdateQuantity(item.id, Math.min(maxStock, item.quantity + 1));
+                                      }}
+                                      className="w-6 h-6 rounded-full bg-[#1D1D1F] text-white flex items-center justify-center font-bold hover:bg-[#000000] transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                                      title={item.quantity >= maxStock ? `Only ${maxStock} in stock` : 'Increase quantity'}
+                                    >
+                                      <Plus className="w-3 h-3" />
+                                    </button>
+                                  );
+                                })()}
                               </div>
 
                               <button
@@ -818,15 +922,7 @@ export const CartPage = ({
                       <ArrowRight className="w-4 h-4" />
                     </button>
 
-                    <a
-                      href={createCartWhatsAppUrl(cartList, total, storeConfig?.whatsappNumber)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="w-full mt-2 py-3 rounded-full bg-[#25D366] hover:bg-[#20bd5a] text-white font-extrabold text-xs shadow-sm flex items-center justify-center gap-2 active:scale-95 transition-all cursor-pointer"
-                    >
-                      <MessageCircle className="w-4 h-4" />
-                      <span>Order on WhatsApp (Instant)</span>
-                    </a>
+
                   </div>
                 </div>
               </div>
@@ -1011,6 +1107,15 @@ export const CartPage = ({
                       <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#F5F5F7] text-xs font-bold text-[#1D1D1F]">
                         <Tag className="w-3 h-3" />
                         Size: {selActiveSize}
+                      </span>
+                    )}
+                    {selItem.selectedColor && (
+                      <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#F5F5F7] text-xs font-bold text-[#1D1D1F]">
+                        <span
+                          className="w-2.5 h-2.5 rounded-full border border-black/20 shrink-0"
+                          style={{ backgroundColor: getProductColorHex(selProduct, selItem.selectedColor) }}
+                        />
+                        Color: {selItem.selectedColor}
                       </span>
                     )}
                     {selProduct?.isPopular && (

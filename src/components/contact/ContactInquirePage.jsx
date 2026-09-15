@@ -508,33 +508,6 @@ export const ContactInquirePage = ({
                     </div>
                   </div>
 
-                  {/* WhatsApp Support Desk */}
-                  <div className="p-3 sm:p-3.5 rounded-xl sm:rounded-2xl bg-[#F5F5F7]/60 border border-black/5 flex items-center justify-between gap-2.5 sm:gap-3">
-                    <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-                      <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-[#25D366]/20 text-[#25D366] flex items-center justify-center shrink-0">
-                        <MessageCircle className="w-4 h-4" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-[10px] font-bold text-[#777777] uppercase tracking-wider">WhatsApp Support</p>
-                        <a
-                          href={`https://wa.me/${storeConfig.whatsappNumber || '9879451341'}?text=Hi%20Nakoda%20Imitation!%20I%20have%20an%20inquiry.`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs sm:text-sm font-extrabold text-[#1D1D1F] hover:text-[#25D366] truncate block"
-                        >
-                          Chat: {storeConfig.whatsappDisplay || '+91 98794 51341'}
-                        </a>
-                      </div>
-                    </div>
-                    <a
-                      href={`https://wa.me/${storeConfig.whatsappNumber || '9879451341'}?text=Hi%20Nakoda%20Imitation!%20I%20have%20an%20inquiry.`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-3 py-1.5 rounded-full bg-[#25D366] text-white text-[11px] font-bold hover:bg-[#20bd5a] transition-colors shrink-0 shadow-sm inline-flex items-center gap-1"
-                    >
-                      Chat
-                    </a>
-                  </div>
 
                   {/* Retail Store Address */}
                   <div className="p-3 sm:p-3.5 rounded-xl sm:rounded-2xl bg-[#F5F5F7]/60 border border-black/5">

@@ -124,11 +124,17 @@ function StorefrontContent() {
         'cart',
         'cartItems',
         'wishlist',
+        'nakoda_recent_v2',
+        'nakoda_recent',
       ];
       keysToPurge.forEach((k) => localStorage.removeItem(k));
 
-      const savedRecent = localStorage.getItem('nakoda_recent_v2');
-      if (savedRecent) setRecentlyViewedIds(JSON.parse(savedRecent));
+      const savedRecent = localStorage.getItem('nakoda_recent_v3');
+      if (savedRecent) {
+        try {
+          setRecentlyViewedIds(JSON.parse(savedRecent));
+        } catch (e) {}
+      }
 
       const savedOrders = localStorage.getItem('nakoda_orders_v2');
       if (savedOrders) setOrders(JSON.parse(savedOrders));
@@ -143,7 +149,7 @@ function StorefrontContent() {
   useEffect(() => {
     if (!isClientStorageLoaded) return;
     try {
-      localStorage.setItem('nakoda_recent_v2', JSON.stringify(recentlyViewedIds));
+      localStorage.setItem('nakoda_recent_v3', JSON.stringify(recentlyViewedIds));
     } catch (e) {}
   }, [recentlyViewedIds, isClientStorageLoaded]);
 
@@ -284,14 +290,6 @@ function StorefrontContent() {
   const lastToastRef = useRef({ key: '', ts: 0 });
 
 
-  const recordRecentlyViewed = useCallback((productId) => {
-    if (!productId) return;
-    setRecentlyViewedIds((prev) => {
-      const filtered = prev.filter((id) => id !== productId);
-      return [productId, ...filtered].slice(0, 8);
-    });
-  }, []);
-
   // Calculate cart counts & total amount
   const { totalCartCount, totalCartAmount, cartItemsList } = useMemo(() => {
     const list = Object.values(cartItems).filter((item) => item.quantity > 0);
@@ -303,6 +301,14 @@ function StorefrontContent() {
       cartItemsList: list,
     };
   }, [cartItems]);
+
+  const recordRecentlyViewed = useCallback((productId) => {
+    if (!productId) return;
+    setRecentlyViewedIds((prev) => {
+      const filtered = prev.filter((id) => id !== productId);
+      return [productId, ...filtered].slice(0, 8);
+    });
+  }, []);
 
   // Toast dispatcher (with double-trigger deduplication)
   const addToast = useCallback((type, title, message) => {
@@ -320,6 +326,16 @@ function StorefrontContent() {
       setToasts((prev) => prev.filter((t) => t.id !== id));
     }, 3000);
   }, []);
+
+  // Clear recently viewed history
+  const handleClearRecentlyViewed = useCallback(() => {
+    setRecentlyViewedIds([]);
+    try {
+      localStorage.removeItem('nakoda_recent_v3');
+      localStorage.removeItem('nakoda_recent_v2');
+    } catch (e) {}
+    addToast('info', 'History Cleared', 'Recently viewed items have been cleared.');
+  }, [addToast]);
 
   const handleDismissToast = (id) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
@@ -378,13 +394,23 @@ function StorefrontContent() {
   // Add to cart handler with stock verification and snapshot preservation
   const handleAddToCart = (product) => {
     if (!product || !product.id) return;
-    recordRecentlyViewed(product.id);
     const qtyToAdd = Math.max(1, parseInt(product.quantity, 10) || 1);
 
     // Stock limit verification
-    const stockLimit = typeof product.stockCount === 'number' ? product.stockCount : 99;
-    if (product.stockStatus === 'out_of_stock' || (typeof product.stockCount === 'number' && product.stockCount <= 0)) {
+    const fullProd = products?.find((p) => String(p.id).trim() === String(product.id).trim()) || product;
+    const stockLimit = typeof fullProd.stockCount === 'number' 
+      ? Math.max(0, fullProd.stockCount) 
+      : (typeof product.stockCount === 'number' ? Math.max(0, product.stockCount) : 99);
+
+    if (fullProd.stockStatus === 'out_of_stock' || stockLimit <= 0) {
       addToast('error', 'Out of Stock ⚠️', `${product.name} is currently out of stock.`);
+      return;
+    }
+
+    const existing = cartItems[product.id];
+    const currentQty = existing ? existing.quantity : 0;
+    if (currentQty >= stockLimit) {
+      addToast('info', 'Stock Limit Reached ⚠️', `You already have the maximum available stock (${stockLimit}) in your bag.`);
       return;
     }
 
@@ -396,11 +422,12 @@ function StorefrontContent() {
     }
 
     const chosenSize = product.selectedSize || product.selectedVariant || '';
+    const actualQtyToAdd = Math.min(qtyToAdd, stockLimit - currentQty);
 
     setCartItems((prev) => {
-      const existing = prev[product.id];
-      const currentQty = existing ? existing.quantity : 0;
-      const newQty = Math.min(stockLimit, currentQty + qtyToAdd);
+      const prevItem = prev[product.id];
+      const prevQty = prevItem ? prevItem.quantity : 0;
+      const newQty = Math.min(stockLimit, prevQty + actualQtyToAdd);
 
       return {
         ...prev,
@@ -408,12 +435,12 @@ function StorefrontContent() {
           ...product,
           id: product.id,
           productId: product.id,
-          name: product.name || existing?.name || 'Product',
-          price: typeof product.price === 'number' ? product.price : (existing?.price || 0),
-          image: product.image || existing?.image || '',
+          name: product.name || prevItem?.name || 'Product',
+          price: typeof product.price === 'number' ? product.price : (prevItem?.price || 0),
+          image: product.image || prevItem?.image || '',
           quantity: newQty,
-          selectedColor: product.selectedColor || existing?.selectedColor || '',
-          selectedSize: chosenSize || existing?.selectedSize || '',
+          selectedColor: product.selectedColor || prevItem?.selectedColor || '',
+          selectedSize: chosenSize || prevItem?.selectedSize || '',
         },
       };
     });
@@ -421,7 +448,7 @@ function StorefrontContent() {
     addToast(
       'success',
       'Added to Cart! 🛍️',
-      `${product.name} (x${qtyToAdd}) has been added to your shopping bag.`
+      `${product.name} (x${actualQtyToAdd}) has been added to your shopping bag.`
     );
   };
 
@@ -438,7 +465,16 @@ function StorefrontContent() {
         return next;
       }
 
-      const stockLimit = typeof current.stockCount === 'number' ? current.stockCount : 99;
+      const fullProd = products?.find((p) => String(p.id).trim() === String(productId).trim()) || current;
+      const stockLimit = typeof fullProd.stockCount === 'number' 
+        ? Math.max(0, fullProd.stockCount) 
+        : (typeof current.stockCount === 'number' ? Math.max(0, current.stockCount) : 99);
+
+      if (newQuantity > stockLimit) {
+        addToast('info', 'Maximum Stock Reached ⚠️', `Only ${stockLimit} unit${stockLimit === 1 ? '' : 's'} available in stock for ${current.name}.`);
+        return prev;
+      }
+
       const cappedQty = Math.min(stockLimit, Math.max(1, newQuantity));
 
       return {
@@ -466,6 +502,23 @@ function StorefrontContent() {
       };
     });
     addToast('info', 'Size Updated 📏', `Size set to ${newSize}.`);
+  };
+
+  // Update color handler for cart items
+  const handleUpdateColor = (productId, newColor) => {
+    setCartItems((prev) => {
+      const current = prev[productId];
+      if (!current) return prev;
+
+      return {
+        ...prev,
+        [productId]: {
+          ...current,
+          selectedColor: newColor,
+        },
+      };
+    });
+    addToast('info', 'Color Updated 🎨', `Color set to ${newColor}.`);
   };
 
   // Wishlist favorite toggle (handles guest prompting, auto-revert, authenticated persistence & rollback)
@@ -726,6 +779,7 @@ function StorefrontContent() {
               onQuickView={handleQuickView}
               onToggleFavorite={handleToggleFavorite}
               onExploreCatalog={() => handleExploreCatalog('all')}
+              onClearRecent={handleClearRecentlyViewed}
             />
           </>
         )}
@@ -766,6 +820,7 @@ function StorefrontContent() {
             products={products}
             onUpdateQuantity={handleUpdateQuantity}
             onUpdateSize={handleUpdateSize}
+            onUpdateColor={handleUpdateColor}
             onAddToCart={handleAddToCart}
             onToggleFavorite={handleToggleFavorite}
             onQuickView={handleQuickView}

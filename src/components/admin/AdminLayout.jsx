@@ -36,6 +36,7 @@ import { AdminExcelImport } from './AdminExcelImport';
 import { AdminProductModal } from './AdminProductModal';
 import { AdminReviews } from './AdminReviews';
 import { AdminExplore } from './AdminExplore';
+import { AdminHeroShowcase } from './AdminHeroShowcase';
 
 export const AdminLayout = ({ 
   onExitAdmin, 
@@ -71,6 +72,7 @@ export const AdminLayout = ({
     { id: 'products', label: 'Products Catalog', icon: Package, badge: catalogStats.totalProducts },
     { id: 'categories', label: 'Categories', icon: Layers, badge: catalogStats.totalCategoriesCount },
     { id: 'explore', label: 'Explore Collections', icon: Compass },
+    { id: 'hero-showcase', label: 'Hero Showcase Cards', icon: Star, badge: 4 },
     { id: 'offers', label: 'Offers & Coupons', icon: Tag, badge: catalogStats.activeOffersCount },
     { id: 'featured', label: 'Featured & Badges', icon: Star, badge: catalogStats.featuredCount },
     { id: 'reviews', label: 'Customer Reviews', icon: MessageSquare },
@@ -371,6 +373,10 @@ export const AdminLayout = ({
 
               {activeNav === 'explore' && (
                 <AdminExplore />
+              )}
+
+              {activeNav === 'hero-showcase' && (
+                <AdminHeroShowcase />
               )}
 
               {activeNav === 'offers' && (

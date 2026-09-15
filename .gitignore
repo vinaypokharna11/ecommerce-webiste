@@ -70,6 +70,7 @@ test-results/
 playwright-report/
 
 # === Misc / Project Specific ===
+scratch/
 prompt/
 *.bak
 *.orig

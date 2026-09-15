@@ -50,13 +50,11 @@ export const AdminProducts = ({ onPreviewStore, initialCategory = 'all', onCateg
     bulkApplyDiscount,
     bulkDeleteProducts,
     bulkUpdateStockStatus,
-    restoreMasterSeed,
     clearAllCatalog,
     isLiveConnected,
     storeConfig,
   } = useCatalog();
 
-  const [isSeeding, setIsSeeding] = useState(false);
   const [isWiping, setIsWiping] = useState(false);
 
   // Search & Filter State
@@ -243,28 +241,14 @@ export const AdminProducts = ({ onPreviewStore, initialCategory = 'all', onCateg
             </span>
           </div>
           <p className="text-xs sm:text-sm text-[#777777]">
-            Manage items, live stock updates, pricing, and master demo seed data
+            Manage items, live stock updates, and pricing
           </p>
         </div>
 
         <div className="flex items-center flex-wrap gap-2.5 w-full sm:w-auto">
-          {products.length === 0 ? (
-            <button
+          <button
               onClick={async () => {
-                setIsSeeding(true);
-                await restoreMasterSeed();
-                setIsSeeding(false);
-              }}
-              disabled={isSeeding}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#9FD842] hover:bg-[#8EC731] text-[#171717] font-extrabold text-xs shadow-sm active:scale-95 transition-all cursor-pointer disabled:opacity-50"
-            >
-              <Sparkles className="w-4 h-4" />
-              <span>{isSeeding ? 'Seeding Catalog...' : 'Seed Demo Products'}</span>
-            </button>
-          ) : (
-            <button
-              onClick={async () => {
-                if (window.confirm('Wipe and delete ALL products, categories, and offers from the active database? This will leave the catalog permanently empty until you add products or re-seed.')) {
+                if (window.confirm('Wipe and delete ALL products, categories, and offers from the active database? This will leave the catalog permanently empty until you add products.')) {
                   setIsWiping(true);
                   await clearAllCatalog();
                   setIsWiping(false);
@@ -276,7 +260,6 @@ export const AdminProducts = ({ onPreviewStore, initialCategory = 'all', onCateg
               <Trash2 className="w-3.5 h-3.5" />
               <span>{isWiping ? 'Wiping...' : 'Clear All'}</span>
             </button>
-          )}
 
           <button
             type="button"
@@ -298,13 +281,7 @@ export const AdminProducts = ({ onPreviewStore, initialCategory = 'all', onCateg
             <span>Bulk Import</span>
           </button>
 
-          <button
-            onClick={handleOpenAddModal}
-            className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-full bg-[#171717] hover:bg-black text-white font-extrabold text-xs sm:text-sm shadow-md hover:scale-105 active:scale-95 transition-all cursor-pointer"
-          >
-            <Plus className="w-4 h-4 text-[#9FD842]" />
-            <span>Add New Product</span>
-          </button>
+
         </div>
       </div>
 
@@ -480,34 +457,13 @@ export const AdminProducts = ({ onPreviewStore, initialCategory = 'all', onCateg
       {/* ── Catalog Empty State (0 items in DB) ── */}
       {products.length === 0 ? (
         <div className="p-12 text-center bg-white rounded-[32px] border border-black/10 shadow-[0_4px_20px_rgba(0,0,0,0.02)] space-y-4">
-          <div className="w-16 h-16 rounded-full bg-[#F3FCDA] text-[#709E1E] flex items-center justify-center mx-auto border border-[#9FD842]/30">
+          <div className="w-16 h-16 rounded-full bg-[#F5F5F7] text-[#777777] flex items-center justify-center mx-auto border border-black/10">
             <Package className="w-8 h-8" />
           </div>
           <h2 className="text-xl font-extrabold text-[#171717]">Your Catalog is Empty</h2>
           <p className="text-xs sm:text-sm text-[#777777] max-w-md mx-auto leading-relaxed">
-            All items have been removed. This clean state will persist across refreshes. You can create brand-new items or restore demo items from your master seed template anytime.
+            No products found. Use <strong>Bulk Import</strong> to upload products via Excel, or use the Download Template to get started.
           </p>
-          <div className="flex items-center justify-center gap-3 pt-2">
-            <button
-              onClick={handleOpenAddModal}
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[#171717] hover:bg-black text-white font-extrabold text-xs shadow-md active:scale-95 transition-all cursor-pointer"
-            >
-              <Plus className="w-4 h-4 text-[#9FD842]" />
-              <span>Add Your First Product</span>
-            </button>
-            <button
-              onClick={async () => {
-                setIsSeeding(true);
-                await restoreMasterSeed();
-                setIsSeeding(false);
-              }}
-              disabled={isSeeding}
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[#9FD842] hover:bg-[#8EC731] text-[#171717] font-extrabold text-xs shadow-md active:scale-95 transition-all cursor-pointer disabled:opacity-50"
-            >
-              <Sparkles className="w-4 h-4" />
-              <span>{isSeeding ? 'Restoring...' : 'Seed Demo Catalog'}</span>
-            </button>
-          </div>
         </div>
       ) : (
         <>

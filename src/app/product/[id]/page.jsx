@@ -9,6 +9,7 @@ import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { STORE_CONFIG } from '@/data/mockData';
 import { formatPrice } from '@/utils/formatPrice';
+import { TrackProductView } from '@/components/product/TrackProductView';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,6 +35,7 @@ export default async function ProductDetailPage({ params }) {
   return (
     <div className="min-h-screen bg-[#F6F5F0] text-[#171717] flex flex-col font-sans selection:bg-[#9FD842] selection:text-[#171717]">
       <Navbar />
+      <TrackProductView productId={product.id || params.id} />
 
       <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
         {/* Breadcrumb / Back Link */}
@@ -101,17 +103,23 @@ export default async function ProductDetailPage({ params }) {
                   {product.name}
                 </h1>
 
-                {/* Rating Badge */}
-                <div className="flex items-center gap-2 text-xs">
-                  <div className="flex items-center text-[#FF9500]">
-                    <Star className="w-4 h-4 fill-current" />
-                    <span className="ml-1.5 font-extrabold text-sm text-[#171717]">{ratingVal}</span>
+                {/* Rating Badge - Only display when genuine reviews exist */}
+                {reviewsCount > 0 && Number(ratingVal) > 0 ? (
+                  <div className="flex items-center gap-2 text-xs">
+                    <div className="flex items-center text-[#FF9500]">
+                      <Star className="w-4 h-4 fill-current" />
+                      <span className="ml-1.5 font-extrabold text-sm text-[#171717]">{ratingVal}</span>
+                    </div>
+                    <span className="text-[#888888]">·</span>
+                    <span className="text-xs font-bold text-[#777777]">
+                      {reviewsCount} verified {reviewsCount === 1 ? 'review' : 'reviews'}
+                    </span>
                   </div>
-                  <span className="text-[#888888]">·</span>
-                  <span className="text-xs font-bold text-[#777777]">
-                    {reviewsCount} verified {reviewsCount === 1 ? 'review' : 'reviews'}
-                  </span>
-                </div>
+                ) : (
+                  <div className="flex items-center gap-1.5 text-xs text-[#888888]">
+                    <span>No reviews yet</span>
+                  </div>
+                )}
 
                 {/* Pricing */}
                 <div className="flex items-baseline gap-3 pt-2">

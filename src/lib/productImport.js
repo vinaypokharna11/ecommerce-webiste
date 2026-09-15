@@ -21,7 +21,7 @@ export const PRODUCT_SCHEMA_FIELDS = [
   { key: 'tags', label: 'Tags', required: false, type: 'csv', description: 'Comma-separated search tags (e.g. bridal, necklace, kundan)' },
   { key: 'badge', label: 'Badge Text', required: false, type: 'text', description: 'e.g. NEW, BEST SELLER, 20% OFF' },
   { key: 'badgeType', label: 'Badge Type', required: false, type: 'text', description: 'new, bestseller, trending, discount' },
-  { key: 'rating', label: 'Rating', required: false, type: 'number', default: 4.8, description: 'Customer rating from 1.0 to 5.0 (default: 4.8)' },
+  { key: 'rating', label: 'Rating', required: false, type: 'number', default: 0, description: 'Customer rating from 0.0 to 5.0 (default: 0)' },
   { key: 'reviews', label: 'Reviews Count', required: false, type: 'number', default: 0, description: 'Total review count (default: 0)' },
   { key: 'isPopular', label: 'Is Popular', required: false, type: 'boolean', default: false, description: 'TRUE or FALSE' },
   { key: 'isFeatured', label: 'Is Featured', required: false, type: 'boolean', default: false, description: 'TRUE or FALSE' },
@@ -311,9 +311,10 @@ export function validateProductRow({
   product.isPopular = parseBooleanInput(product.isPopular);
   product.isFeatured = parseBooleanInput(product.isFeatured);
 
-  // 10. Rating & Reviews
-  product.rating = Math.min(5, Math.max(1, Number(product.rating) || 4.8));
-  product.reviews = Math.max(0, parseInt(product.reviews, 10) || 0);
+  // 10. Rating & Reviews - genuine only
+  const parsedReviews = Math.max(0, parseInt(product.reviews, 10) || 0);
+  product.reviews = parsedReviews;
+  product.rating = parsedReviews > 0 ? Math.min(5, Math.max(0, Number(product.rating) || 0)) : 0;
 
   // 11. Description & Badges
   product.description = String(product.description || '').trim();

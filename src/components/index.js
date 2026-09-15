@@ -20,6 +20,7 @@ export { TextScatter, ScatterItem } from './ui/text-scatter';
 export { Hero17 } from './ui/hero-17';
 export { AccordionGallery } from './ui/AccordionGallery';
 export { InfiniteMenu } from './ui/InfiniteMenu';
+export { default as ScrollStack, ScrollStackItem } from './ui/ScrollStack';
 
 // Product Catalog & Browsing
 export { default as ProductCard } from './product/ProductCard';

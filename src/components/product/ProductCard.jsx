@@ -6,13 +6,14 @@ import { Heart, Star, ShoppingBag, Plus, Minus, MessageCircle, Eye, AlertCircle 
 import Image from 'next/image';
 import { STORE_CONFIG } from '@/data/mockData';
 import { formatPrice } from '@/utils/formatPrice';
-import { getProductSizes, isProductSizeAvailable } from '@/utils/productOptions';
+import { getProductSizes, isProductSizeAvailable, getProductColors, getProductColorHex } from '@/utils/productOptions';
 
 export const ProductCardComponent = ({ 
   product, 
   quantity = 0, 
   isFavorite = false,
   selectedSize: initialSelectedSize = null,
+  selectedColor: initialSelectedColor = null,
   onAddToCart, 
   onUpdateQuantity, 
   onUpdateSize,
@@ -23,14 +24,25 @@ export const ProductCardComponent = ({
 }) => {
   const isOutOfStock = product.stockStatus === 'out_of_stock';
   const sizes = getProductSizes(product);
+  const colors = getProductColors(product);
   const [selectedSize, setSelectedSize] = useState(initialSelectedSize || null);
+  const [selectedColor, setSelectedColor] = useState(
+    initialSelectedColor || product.selectedColor || (colors.length === 1 ? colors[0].name : null)
+  );
   const [showSizeWarning, setShowSizeWarning] = useState(false);
+  const [showColorWarning, setShowColorWarning] = useState(false);
 
   useEffect(() => {
     if (initialSelectedSize) {
       setSelectedSize(initialSelectedSize);
     }
   }, [initialSelectedSize]);
+
+  useEffect(() => {
+    if (initialSelectedColor) {
+      setSelectedColor(initialSelectedColor);
+    }
+  }, [initialSelectedColor]);
 
   return (
     <motion.article
@@ -106,37 +118,22 @@ export const ProductCardComponent = ({
             {product.name}
           </h3>
 
-          {/* Rating */}
-          <div className="flex items-center gap-1.5 mb-2 text-xs">
-            <div className="flex items-center text-[#FF9500]">
-              <Star className="w-3 h-3 sm:w-3.5 sm:h-3.5 fill-current" />
-            </div>
-            <span className="font-sans font-semibold text-[#1D1D1F] text-[11px] sm:text-xs">
-              {product.rating || '4.8'}
-            </span>
-            <span className="text-[10px] sm:text-[11px] text-[#86868B]">
-              ({product.reviews || 80})
-            </span>
-          </div>
-
-          {/* Color Swatches (from admin dashboard) */}
-          {product.colors && product.colors.length > 0 && (
-            <div className="flex items-center gap-1.5 mb-2" onClick={(e) => e.stopPropagation()}>
-              {product.colors.slice(0, 5).map((color, idx) => (
-                <span
-                  key={`${color.hex}-${idx}`}
-                  title={color.name || color.hex}
-                  className="w-4 h-4 sm:w-[18px] sm:h-[18px] rounded-full border-2 border-white shadow-[0_0_0_1px_rgba(0,0,0,0.1)] transition-transform hover:scale-125"
-                  style={{ backgroundColor: color.hex }}
-                />
-              ))}
-              {product.colors.length > 5 && (
-                <span className="text-[10px] font-semibold text-[#86868B] ml-0.5">
-                  +{product.colors.length - 5}
-                </span>
-              )}
+          {/* Rating - Only display when genuine reviews exist */}
+          {Number(product.reviews) > 0 && Number(product.rating) > 0 && (
+            <div className="flex items-center gap-1.5 mb-2 text-xs">
+              <div className="flex items-center text-[#FF9500]">
+                <Star className="w-3 h-3 sm:w-3.5 sm:h-3.5 fill-current" />
+              </div>
+              <span className="font-sans font-semibold text-[#1D1D1F] text-[11px] sm:text-xs">
+                {Number(product.rating).toFixed(1)}
+              </span>
+              <span className="text-[10px] sm:text-[11px] text-[#86868B]">
+                ({product.reviews})
+              </span>
             </div>
           )}
+
+
 
           {/* Sizes Selector (Clothing & Shoes) - Show ALL sizes, diagonal cross on unavailable */}
           {sizes.length > 0 && (
@@ -242,6 +239,49 @@ export const ProductCardComponent = ({
               </motion.div>
             </div>
           )}
+
+          {/* Color Swatch Options (if available) */}
+          {colors.length > 0 && (
+            <div className="mt-2 pt-1 border-t border-black/[0.04]">
+              <div className="flex items-center mb-1 px-0.5">
+                <span className="text-[10px] font-bold text-[#86868B] uppercase tracking-wider">
+                  Color
+                </span>
+              </div>
+
+              <div 
+                className="flex items-center gap-1.5 flex-wrap p-0.5"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {colors.map((col) => {
+                  const isSelected = (selectedColor || '').toLowerCase() === col.name.toLowerCase();
+                  return (
+                    <button
+                      key={col.name}
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedColor(col.name);
+                        setShowColorWarning(false);
+                      }}
+                      title={`Color: ${col.name}`}
+                      className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold transition-all cursor-pointer ${
+                        isSelected
+                          ? 'bg-[#1D1D1F] text-white shadow-xs ring-1 ring-[#1D1D1F] scale-105'
+                          : 'bg-[#F5F5F7] text-[#555555] hover:bg-[#E8E8ED] hover:text-[#1D1D1F] border border-black/5'
+                      }`}
+                    >
+                      <span
+                        className="w-2.5 h-2.5 rounded-full border border-black/20 shrink-0"
+                        style={{ backgroundColor: col.hex }}
+                      />
+                      <span className="uppercase text-[9px]">{col.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Price & Action Row */}
@@ -288,10 +328,17 @@ export const ProductCardComponent = ({
                     onNotify && onNotify('error', 'Select Size First ⚠️', `Please select a size for ${product.name} before adding to cart.`);
                     return;
                   }
+                  if (colors.length > 0 && !selectedColor) {
+                    setShowColorWarning(true);
+                    setTimeout(() => setShowColorWarning(false), 3500);
+                    onNotify && onNotify('error', 'Select Color First ⚠️', `Please select a color for ${product.name} before adding to cart.`);
+                    return;
+                  }
                   onAddToCart && onAddToCart({
                     ...product,
+                    selectedColor: selectedColor || (colors.length === 1 ? colors[0].name : ''),
                     selectedSize,
-                    selectedVariant: selectedSize,
+                    selectedVariant: [selectedColor, selectedSize].filter(Boolean).join(' / ') || selectedSize || selectedColor || '',
                   });
                 }}
                 className="w-full py-2 sm:py-2.5 px-2 xs:px-2.5 sm:px-4 rounded-full bg-[#1D1D1F] hover:bg-black text-white font-medium text-[10px] xs:text-[11px] sm:text-xs font-sans tracking-wide flex items-center justify-center gap-1 sm:gap-2 shadow-xs active:scale-95 transition-all cursor-pointer"
@@ -325,15 +372,27 @@ export const ProductCardComponent = ({
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
+                    const maxStock = typeof product.stockCount === 'number' ? Math.max(0, product.stockCount) : 99;
+                    if (quantity >= maxStock) {
+                      onNotify && onNotify('info', 'Stock Limit Reached ⚠️', `Only ${maxStock} unit${maxStock === 1 ? '' : 's'} available in stock.`);
+                      return;
+                    }
                     if (sizes.length > 0 && !selectedSize) {
                       setShowSizeWarning(true);
                       setTimeout(() => setShowSizeWarning(false), 3500);
                       onNotify && onNotify('error', 'Select Size First ⚠️', `Please select a size for ${product.name} before updating quantity.`);
                       return;
                     }
+                    if (colors.length > 0 && !selectedColor) {
+                      setShowColorWarning(true);
+                      setTimeout(() => setShowColorWarning(false), 3500);
+                      onNotify && onNotify('error', 'Select Color First ⚠️', `Please select a color for ${product.name} before updating quantity.`);
+                      return;
+                    }
                     onUpdateQuantity && onUpdateQuantity(product.id, quantity + 1);
                   }}
-                  className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-[#1D1D1F] text-white hover:bg-black flex items-center justify-center shadow-xs transition-colors cursor-pointer shrink-0"
+                  disabled={typeof product.stockCount === 'number' && quantity >= product.stockCount}
+                  className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-[#1D1D1F] text-white hover:bg-black disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center shadow-xs transition-colors cursor-pointer shrink-0"
                   aria-label="Increase quantity"
                 >
                   <Plus className="w-2.5 h-2.5 sm:w-3 sm:h-3" />

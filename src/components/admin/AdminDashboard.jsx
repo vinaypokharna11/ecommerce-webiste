@@ -267,33 +267,7 @@ export const AdminDashboard = ({ onNavigate, onOpenAddProduct }) => {
 
       </div>
 
-      {/* ── Quick Actions: Excel Import ── */}
-      <motion.div
-        initial={{ opacity: 0, y: 15 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-        onClick={() => onNavigate('excel-import')}
-        className="bg-gradient-to-br from-[#171717] to-[#2B3A0D] rounded-[28px] border border-black/10 p-6 sm:p-7 shadow-[0_4px_20px_rgba(0,0,0,0.08)] cursor-pointer hover:shadow-[0_12px_30px_rgba(0,0,0,0.15)] hover:-translate-y-0.5 transition-all group"
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-[#9FD842]/20 flex items-center justify-center text-[#9FD842] border border-[#9FD842]/30">
-              <FileSpreadsheet className="w-6 h-6" />
-            </div>
-            <div>
-              <h3 className="text-base font-extrabold text-white mb-0.5">
-                Import Products from Excel
-              </h3>
-              <p className="text-xs text-white/60">
-                Upload a .xlsx or .csv file to bulk-add products with column mapping
-              </p>
-            </div>
-          </div>
-          <div className="p-2 rounded-full text-[#9FD842] group-hover:bg-[#9FD842]/20 transition-colors">
-            <ChevronRight className="w-5 h-5" />
-          </div>
-        </div>
-      </motion.div>
+
 
       {/* ── Recent Activity Log ── */}
       <div className="bg-white rounded-[28px] border border-black/10 p-6 sm:p-7 shadow-[0_4px_20px_rgba(0,0,0,0.02)]">

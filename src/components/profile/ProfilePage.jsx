@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   User,
   Phone,
+  Cake,
   Mail,
   Edit3,
   Package,
@@ -137,6 +138,7 @@ const EditProfileModal = ({ profile, onClose, onSave }) => {
     name: (profile?.name || '').replace(/[^a-zA-Z\s]/g, ''),
     email: initialEmail,
     phone: (profile?.phone || '').replace(/\D/g, '').slice(0, 10),
+    dob: profile?.dob || '',
   });
   const [error, setError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -279,6 +281,23 @@ const EditProfileModal = ({ profile, onClose, onSave }) => {
             />
           </div>
           <p className="text-[10px] text-[#86868B] mt-1">Must be exactly 10 digits.</p>
+        </div>
+
+        <div>
+          <label className="text-xs font-bold text-[#777777] uppercase tracking-wider block mb-1">
+            Date of Birth
+          </label>
+          <div className="relative">
+            <Cake className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#777777]" />
+            <input
+              type="date"
+              value={form.dob || ''}
+              onChange={(e) => setForm((prev) => ({ ...prev, dob: e.target.value }))}
+              max={new Date().toISOString().split('T')[0]}
+              className="w-full pl-10 pr-3.5 sm:pr-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl border border-black/5 bg-[#F5F5F7]/60 text-xs sm:text-sm text-[#1D1D1F] focus:outline-none focus:ring-2 focus:ring-[#1D1D1F] focus:bg-white font-medium transition-all"
+            />
+          </div>
+          <p className="text-[10px] text-[#86868B] mt-1">Optional. Used for birthday surprises & offers.</p>
         </div>
 
         <button
@@ -609,6 +628,16 @@ export const ProfilePage = ({ orders = [], onExploreCatalog, onNavigate }) => {
     name: user?.name ? user.name.replace(/[^a-zA-Z\s]/g, '').trim() || user.name : (isAuthenticated ? 'Customer' : 'Guest Shopper'),
     email: user?.email || (isAuthenticated ? '' : 'Sign in to view orders & track packages'),
     phone: user?.phone ? user.phone.replace(/\D/g, '').slice(0, 10) || user.phone : (isAuthenticated ? '' : 'No phone linked'),
+    dob: user?.dob || '',
+  };
+
+  const formatDob = (dob) => {
+    if (!dob) return null;
+    try {
+      return new Date(dob).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+    } catch {
+      return dob;
+    }
   };
 
   const initials = profile.name
@@ -687,6 +716,13 @@ export const ProfilePage = ({ orders = [], onExploreCatalog, onNavigate }) => {
                   <Phone className="w-3.5 h-3.5 shrink-0" />
                   <span className="truncate">{profile.phone}</span>
                 </div>
+
+                {profile.dob && (
+                  <div className="flex items-center gap-1.5 text-xs text-[#777777] mt-0.5">
+                    <Cake className="w-3.5 h-3.5 shrink-0" />
+                    <span className="truncate">{formatDob(profile.dob)}</span>
+                  </div>
+                )}
               </div>
             </div>
 

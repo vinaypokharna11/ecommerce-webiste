@@ -486,6 +486,19 @@ export const AdminExplore = () => {
                 />
               </div>
             </div>
+
+            {/* Save Button */}
+            <div className="flex justify-end pt-2 border-t border-black/5">
+              <button
+                type="button"
+                onClick={handleSaveAll}
+                disabled={isSaving}
+                className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-[#171717] hover:bg-black text-white text-xs font-bold shadow-sm active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+              >
+                <Save className="w-3.5 h-3.5" />
+                {isSaving ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
           </div>
 
           {/* 2. Collection Cards List */}

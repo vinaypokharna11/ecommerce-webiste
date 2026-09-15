@@ -2,14 +2,14 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { ShoppingBag, ArrowLeft } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 
 export function AuthHeader({ storeName = 'Nakoda Imitation', backHref = '/' }) {
   return (
     <header className="p-4 sm:p-6 flex items-center justify-between max-w-6xl mx-auto w-full">
       <Link href={backHref} className="flex items-center gap-2.5 group">
-        <div className="w-9 h-9 rounded-full bg-[#171717] flex items-center justify-center text-white shadow-sm group-hover:scale-105 transition-transform">
-          <ShoppingBag className="w-4 h-4 text-white" />
+        <div className="w-9 h-9 rounded-[10px] bg-[#171717] flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
+          <span className="text-[#9FD842] text-base font-black tracking-tight">N</span>
         </div>
         <span className="text-lg sm:text-xl font-extrabold tracking-tight text-[#171717]">
           {storeName}

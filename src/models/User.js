@@ -16,6 +16,7 @@ const UserSchema = new mongoose.Schema(
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     passwordHash: { type: String, required: true },
     phone: { type: String, default: '' },
+    dob: { type: String, default: '' }, // Date of birth in YYYY-MM-DD format
     role: { type: String, enum: ['customer', 'admin'], default: 'customer' },
     addresses: [AddressSchema],
   },

@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import bcrypt from 'bcryptjs';
+import mongoose from 'mongoose';
 import connectToDatabase from './mongodb.js';
 import User from '../models/User.js';
 import Product from '../models/Product.js';
@@ -54,6 +55,58 @@ export const DEFAULT_EXPLORE_SECTION = {
   ],
 };
 
+// Default Hero Showcase 2x2 cards configuration
+export const DEFAULT_HERO_SHOWCASE = [
+  {
+    id: 'trolley',
+    title: 'Cabin Spinner Suitcase',
+    category: 'BAGS & TROLLEYS',
+    badge: 'BESTSELLER',
+    badgeBg: 'bg-black',
+    image: '/assets/images/prod_trolley_wide.jpg',
+    imageFit: 'cover',
+    linkCategory: 'bags-luggage',
+    order: 0,
+    isActive: true,
+  },
+  {
+    id: 'jewelry',
+    title: 'Polki & Emerald Choker',
+    category: 'JEWELRY & HEIRLOOMS',
+    badge: 'LUXURY',
+    badgeBg: 'bg-[#FF9500]',
+    image: '/assets/images/nakoda/hero.jpg',
+    imageFit: 'cover',
+    linkCategory: 'jewelry',
+    order: 1,
+    isActive: true,
+  },
+  {
+    id: 'papad',
+    title: 'Spiced Urad Dal Papad',
+    category: 'PAPAD & SNACKS',
+    badge: 'FRESH CRISP',
+    badgeBg: 'bg-[#34C759]',
+    image: '/assets/images/prod_papad.jpg',
+    imageFit: 'cover',
+    linkCategory: 'food-grocery',
+    order: 2,
+    isActive: true,
+  },
+  {
+    id: 'innerwear',
+    title: 'Cotton Trunks (Pack of 3)',
+    category: 'UNDERGARMENTS',
+    badge: '100% COTTON',
+    badgeBg: 'bg-[#0071E3]',
+    image: '/assets/images/prod_innerwear.jpg',
+    imageFit: 'cover',
+    linkCategory: 'undergarments',
+    order: 3,
+    isActive: true,
+  },
+];
+
 // Initial baseline mock data for seeding MongoDB and JSON fallback
 export const INITIAL_DB_STATE = {
   products: [
@@ -65,8 +118,8 @@ export const INITIAL_DB_STATE = {
       price: 3499,
       oldPrice: 4999,
       discountPercent: 30,
-      rating: 4.8,
-      reviews: 142,
+      rating: 0,
+      reviews: 0,
       badge: 'BEST SELLER',
       badgeType: 'bestseller',
       stockStatus: 'in_stock',
@@ -91,8 +144,8 @@ export const INITIAL_DB_STATE = {
       price: 2499,
       oldPrice: 3999,
       discountPercent: 38,
-      rating: 4.7,
-      reviews: 98,
+      rating: 0,
+      reviews: 0,
       badge: 'TRENDING',
       badgeType: 'trending',
       stockStatus: 'low_stock',
@@ -116,8 +169,8 @@ export const INITIAL_DB_STATE = {
       price: 1999,
       oldPrice: 2999,
       discountPercent: 33,
-      rating: 4.6,
-      reviews: 184,
+      rating: 0,
+      reviews: 0,
       badge: '25% OFF',
       badgeType: 'discount',
       stockStatus: 'in_stock',
@@ -141,8 +194,8 @@ export const INITIAL_DB_STATE = {
       price: 1499,
       oldPrice: 2499,
       discountPercent: 40,
-      rating: 4.5,
-      reviews: 76,
+      rating: 0,
+      reviews: 0,
       badge: 'POPULAR',
       badgeType: 'popular',
       stockStatus: 'in_stock',
@@ -165,8 +218,8 @@ export const INITIAL_DB_STATE = {
       price: 1299,
       oldPrice: 1899,
       discountPercent: 31,
-      rating: 4.9,
-      reviews: 62,
+      rating: 0,
+      reviews: 0,
       badge: 'NEW',
       badgeType: 'new',
       stockStatus: 'in_stock',
@@ -191,8 +244,8 @@ export const INITIAL_DB_STATE = {
       price: 899,
       oldPrice: 1499,
       discountPercent: 40,
-      rating: 4.7,
-      reviews: 110,
+      rating: 0,
+      reviews: 0,
       badge: 'SALE',
       badgeType: 'sale',
       stockStatus: 'in_stock',
@@ -215,8 +268,8 @@ export const INITIAL_DB_STATE = {
       price: 1799,
       oldPrice: 2799,
       discountPercent: 35,
-      rating: 4.8,
-      reviews: 89,
+      rating: 0,
+      reviews: 0,
       badge: 'BEST SELLER',
       badgeType: 'bestseller',
       stockStatus: 'low_stock',
@@ -239,8 +292,8 @@ export const INITIAL_DB_STATE = {
       price: 499,
       oldPrice: 799,
       discountPercent: 37,
-      rating: 4.6,
-      reviews: 45,
+      rating: 0,
+      reviews: 0,
       badge: 'ECO',
       badgeType: 'eco',
       stockStatus: 'in_stock',
@@ -264,8 +317,8 @@ export const INITIAL_DB_STATE = {
       price: 2999,
       oldPrice: 4299,
       discountPercent: 30,
-      rating: 4.9,
-      reviews: 215,
+      rating: 0,
+      reviews: 0,
       badge: 'LIMITED',
       badgeType: 'limited',
       stockStatus: 'in_stock',
@@ -288,8 +341,8 @@ export const INITIAL_DB_STATE = {
       price: 799,
       oldPrice: 1299,
       discountPercent: 38,
-      rating: 4.5,
-      reviews: 58,
+      rating: 0,
+      reviews: 0,
       badge: 'NEW',
       badgeType: 'new',
       stockStatus: 'in_stock',
@@ -314,8 +367,8 @@ export const INITIAL_DB_STATE = {
       price: 2799,
       oldPrice: 3999,
       discountPercent: 30,
-      rating: 4.8,
-      reviews: 41,
+      rating: 0,
+      reviews: 0,
       badge: 'PREMIUM',
       badgeType: 'premium',
       stockStatus: 'low_stock',
@@ -339,8 +392,8 @@ export const INITIAL_DB_STATE = {
       price: 699,
       oldPrice: 1199,
       discountPercent: 41,
-      rating: 4.6,
-      reviews: 93,
+      rating: 0,
+      reviews: 0,
       badge: 'POPULAR',
       badgeType: 'popular',
       stockStatus: 'in_stock',
@@ -363,8 +416,8 @@ export const INITIAL_DB_STATE = {
       price: 1599,
       oldPrice: 2299,
       discountPercent: 30,
-      rating: 4.9,
-      reviews: 67,
+      rating: 0,
+      reviews: 0,
       badge: 'HOT',
       badgeType: 'hot',
       stockStatus: 'in_stock',
@@ -387,8 +440,8 @@ export const INITIAL_DB_STATE = {
       price: 2299,
       oldPrice: 3499,
       discountPercent: 34,
-      rating: 4.7,
-      reviews: 130,
+      rating: 0,
+      reviews: 0,
       badge: 'SALE',
       badgeType: 'sale',
       stockStatus: 'out_of_stock',
@@ -412,8 +465,8 @@ export const INITIAL_DB_STATE = {
       price: 2199,
       oldPrice: 3299,
       discountPercent: 33,
-      rating: 4.8,
-      reviews: 52,
+      rating: 0,
+      reviews: 0,
       badge: 'TRENDING',
       badgeType: 'trending',
       stockStatus: 'in_stock',
@@ -438,8 +491,8 @@ export const INITIAL_DB_STATE = {
       price: 1999,
       oldPrice: 2999,
       discountPercent: 33,
-      rating: 5.0,
-      reviews: 28,
+      rating: 0,
+      reviews: 0,
       badge: 'SPECIAL',
       badgeType: 'special',
       stockStatus: 'in_stock',
@@ -667,6 +720,7 @@ export const INITIAL_DB_STATE = {
     hours: 'Mon - Sun: 9:30 AM – 9:30 PM',
     currency: '₹',
     exploreSection: DEFAULT_EXPLORE_SECTION,
+    heroShowcase: DEFAULT_HERO_SHOWCASE,
   },
   users: [],
   reviews: [],
@@ -818,6 +872,7 @@ export async function getCatalogBundle() {
     offers,
     storeConfig,
     exploreSection: storeConfig?.exploreSection || DEFAULT_EXPLORE_SECTION,
+    heroShowcase: storeConfig?.heroShowcase || DEFAULT_HERO_SHOWCASE,
   };
 
   memoryCache.catalogBundle = bundle;
@@ -1105,7 +1160,7 @@ export function sanitizeProductPayload(data = {}) {
     sanitized.stockCount = count;
     sanitized.stockStatus = count === 0 ? 'out_of_stock' : count < 5 ? 'low_stock' : 'in_stock';
   }
-  if (sanitized.rating !== undefined) sanitized.rating = Number(sanitized.rating) || 4.8;
+  if (sanitized.rating !== undefined) sanitized.rating = Number(sanitized.rating) || 0;
   if (sanitized.reviews !== undefined) sanitized.reviews = Number(sanitized.reviews) || 0;
   if (sanitized.tags !== undefined) {
     sanitized.tags = Array.isArray(sanitized.tags)
@@ -1182,7 +1237,7 @@ export async function createProduct(productData) {
     discountPercent,
     stockCount,
     stockStatus,
-    rating: Number(sanitized.rating) || 5.0,
+    rating: Number(sanitized.rating) || 0,
     reviews: Number(sanitized.reviews) || 0,
     isPopular: !!sanitized.isPopular,
     isFeatured: !!sanitized.isFeatured,
@@ -1497,7 +1552,7 @@ export async function bulkImportProductsDB({
         discountPercent,
         stockCount,
         stockStatus,
-        rating: Number(sanitized.rating) || 4.8,
+        rating: Number(sanitized.rating) || 0,
         reviews: Number(sanitized.reviews) || 0,
         isPopular: !!sanitized.isPopular,
         isFeatured: !!sanitized.isFeatured,
@@ -2166,6 +2221,9 @@ export async function getStoreConfig() {
       } else if (!Array.isArray(rest.exploreSection.collections)) {
         rest.exploreSection.collections = DEFAULT_EXPLORE_SECTION.collections;
       }
+      if (!rest.heroShowcase || !Array.isArray(rest.heroShowcase) || rest.heroShowcase.length === 0) {
+        rest.heroShowcase = DEFAULT_HERO_SHOWCASE;
+      }
       if (envWhatsapp) rest.whatsappNumber = envWhatsapp;
       if (envWhatsappDisplay) rest.whatsappDisplay = envWhatsappDisplay;
       if (envWhatsappLink) rest.whatsappLink = envWhatsappLink;
@@ -2181,6 +2239,9 @@ export async function getStoreConfig() {
     cfg.exploreSection = DEFAULT_EXPLORE_SECTION;
   } else if (!Array.isArray(cfg.exploreSection.collections)) {
     cfg.exploreSection.collections = DEFAULT_EXPLORE_SECTION.collections;
+  }
+  if (!cfg.heroShowcase || !Array.isArray(cfg.heroShowcase) || cfg.heroShowcase.length === 0) {
+    cfg.heroShowcase = DEFAULT_HERO_SHOWCASE;
   }
   if (envWhatsapp) cfg.whatsappNumber = envWhatsapp;
   if (envWhatsappDisplay) cfg.whatsappDisplay = envWhatsappDisplay;
@@ -2248,6 +2309,22 @@ export async function updateExploreSection(exploreData) {
   });
   broadcastCatalogEvent(CATALOG_EVENTS.EXPLORE_UPDATED, { exploreSection: updatedConfig.exploreSection });
   return updatedConfig.exploreSection;
+}
+
+export async function getHeroShowcase() {
+  const config = await getStoreConfig();
+  return (config?.heroShowcase && Array.isArray(config.heroShowcase) && config.heroShowcase.length > 0)
+    ? config.heroShowcase
+    : DEFAULT_HERO_SHOWCASE;
+}
+
+export async function updateHeroShowcase(cards) {
+  const updatedCards = Array.isArray(cards) && cards.length > 0 ? cards : DEFAULT_HERO_SHOWCASE;
+  const updatedConfig = await updateStoreConfig({
+    heroShowcase: updatedCards,
+  });
+  broadcastCatalogEvent(CATALOG_EVENTS.HERO_SHOWCASE_UPDATED, { heroShowcase: updatedConfig.heroShowcase });
+  return updatedConfig.heroShowcase;
 }
 
 // ─── CUSTOMER AUTHENTICATION (MongoDB + JSON fallback) ───────────────────────
@@ -2761,11 +2838,21 @@ export async function recalculateProductRatingDB(productId) {
   try {
     const db = await connectToDatabase();
     if (db) {
+      const cleanId = String(productId);
+      const possibleIds = [cleanId];
+      const orClauses = [{ id: cleanId }];
+      if (mongoose.isValidObjectId(cleanId)) orClauses.push({ _id: cleanId });
+      const pDoc = await Product.findOne({ $or: orClauses }).lean();
+      if (pDoc) {
+        if (pDoc.id && !possibleIds.includes(String(pDoc.id))) possibleIds.push(String(pDoc.id));
+        if (pDoc._id && !possibleIds.includes(String(pDoc._id))) possibleIds.push(String(pDoc._id));
+      }
+
       const stats = await Review.aggregate([
-        { $match: { productId: String(productId), status: 'approved' } },
+        { $match: { productId: { $in: possibleIds }, status: 'approved' } },
         {
           $group: {
-            _id: '$productId',
+            _id: null,
             totalReviews: { $sum: 1 },
             averageRating: { $avg: '$rating' },
           },
@@ -2777,8 +2864,8 @@ export async function recalculateProductRatingDB(productId) {
         averageRating = Math.round((stats[0].averageRating || 0) * 10) / 10;
       }
 
-      await Product.updateOne(
-        { id: String(productId) },
+      await Product.updateMany(
+        { $or: orClauses },
         { $set: { rating: averageRating, reviews: totalReviews } }
       );
     }
@@ -3230,7 +3317,16 @@ export async function getProductReviewsDB(
   try {
     const db = await connectToDatabase();
     if (db) {
-      const docs = await Review.find({ productId: pId, status: 'approved' }).sort({ createdAt: -1 });
+      const possibleIds = [pId];
+      const orClauses = [{ id: pId }];
+      if (mongoose.isValidObjectId(pId)) orClauses.push({ _id: pId });
+      const pDoc = await Product.findOne({ $or: orClauses }).lean();
+      if (pDoc) {
+        if (pDoc.id && !possibleIds.includes(String(pDoc.id))) possibleIds.push(String(pDoc.id));
+        if (pDoc._id && !possibleIds.includes(String(pDoc._id))) possibleIds.push(String(pDoc._id));
+      }
+
+      const docs = await Review.find({ productId: { $in: possibleIds }, status: 'approved' }).sort({ createdAt: -1 });
       allApprovedReviews = docs.map((d) => {
         const obj = d.toObject();
         delete obj._id;
