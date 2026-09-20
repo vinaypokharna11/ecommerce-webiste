@@ -91,7 +91,7 @@ export function verifyAdminAuth(request) {
   }
 
   const decoded = verifyToken(token);
-  if (!decoded || (decoded.role !== 'admin' && decoded.role !== 'superadmin')) {
+  if (!decoded || (decoded.role !== 'admin' && decoded.role !== 'superadmin' && decoded.role !== 'seller')) {
     return null;
   }
 

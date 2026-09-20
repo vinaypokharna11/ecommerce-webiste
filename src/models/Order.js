@@ -12,6 +12,7 @@ const OrderItemSchema = new mongoose.Schema({
   image: { type: String, default: '' },
   selectedColor: { type: String, default: '' },
   selectedSize: { type: String, default: '' },
+  sellerId: { type: String, default: 'nakoda_seller' },
 });
 
 /**
@@ -34,10 +35,11 @@ const OrderSchema = new mongoose.Schema(
     couponCode: { type: String, default: '' },
     status: {
       type: String,
-      enum: ['processing', 'shipped', 'delivered', 'cancelled'],
-      default: 'processing',
+      enum: ['pending', 'accepted', 'rejected', 'processing', 'shipped', 'delivered', 'cancelled'],
+      default: 'pending',
+      index: true,
     },
-    statusLabel: { type: String, default: 'Processing' },
+    statusLabel: { type: String, default: 'Pending' },
     paymentStatus: {
       type: String,
       enum: ['pending', 'paid', 'refunded', 'failed'],
@@ -50,6 +52,20 @@ const OrderSchema = new mongoose.Schema(
     city: { type: String, default: '' },
     pincode: { type: String, default: '' },
     date: { type: String, default: '' },
+    sellerId: { type: String, default: 'nakoda_seller', index: true },
+    rejectionReason: { type: String, default: '' },
+    sellerNotes: { type: String, default: '' },
+    acceptedAt: { type: Date, default: null },
+    rejectedAt: { type: Date, default: null },
+    chatMessages: [
+      {
+        id: { type: String, required: true },
+        senderRole: { type: String, enum: ['customer', 'seller'], required: true },
+        senderName: { type: String, required: true },
+        message: { type: String, required: true, trim: true },
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
   },
   { timestamps: true }
 );

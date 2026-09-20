@@ -109,7 +109,7 @@ async function runSecurityTests() {
       const expectedTotal = expectedUnitPrice * 2;
 
       assert(order.amount === expectedTotal, `Order total recomputed from DB price: ${order.amount} === ${expectedTotal} (ignored spoofed amount: 2)`);
-      assert(order.status === 'processing', `Order status forced to 'processing' (got '${order.status}', ignored 'delivered')`);
+      assert(order.status === 'pending', `Order status forced to 'pending' (got '${order.status}', ignored 'delivered')`);
       assert(order.paymentStatus === 'pending', `Order payment status forced to 'pending' (got '${order.paymentStatus}', ignored 'paid')`);
       assert(order.discountPercent === 0, `Unverified 95% discount dropped to 0% (got ${order.discountPercent}%)`);
     } else {

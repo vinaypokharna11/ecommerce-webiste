@@ -37,6 +37,7 @@ import { AdminProductModal } from './AdminProductModal';
 import { AdminReviews } from './AdminReviews';
 import { AdminExplore } from './AdminExplore';
 import { AdminHeroShowcase } from './AdminHeroShowcase';
+import { AdminOrders } from './AdminOrders';
 
 export const AdminLayout = ({ 
   onExitAdmin, 
@@ -52,6 +53,29 @@ export const AdminLayout = ({
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [pendingOrdersCount, setPendingOrdersCount] = useState(0);
+
+  // Poll for pending orders count
+  useEffect(() => {
+    let isMounted = true;
+    async function fetchPendingCount() {
+      try {
+        const token = localStorage.getItem('nakoda_admin_token') || localStorage.getItem('shopease_admin_token');
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        const res = await fetch('/api/orders?status=pending', { headers, credentials: 'include' });
+        const data = await res.json();
+        if (isMounted && data && Array.isArray(data.orders)) {
+          setPendingOrdersCount(data.orders.length);
+        }
+      } catch {}
+    }
+    fetchPendingCount();
+    const interval = setInterval(fetchPendingCount, 15000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
 
   // Synchronize state whenever URL activeTab changes (e.g. Back/Forward button)
   useEffect(() => {
@@ -68,6 +92,7 @@ export const AdminLayout = ({
 
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'orders', label: 'Orders', icon: ShoppingBag, badge: pendingOrdersCount > 0 ? pendingOrdersCount : undefined, alert: pendingOrdersCount > 0 },
     { id: 'inquiries', label: 'Inquiries & Messages', icon: MessageSquare },
     { id: 'products', label: 'Products Catalog', icon: Package, badge: catalogStats.totalProducts },
     { id: 'categories', label: 'Categories', icon: Layers, badge: catalogStats.totalCategoriesCount },
@@ -344,6 +369,10 @@ export const AdminLayout = ({
                   onNavigate={handleNavClick}
                   onOpenAddProduct={() => setIsAddModalOpen(true)}
                 />
+              )}
+
+              {activeNav === 'orders' && (
+                <AdminOrders adminUser={adminUser} />
               )}
 
               {activeNav === 'products' && (

@@ -8,17 +8,43 @@ import { ProductReviews } from '@/components/product/ProductReviews';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { STORE_CONFIG } from '@/data/mockData';
-import { formatPrice } from '@/utils/formatPrice';
 import { TrackProductView } from '@/components/product/TrackProductView';
+import { ProductGallery } from '@/components/product/ProductGallery';
 
 export const dynamic = 'force-dynamic';
 
 export async function generateMetadata({ params }) {
   const product = await getProductByIdDB(params.id);
-  if (!product) return { title: 'Product Not Found | Nakoda Imitation' };
+  if (!product) return { title: 'Product Not Found | Nakoda Store' };
+
+  const title = `${product.name} | Nakoda Store`;
+  const description = product.description || `Shop ${product.name} at Nakoda Store with fast delivery across India.`;
+  const imageUrl = product.image || (product.images && product.images[0]) || '/assets/images/nakoda/hero.jpg';
+
   return {
-    title: `${product.name} | Nakoda Imitation`,
-    description: product.description || 'Premium lifestyle accessories & imitation jewelry.',
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      url: `https://nakodaimitation.com/product/${product.id}`,
+      siteName: 'Nakoda Store',
+      images: [
+        {
+          url: imageUrl,
+          width: 800,
+          height: 800,
+          alt: product.name,
+        },
+      ],
+      type: 'website',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [imageUrl],
+    },
   };
 }
 
@@ -32,8 +58,44 @@ export default async function ProductDetailPage({ params }) {
   const ratingVal = product.rating ? Number(product.rating).toFixed(1) : '0.0';
   const reviewsCount = product.reviews || 0;
 
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: product.name,
+    image: product.images && product.images.length > 0 ? product.images : [product.image],
+    description: product.description || `${product.name} - Nakoda Store`,
+    sku: product.id,
+    offers: {
+      '@type': 'Offer',
+      price: product.price,
+      priceCurrency: 'INR',
+      availability:
+        product.stockStatus === 'out_of_stock' || product.stockCount <= 0
+          ? 'https://schema.org/OutOfStock'
+          : 'https://schema.org/InStock',
+      url: `https://nakodaimitation.com/product/${product.id}`,
+      seller: {
+        '@type': 'Organization',
+        name: 'Nakoda Store',
+      },
+    },
+    ...(reviewsCount > 0
+      ? {
+          aggregateRating: {
+            '@type': 'AggregateRating',
+            ratingValue: ratingVal,
+            reviewCount: reviewsCount,
+          },
+        }
+      : {}),
+  };
+
   return (
     <div className="min-h-screen bg-[#F6F5F0] text-[#171717] flex flex-col font-sans selection:bg-[#9FD842] selection:text-[#171717]">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }}
+      />
       <Navbar />
       <TrackProductView productId={product.id || params.id} />
 
@@ -54,43 +116,12 @@ export default async function ProductDetailPage({ params }) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
             
             {/* Left: Product Media Gallery */}
-            <div className="space-y-4">
-              <div className="relative aspect-square w-full rounded-3xl overflow-hidden bg-[#F5F5F7] border border-black/5 shadow-inner">
-                <Image
-                  src={product.image || '/assets/images/prod_backpack.jpg'}
-                  alt={product.name}
-                  fill
-                  priority
-                  className="object-cover hover:scale-105 transition-transform duration-500"
-                  sizes="(max-width: 768px) 100vw, 500px"
-                />
-                {product.badge && (
-                  <div className="absolute top-4 left-4 px-3.5 py-1.5 bg-[#171717] text-white text-xs font-bold uppercase tracking-wider rounded-full shadow-md">
-                    {product.badge}
-                  </div>
-                )}
-              </div>
-
-              {/* Multiple Images Gallery Thumbnails if available */}
-              {Array.isArray(product.images) && product.images.length > 1 && (
-                <div className="flex items-center gap-3 overflow-x-auto pb-2">
-                  {product.images.map((imgUrl, i) => (
-                    <div
-                      key={i}
-                      className="relative w-16 h-16 rounded-xl overflow-hidden border border-black/10 shrink-0 bg-[#F5F5F7]"
-                    >
-                      <Image
-                        src={imgUrl}
-                        alt={`${product.name} - view ${i + 1}`}
-                        fill
-                        className="object-cover"
-                        sizes="64px"
-                      />
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            <ProductGallery
+              image={product.image}
+              images={product.images}
+              name={product.name}
+              badge={product.badge}
+            />
 
             {/* Right: Product Info & Buy */}
             <div className="flex flex-col justify-between space-y-6">

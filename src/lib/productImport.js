@@ -297,8 +297,10 @@ export function validateProductRow({
       });
     }
     product.image = primaryImg;
+    product.images = imgUrls;
   } else {
     product.image = '';
+    product.images = [];
   }
 
   // 8. Transform Colors, Sizes, Tags, Variants

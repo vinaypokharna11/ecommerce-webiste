@@ -32,6 +32,7 @@ import {
   ShieldCheck,
   AlertCircle,
   Heart,
+  MessageSquare,
 } from 'lucide-react';
 import { STORE_CONFIG } from '@/data/mockData';
 import { useAuth } from '@/context/AuthContext';
@@ -40,6 +41,7 @@ import { formatPrice } from '@/utils/formatPrice';
 import { authService } from '@/services/authService';
 import { orderService } from '@/services/orderService';
 import { inquiryService } from '@/services/inquiryService';
+import { OrderChatModal } from '@/components/orders/OrderChatModal';
 
 // ─── Default fallback mock orders ─────────────────────────────────────────────
 export const INITIAL_ORDERS = [];
@@ -313,7 +315,7 @@ const EditProfileModal = ({ profile, onClose, onSave }) => {
 };
 
 // ─── Order Details Modal ──────────────────────────────────────────────────────
-const OrderDetailsModal = ({ order, onClose }) => {
+const OrderDetailsModal = ({ order, onClose, onOpenChat }) => {
   if (!order) return null;
   const st = STATUS_STYLES[order.status] || STATUS_STYLES.delivered;
   const StatusIcon = st.icon;
@@ -402,6 +404,18 @@ const OrderDetailsModal = ({ order, onClose }) => {
             {formatPrice(order.amount, STORE_CONFIG.currency)}
           </span>
         </div>
+
+        {/* Chat with Seller Button */}
+        <button
+          onClick={() => {
+            onClose();
+            if (onOpenChat) onOpenChat(order);
+          }}
+          className="w-full py-3 rounded-full bg-[#1D1D1F] hover:bg-black text-white font-extrabold text-xs sm:text-sm shadow-sm flex items-center justify-center gap-2 active:scale-95 transition-all cursor-pointer"
+        >
+          <MessageSquare className="w-4 h-4 text-[#9FD842]" />
+          <span>Chat With Seller About Order</span>
+        </button>
       </div>
     </SheetModal>
   );
@@ -808,6 +822,17 @@ export const ProfilePage = ({ orders = [], onExploreCatalog, onNavigate }) => {
                   </div>
 
                   <div className="text-right shrink-0 flex items-center gap-1.5 sm:gap-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setChatOrder(order);
+                      }}
+                      className="p-1.5 sm:px-2.5 sm:py-1 rounded-lg bg-[#F5F5F7] hover:bg-[#EAEAEA] text-[#1D1D1F] flex items-center gap-1 text-[11px] font-bold transition-colors cursor-pointer"
+                      title="Chat with Seller"
+                    >
+                      <MessageSquare className="w-3.5 h-3.5 text-[#0071E3]" />
+                      <span className="hidden sm:inline">Chat</span>
+                    </button>
                     <span className="text-xs sm:text-sm font-extrabold text-[#1D1D1F]">
                       {formatPrice(order.amount, STORE_CONFIG.currency)}
                     </span>
@@ -1075,6 +1100,19 @@ export const ProfilePage = ({ orders = [], onExploreCatalog, onNavigate }) => {
         <OrderDetailsModal
           order={selectedOrder}
           onClose={() => setSelectedOrder(null)}
+          onOpenChat={(ord) => setChatOrder(ord)}
+        />
+      )}
+
+      {/* Customer ↔ Seller Order Chat Modal */}
+      {chatOrder && (
+        <OrderChatModal
+          isOpen={Boolean(chatOrder)}
+          onClose={() => setChatOrder(null)}
+          orderId={chatOrder.id}
+          customerName={chatOrder.customerName || user?.name}
+          orderStatus={chatOrder.status}
+          role="customer"
         />
       )}
 

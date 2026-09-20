@@ -47,6 +47,7 @@ export const QuickViewModal = ({
   const [localQty, setLocalQty] = useState(cartQuantity || 0);
   const [isAdded, setIsAdded] = useState(false);
   const [liveReviewStats, setLiveReviewStats] = useState(null);
+  const [activeImage, setActiveImage] = useState(null);
 
   useEffect(() => {
     if (product) {
@@ -68,6 +69,10 @@ export const QuickViewModal = ({
       setShowSizeWarning(false);
       setShowColorWarning(false);
       setLiveReviewStats(null);
+      const allImgs = Array.isArray(product.images) && product.images.length > 0
+        ? product.images
+        : (product.image ? [product.image] : []);
+      setActiveImage(allImgs[0] || product.image || '/assets/images/prod_backpack.jpg');
     }
   }, [product, cartQuantity]);
 
@@ -315,17 +320,49 @@ export const QuickViewModal = ({
               <div ref={modalContentRef} className="w-full">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 xs:gap-5 sm:gap-8 items-start">
                 {/* Image Showcase */}
-                <div className="relative aspect-4/3 xs:aspect-square md:aspect-square w-full rounded-xl sm:rounded-2xl overflow-hidden bg-[#F5F5F7] border border-black/[0.04] max-h-[260px] xs:max-h-[320px] md:max-h-none">
-                  <Image
-                    src={product.image || '/assets/images/prod_backpack.jpg'}
-                    alt={product.name}
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 768px) 100vw, 400px"
-                  />
-                  {product.badge && (
-                    <div className="absolute top-3.5 left-3.5 sm:top-4 sm:left-4 px-3.5 py-1.5 sm:px-4 sm:py-1.5 bg-[#1D1D1F] text-white text-xs sm:text-sm font-sans font-bold tracking-wider uppercase rounded-full shadow-md z-20">
-                      {product.badge}
+                <div className="space-y-3 w-full">
+                  <div className="relative aspect-4/3 xs:aspect-square md:aspect-square w-full rounded-xl sm:rounded-2xl overflow-hidden bg-[#F5F5F7] border border-black/[0.04] max-h-[260px] xs:max-h-[320px] md:max-h-none">
+                    <Image
+                      src={activeImage || product.image || '/assets/images/prod_backpack.jpg'}
+                      alt={product.name}
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 768px) 100vw, 400px"
+                    />
+                    {product.badge && (
+                      <div className="absolute top-3.5 left-3.5 sm:top-4 sm:left-4 px-3.5 py-1.5 sm:px-4 sm:py-1.5 bg-[#1D1D1F] text-white text-xs sm:text-sm font-sans font-bold tracking-wider uppercase rounded-full shadow-md z-20">
+                        {product.badge}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Multi-Image Thumbnails in QuickView */}
+                  {Array.isArray(product.images) && product.images.length > 1 && (
+                    <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+                      {product.images.map((imgUrl, i) => {
+                        const isSelected = (activeImage || product.image) === imgUrl;
+                        return (
+                          <button
+                            key={i}
+                            type="button"
+                            onClick={() => setActiveImage(imgUrl)}
+                            className={`relative w-12 h-12 rounded-lg overflow-hidden shrink-0 bg-[#F5F5F7] border-2 transition-all cursor-pointer ${
+                              isSelected
+                                ? 'border-[#1D1D1F] ring-2 ring-[#9FD842]/60 scale-105 shadow-xs'
+                                : 'border-black/10 hover:border-black/30 opacity-70 hover:opacity-100'
+                            }`}
+                            title={`View image ${i + 1}`}
+                          >
+                            <Image
+                              src={imgUrl}
+                              alt={`${product.name} - view ${i + 1}`}
+                              fill
+                              className="object-cover"
+                              sizes="48px"
+                            />
+                          </button>
+                        );
+                      })}
                     </div>
                   )}
                 </div>

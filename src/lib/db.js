@@ -625,11 +625,48 @@ export const INITIAL_DB_STATE = {
   ],
   orders: [
     {
+      id: '#SE1005',
+      customerName: 'Priyanshu Patel',
+      customerEmail: 'priyanshu.p@example.com',
+      customerPhone: '+91 98251 23456',
+      items: [
+        { id: 'prod-1', name: 'Wireless Headphones', price: 3499, quantity: 1, image: '/assets/images/prod_headphones.jpg' },
+      ],
+      itemSummary: 'Wireless Headphones (x1)',
+      amount: 3499,
+      status: 'pending',
+      statusLabel: 'Pending',
+      payMethod: 'Cash on Delivery',
+      deliveryAddress: '14, Shanti Niketan, Chala Road, Vapi, Gujarat 396191',
+      date: 'Sep 20, 2026',
+      sellerId: 'nakoda_seller',
+      createdAt: new Date().toISOString(),
+    },
+    {
+      id: '#SE1004',
+      customerName: 'Meera Desai',
+      customerEmail: 'meera.desai@example.com',
+      customerPhone: '+91 97234 56789',
+      items: [
+        { id: 'prod-2', name: 'Smart Watch Pro', price: 2499, quantity: 1, image: '/assets/images/prod_smartwatch.jpg' },
+      ],
+      itemSummary: 'Smart Watch Pro (x1)',
+      amount: 2499,
+      status: 'accepted',
+      statusLabel: 'Accepted',
+      payMethod: 'Online Payment (UPI)',
+      deliveryAddress: 'B-204, Royal Palms, Gunjan, Vapi, Gujarat 396195',
+      date: 'Sep 19, 2026',
+      sellerId: 'nakoda_seller',
+      acceptedAt: new Date(Date.now() - 3600000).toISOString(),
+      createdAt: new Date(Date.now() - 7200000).toISOString(),
+    },
+    {
       id: '#SE1003',
       customerName: 'John Doe',
       customerEmail: 'john.doe@example.com',
       customerPhone: '+91 98765 43210',
-      items: [{ id: 'prod-1', name: 'Wireless Headphones', price: 3499, quantity: 1 }],
+      items: [{ id: 'prod-1', name: 'Wireless Headphones', price: 3499, quantity: 1, image: '/assets/images/prod_headphones.jpg' }],
       itemSummary: 'Wireless Headphones (x1)',
       amount: 3499,
       status: 'delivered',
@@ -637,13 +674,15 @@ export const INITIAL_DB_STATE = {
       payMethod: 'Cash on Delivery',
       deliveryAddress: '6, Honey Complex, Opposite Gunjan Cinema, Koparli Road, Gunjan, G.I.D.C, Vapi, Gujarat 396195',
       date: 'Aug 20, 2026',
+      sellerId: 'nakoda_seller',
+      createdAt: new Date(Date.now() - 86400000 * 30).toISOString(),
     },
     {
       id: '#SE1002',
       customerName: 'Sarah Jenkins',
       customerEmail: 'sarah.j@example.com',
       customerPhone: '+91 98765 43211',
-      items: [{ id: 'prod-2', name: 'Smart Watch Pro', price: 2499, quantity: 1 }],
+      items: [{ id: 'prod-2', name: 'Smart Watch Pro', price: 2499, quantity: 1, image: '/assets/images/prod_smartwatch.jpg' }],
       itemSummary: 'Smart Watch Pro (x1)',
       amount: 2499,
       status: 'shipped',
@@ -651,6 +690,26 @@ export const INITIAL_DB_STATE = {
       payMethod: 'Online Payment (UPI)',
       deliveryAddress: 'Flat 302, Palm Heights, Koparli Road, Vapi — 396195',
       date: 'Aug 15, 2026',
+      sellerId: 'nakoda_seller',
+      createdAt: new Date(Date.now() - 86400000 * 35).toISOString(),
+    },
+    {
+      id: '#SE1001',
+      customerName: 'Rajesh Gupta',
+      customerEmail: 'rajesh.gupta@example.com',
+      customerPhone: '+91 98111 22334',
+      items: [{ id: 'prod-3', name: 'Casual Sneakers', price: 1899, quantity: 1, image: '/assets/images/prod_sneakers.jpg' }],
+      itemSummary: 'Casual Sneakers (x1)',
+      amount: 1899,
+      status: 'rejected',
+      statusLabel: 'Rejected',
+      rejectionReason: 'Customer requested cancellation prior to packing',
+      rejectedAt: new Date(Date.now() - 86400000 * 40).toISOString(),
+      payMethod: 'Cash on Delivery',
+      deliveryAddress: 'Shop 12, Station Road, Vapi — 396191',
+      date: 'Aug 10, 2026',
+      sellerId: 'nakoda_seller',
+      createdAt: new Date(Date.now() - 86400000 * 40).toISOString(),
     },
   ],
   contactMessages: [
@@ -1179,6 +1238,28 @@ export function sanitizeProductPayload(data = {}) {
   if (sanitized.colors && !Array.isArray(sanitized.colors)) {
     sanitized.colors = [];
   }
+  if (sanitized.images !== undefined) {
+    if (Array.isArray(sanitized.images)) {
+      sanitized.images = sanitized.images
+        .map((img) => (typeof img === 'string' ? img.trim() : (img?.src ? String(img.src).trim() : '')))
+        .filter(Boolean);
+    } else if (typeof sanitized.images === 'string') {
+      sanitized.images = sanitized.images.split(',').map((u) => u.trim()).filter(Boolean);
+    } else {
+      sanitized.images = [];
+    }
+  }
+
+  // Ensure image (primary cover) and images array stay in sync
+  if (Array.isArray(sanitized.images) && sanitized.images.length > 0) {
+    if (!sanitized.image || typeof sanitized.image !== 'string' || !sanitized.image.trim()) {
+      sanitized.image = sanitized.images[0];
+    } else if (!sanitized.images.includes(sanitized.image)) {
+      sanitized.images.unshift(sanitized.image);
+    }
+  } else if (sanitized.image && typeof sanitized.image === 'string' && sanitized.image.trim()) {
+    sanitized.images = [sanitized.image.trim()];
+  }
   return sanitized;
 }
 
@@ -1242,6 +1323,8 @@ export async function createProduct(productData) {
     isPopular: !!sanitized.isPopular,
     isFeatured: !!sanitized.isFeatured,
     tags: Array.isArray(sanitized.tags) ? sanitized.tags : [],
+    images: Array.isArray(sanitized.images) ? sanitized.images : (sanitized.image ? [sanitized.image] : []),
+    image: sanitized.image || (Array.isArray(sanitized.images) && sanitized.images[0]) || '',
     createdAt: sanitized.createdAt || new Date().toISOString(),
   };
 
@@ -1846,13 +1929,49 @@ export async function deleteOffer(id) {
 }
 
 // ─── ORDERS CRUD ─────────────────────────────────────────────────────────────
-export async function getOrders(userId = null) {
+export async function getOrders(userId = null, options = {}) {
   const db = await connectToDatabase();
+  const { status, sellerId, search, limit } = options;
+
   if (db) {
-    const query = userId
-      ? { $or: [{ userId: String(userId) }, { customerEmail: String(userId).toLowerCase() }] }
-      : {};
-    const orders = await Order.find(query).sort({ createdAt: -1 }).lean();
+    const query = {};
+    const andClauses = [];
+
+    if (userId) {
+      andClauses.push({
+        $or: [{ userId: String(userId) }, { customerEmail: String(userId).toLowerCase() }],
+      });
+    }
+    if (sellerId) {
+      query.sellerId = String(sellerId);
+    }
+    if (status && status !== 'all') {
+      query.status = String(status).toLowerCase();
+    }
+    if (search) {
+      const searchRegex = new RegExp(search.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+      andClauses.push({
+        $or: [
+          { id: searchRegex },
+          { customerName: searchRegex },
+          { customerEmail: searchRegex },
+          { customerPhone: searchRegex },
+          { 'items.name': searchRegex },
+        ],
+      });
+    }
+
+    if (andClauses.length === 1) {
+      Object.assign(query, andClauses[0]);
+    } else if (andClauses.length > 1) {
+      query.$and = andClauses;
+    }
+
+    let queryBuilder = Order.find(query).sort({ createdAt: -1 });
+    if (limit && Number(limit) > 0) {
+      queryBuilder = queryBuilder.limit(Number(limit));
+    }
+    const orders = await queryBuilder.lean();
     return orders.map(({ _id, __v, ...o }) => o);
   }
 
@@ -1861,6 +1980,26 @@ export async function getOrders(userId = null) {
   if (userId) {
     const cleanId = String(userId).toLowerCase();
     orders = orders.filter((o) => (o.userId && String(o.userId).toLowerCase() === cleanId) || (o.customerEmail && o.customerEmail.toLowerCase() === cleanId));
+  }
+  if (sellerId) {
+    orders = orders.filter((o) => !o.sellerId || o.sellerId === sellerId);
+  }
+  if (status && status !== 'all') {
+    const s = String(status).toLowerCase();
+    orders = orders.filter((o) => (o.status || '').toLowerCase() === s);
+  }
+  if (search) {
+    const term = search.toLowerCase().trim();
+    orders = orders.filter((o) =>
+      (o.id && o.id.toLowerCase().includes(term)) ||
+      (o.customerName && o.customerName.toLowerCase().includes(term)) ||
+      (o.customerEmail && o.customerEmail.toLowerCase().includes(term)) ||
+      (o.customerPhone && o.customerPhone.includes(term)) ||
+      (o.items && o.items.some((i) => i.name && i.name.toLowerCase().includes(term)))
+    );
+  }
+  if (limit && Number(limit) > 0) {
+    orders = orders.slice(0, Number(limit));
   }
   return orders;
 }
@@ -1892,7 +2031,7 @@ export async function createOrder(data) {
 
     const safeQty = Math.max(1, Math.min(100, parseInt(item.quantity, 10) || 1));
     
-    // Inventory / Stock Validation: Prevent overselling & race conditions
+    // Preliminary Stock Verification: Ensure catalog has enough available stock
     if (dbProd.stockCount !== undefined && dbProd.stockCount < safeQty) {
       throw new Error(`Insufficient stock for "${dbProd.name}". Available: ${dbProd.stockCount}, Requested: ${safeQty}`);
     }
@@ -1909,6 +2048,7 @@ export async function createOrder(data) {
       price: verifiedUnitPrice,
       quantity: safeQty,
       image: dbProd.image || item.image || '',
+      sellerId: dbProd.sellerId || 'nakoda_seller',
     });
   }
 
@@ -1938,7 +2078,7 @@ export async function createOrder(data) {
 
   const finalAmount = Math.max(0, calculatedAmount);
 
-  // 4. Force strict initial order status & sanitize order properties
+  // 4. Force strict initial order status: PENDING (Do NOT confirm or deduct inventory yet)
   const addressVal = String(data.deliveryAddress || data.shippingAddress || data.address || '').trim();
   const payMethodVal = String(data.paymentMethod || data.payMethod || 'Cash on Delivery').trim();
   const newOrder = {
@@ -1958,38 +2098,23 @@ export async function createOrder(data) {
     amount: finalAmount,
     discountPercent: appliedDiscountPercent,
     couponCode: appliedCouponCode,
-    status: 'processing',
-    statusLabel: 'Processing',
+    status: 'pending',
+    statusLabel: 'Pending',
     paymentStatus: 'pending',
     paymentMethod: payMethodVal,
     payMethod: payMethodVal,
+    sellerId: data.sellerId || verifiedItems[0]?.sellerId || 'nakoda_seller',
     createdAt: new Date().toISOString(),
   };
 
   let savedOrder = newOrder;
 
-  // 5. Persist to MongoDB Atlas & Atomically Decrement Inventory
+  // 5. Persist to MongoDB Atlas (Inventory is NOT decremented until seller accepts)
   if (db) {
     const created = await Order.create(newOrder);
     savedOrder = created.toObject();
     delete savedOrder._id;
     delete savedOrder.__v;
-
-    // Atomically decrement stock in MongoDB
-    for (const item of verifiedItems) {
-      const updatedProd = await Product.findOneAndUpdate(
-        { id: item.id, stockCount: { $gte: item.quantity } },
-        { $inc: { stockCount: -item.quantity } },
-        { returnDocument: 'after' }
-      );
-      if (updatedProd) {
-        const sc = updatedProd.stockCount;
-        const newStatus = sc <= 0 ? 'out_of_stock' : sc < 5 ? 'low_stock' : 'in_stock';
-        if (updatedProd.stockStatus !== newStatus) {
-          await Product.updateOne({ id: item.id }, { $set: { stockStatus: newStatus } });
-        }
-      }
-    }
 
     // Clear customer's server cart if authenticated
     const targetUserId = newOrder.userId || newOrder.customerId;
@@ -2000,15 +2125,148 @@ export async function createOrder(data) {
     console.warn('⚠️ MongoDB Atlas unavailable — placing order in local fallback only.');
   }
 
-  // 6. Update local JSON backup & atomic cache
+  // 6. Update local JSON backup
   const jdb = readJSONDB();
   jdb.orders = [newOrder, ...(jdb.orders || [])];
-  // Decrement stock in local JSON DB as well
+  writeJSONDB(jdb);
+
+  broadcastCatalogEvent(CATALOG_EVENTS.ORDER_CREATED, { order: savedOrder });
+  return savedOrder;
+}
+
+/**
+ * acceptOrder
+ * Seller explicitly confirms and accepts a pending order.
+ * Verifies pending state, re-checks stock, atomically decrements inventory,
+ * and advances status to 'accepted'.
+ */
+export async function acceptOrder(orderId, sellerUser = null) {
+  if (!orderId) {
+    throw new Error('Order ID is required');
+  }
+
+  const db = await connectToDatabase();
+
+  // 1. Fetch order & verify pending status
+  let order = null;
+  if (db) {
+    order = await Order.findOne({ id: orderId }).lean();
+  } else {
+    const jdb = readJSONDB();
+    order = (jdb.orders || []).find((o) => o.id === orderId);
+  }
+
+  if (!order) {
+    throw new Error(`Order "${orderId}" not found`);
+  }
+
+  if (order.status !== 'pending') {
+    throw new Error(`Order "${orderId}" is not in pending status (current status: "${order.status}") and cannot be accepted`);
+  }
+
+  // 2. Validate seller authorization
+  if (sellerUser && sellerUser.role === 'seller' && sellerUser.sellerId) {
+    if (order.sellerId && order.sellerId !== sellerUser.sellerId) {
+      throw new Error('Unauthorized: You can only manage orders belonging to your seller account');
+    }
+  }
+
+  const verifiedItems = order.items || [];
+  if (verifiedItems.length === 0) {
+    throw new Error('Order contains no line items to fulfill');
+  }
+
+  // 3. Verify stock availability for all items before any deduction
+  const allProducts = db ? await Product.find().lean() : (readJSONDB().products || []);
+  for (const item of verifiedItems) {
+    const pId = item.productId || item.id;
+    const dbProd = allProducts.find((p) => p.id === pId);
+    if (!dbProd) {
+      throw new Error(`Product "${item.name || pId}" no longer exists in catalog`);
+    }
+    const reqQty = Number(item.quantity) || 1;
+    const currentStock = dbProd.stockCount !== undefined ? dbProd.stockCount : 999;
+    if (currentStock < reqQty) {
+      throw new Error(`Insufficient stock for "${dbProd.name}". Available: ${currentStock}, Required: ${reqQty}`);
+    }
+  }
+
+  const acceptedAtIso = new Date().toISOString();
+
+  // 4. Atomically update Order status to 'accepted' and decrement inventory
+  let acceptedOrder = null;
+  const decrementedProductIds = [];
+
+  if (db) {
+    // Atomic status transition: matches status: 'pending' to prevent race conditions / duplicate accepts
+    const updatedOrder = await Order.findOneAndUpdate(
+      { id: orderId, status: 'pending' },
+      {
+        $set: {
+          status: 'accepted',
+          statusLabel: 'Accepted',
+          acceptedAt: new Date(acceptedAtIso),
+        },
+      },
+      { returnDocument: 'after' }
+    ).lean();
+
+    if (!updatedOrder) {
+      throw new Error(`Order "${orderId}" is no longer pending or has already been accepted by another request`);
+    }
+
+    // Atomically decrement stock in MongoDB for each product
+    for (const item of verifiedItems) {
+      const pId = item.productId || item.id;
+      const reqQty = Number(item.quantity) || 1;
+      const updatedProd = await Product.findOneAndUpdate(
+        { id: pId, stockCount: { $gte: reqQty } },
+        { $inc: { stockCount: -reqQty } },
+        { returnDocument: 'after' }
+      );
+      if (updatedProd) {
+        decrementedProductIds.push({ id: pId, qty: reqQty });
+        const sc = updatedProd.stockCount;
+        const newStatus = sc <= 0 ? 'out_of_stock' : sc < 5 ? 'low_stock' : 'in_stock';
+        if (updatedProd.stockStatus !== newStatus) {
+          await Product.updateOne({ id: pId }, { $set: { stockStatus: newStatus } });
+        }
+      } else {
+        // Roll back previous decrements if this item failed
+        for (const dec of decrementedProductIds) {
+          await Product.updateOne({ id: dec.id }, { $inc: { stockCount: dec.qty } });
+        }
+        // Roll back order status
+        await Order.updateOne({ id: orderId }, { $set: { status: 'pending', statusLabel: 'Pending', acceptedAt: null } });
+        throw new Error(`Stock decrement failed for "${item.name}". Order acceptance rolled back.`);
+      }
+    }
+
+    acceptedOrder = { ...updatedOrder };
+    delete acceptedOrder._id;
+    delete acceptedOrder.__v;
+  }
+
+  // Synchronize local JSON DB fallback
+  const jdb = readJSONDB();
+  const localOrder = (jdb.orders || []).find((o) => o.id === orderId);
+  if (localOrder) {
+    localOrder.status = 'accepted';
+    localOrder.statusLabel = 'Accepted';
+    localOrder.acceptedAt = acceptedAtIso;
+    if (!acceptedOrder) {
+      acceptedOrder = { ...localOrder };
+    }
+  }
+
+  // Decrement stock in local JSON DB
   if (jdb.products) {
     for (const item of verifiedItems) {
-      const p = jdb.products.find((prod) => prod.id === item.id);
+      const pId = item.productId || item.id;
+      const reqQty = Number(item.quantity) || 1;
+      const p = jdb.products.find((prod) => prod.id === pId);
       if (p && p.stockCount !== undefined) {
-        p.stockCount = Math.max(0, p.stockCount - item.quantity);
+        p.stockCount = Math.max(0, p.stockCount - reqQty);
         p.stockStatus = p.stockCount <= 0 ? 'out_of_stock' : p.stockCount < 5 ? 'low_stock' : 'in_stock';
       }
     }
@@ -2017,28 +2275,286 @@ export async function createOrder(data) {
 
   memoryCache.invalidateProducts();
   memoryCache.invalidateCategories();
-  broadcastCatalogEvent(CATALOG_EVENTS.ORDER_CREATED, { order: savedOrder });
-  return savedOrder;
+  broadcastCatalogEvent('ORDER_ACCEPTED', { order: acceptedOrder || order });
+  broadcastCatalogEvent(CATALOG_EVENTS.ORDER_UPDATED, { order: acceptedOrder || order });
+
+  return acceptedOrder || order;
 }
 
+/**
+ * rejectOrder
+ * Seller explicitly rejects a pending order.
+ * Marks status as 'rejected', captures rejection reason, keeps inventory intact,
+ * and permanently locks order against acceptance.
+ */
+export async function rejectOrder(orderId, sellerUser = null, reason = '') {
+  if (!orderId) {
+    throw new Error('Order ID is required');
+  }
 
-export async function updateOrderStatus(id, status) {
-  const statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
   const db = await connectToDatabase();
+
+  // 1. Fetch order & verify pending status
+  let order = null;
   if (db) {
-    const updated = await Order.findOneAndUpdate({ id }, { status, statusLabel }, { returnDocument: 'after' }).lean();
+    order = await Order.findOne({ id: orderId }).lean();
+  } else {
+    const jdb = readJSONDB();
+    order = (jdb.orders || []).find((o) => o.id === orderId);
+  }
+
+  if (!order) {
+    throw new Error(`Order "${orderId}" not found`);
+  }
+
+  if (order.status !== 'pending') {
+    throw new Error(`Order "${orderId}" is not in pending status (current status: "${order.status}") and cannot be rejected`);
+  }
+
+  // 2. Validate seller authorization
+  if (sellerUser && sellerUser.role === 'seller' && sellerUser.sellerId) {
+    if (order.sellerId && order.sellerId !== sellerUser.sellerId) {
+      throw new Error('Unauthorized: You can only manage orders belonging to your seller account');
+    }
+  }
+
+  const rejectedAtIso = new Date().toISOString();
+  const cleanReason = String(reason || 'Seller was unable to accept this order').trim();
+
+  let rejectedOrder = null;
+
+  if (db) {
+    const updated = await Order.findOneAndUpdate(
+      { id: orderId, status: 'pending' },
+      {
+        $set: {
+          status: 'rejected',
+          statusLabel: 'Rejected',
+          rejectionReason: cleanReason,
+          rejectedAt: new Date(rejectedAtIso),
+        },
+      },
+      { returnDocument: 'after' }
+    ).lean();
+
+    if (!updated) {
+      throw new Error(`Order "${orderId}" is no longer pending or has already been processed`);
+    }
+
+    rejectedOrder = { ...updated };
+    delete rejectedOrder._id;
+    delete rejectedOrder.__v;
+  }
+
+  // Synchronize local JSON DB fallback (inventory is NOT touched)
+  const jdb = readJSONDB();
+  const localOrder = (jdb.orders || []).find((o) => o.id === orderId);
+  if (localOrder) {
+    localOrder.status = 'rejected';
+    localOrder.statusLabel = 'Rejected';
+    localOrder.rejectionReason = cleanReason;
+    localOrder.rejectedAt = rejectedAtIso;
+    if (!rejectedOrder) {
+      rejectedOrder = { ...localOrder };
+    }
+  }
+  writeJSONDB(jdb);
+
+  broadcastCatalogEvent('ORDER_REJECTED', { order: rejectedOrder || order });
+  broadcastCatalogEvent(CATALOG_EVENTS.ORDER_UPDATED, { order: rejectedOrder || order });
+
+  return rejectedOrder || order;
+}
+
+export async function updateOrderStatus(id, status, sellerNotes = '') {
+  if (!id || !status) {
+    throw new Error('Order ID and status are required');
+  }
+
+  const validStatuses = ['pending', 'accepted', 'rejected', 'processing', 'shipped', 'delivered', 'cancelled'];
+  const normalizedStatus = String(status).toLowerCase();
+  if (!validStatuses.includes(normalizedStatus)) {
+    throw new Error(`Invalid order status: "${status}"`);
+  }
+
+  const db = await connectToDatabase();
+  const existingOrder = db 
+    ? await Order.findOne({ id }).lean() 
+    : (readJSONDB().orders || []).find((o) => o.id === id);
+
+  if (!existingOrder) {
+    return null;
+  }
+
+  // Prevent reviving rejected orders
+  if (existingOrder.status === 'rejected' && normalizedStatus !== 'rejected') {
+    throw new Error(`Cannot transition a rejected order "${id}" to "${normalizedStatus}"`);
+  }
+
+  const statusLabel = normalizedStatus.charAt(0).toUpperCase() + normalizedStatus.slice(1);
+  const updateFields = { status: normalizedStatus, statusLabel };
+  if (sellerNotes) {
+    updateFields.sellerNotes = String(sellerNotes).trim();
+  }
+
+  if (db) {
+    const updated = await Order.findOneAndUpdate({ id }, { $set: updateFields }, { returnDocument: 'after' }).lean();
     if (!updated) return null;
     const { _id, __v, ...rest } = updated;
+    broadcastCatalogEvent(CATALOG_EVENTS.ORDER_UPDATED, { order: rest });
     return rest;
   }
 
   const jdb = readJSONDB();
   const order = (jdb.orders || []).find((o) => o.id === id);
   if (!order) return null;
-  order.status = status;
+  order.status = normalizedStatus;
   order.statusLabel = statusLabel;
+  if (sellerNotes) order.sellerNotes = String(sellerNotes).trim();
   writeJSONDB(jdb);
+  broadcastCatalogEvent(CATALOG_EVENTS.ORDER_UPDATED, { order });
   return order;
+}
+
+// ─── ORDER CHAT SYSTEM ───────────────────────────────────────────────────────
+export async function getOrderChatMessages(orderId, authUser) {
+  if (!orderId) throw new Error('Order ID is required');
+  if (!authUser) throw new Error('Authentication required to access order chat');
+
+  const db = await connectToDatabase();
+  let order = null;
+
+  if (db) {
+    order = await Order.findOne({ id: orderId }).lean();
+  } else {
+    const jdb = readJSONDB();
+    order = (jdb.orders || []).find((o) => o.id === orderId);
+  }
+
+  if (!order) {
+    throw new Error(`Order "${orderId}" not found`);
+  }
+
+  // Authorization check
+  const isCustomer = authUser.role === 'customer';
+  const isAdmin = authUser.role === 'admin' || authUser.role === 'superadmin' || authUser.role === 'seller';
+
+  if (isCustomer) {
+    const authId = String(authUser.id || authUser._id || '').toLowerCase();
+    const authEmail = String(authUser.email || '').toLowerCase();
+    const orderUserId = String(order.userId || order.customerId || '').toLowerCase();
+    const orderEmail = String(order.customerEmail || '').toLowerCase();
+
+    if (authId !== orderUserId && authEmail !== orderEmail) {
+      throw new Error('Unauthorized: You can only view chat messages for your own orders');
+    }
+  } else if (isAdmin) {
+    if (authUser.role === 'seller' && authUser.sellerId && order.sellerId && order.sellerId !== authUser.sellerId) {
+      throw new Error('Unauthorized: You can only view chat messages for orders assigned to your seller account');
+    }
+  } else {
+    throw new Error('Unauthorized: Invalid role for chat access');
+  }
+
+  return {
+    orderId,
+    orderStatus: order.status,
+    customerName: order.customerName,
+    chatMessages: (order.chatMessages || []).map((m) => {
+      const { _id, ...clean } = m;
+      return clean;
+    }),
+  };
+}
+
+export async function addOrderChatMessage(orderId, messageText, authUser) {
+  if (!orderId) throw new Error('Order ID is required');
+  if (!authUser) throw new Error('Authentication required to send chat message');
+
+  const cleanMessage = String(messageText || '').trim();
+  if (!cleanMessage) {
+    throw new Error('Message text cannot be empty');
+  }
+  if (cleanMessage.length > 2000) {
+    throw new Error('Message exceeds 2000 character limit');
+  }
+
+  const db = await connectToDatabase();
+  let order = null;
+
+  if (db) {
+    order = await Order.findOne({ id: orderId }).lean();
+  } else {
+    const jdb = readJSONDB();
+    order = (jdb.orders || []).find((o) => o.id === orderId);
+  }
+
+  if (!order) {
+    throw new Error(`Order "${orderId}" not found`);
+  }
+
+  // Authorization check
+  const isCustomer = authUser.role === 'customer';
+  const isAdmin = authUser.role === 'admin' || authUser.role === 'superadmin' || authUser.role === 'seller';
+
+  if (isCustomer) {
+    const authId = String(authUser.id || authUser._id || '').toLowerCase();
+    const authEmail = String(authUser.email || '').toLowerCase();
+    const orderUserId = String(order.userId || order.customerId || '').toLowerCase();
+    const orderEmail = String(order.customerEmail || '').toLowerCase();
+
+    if (authId !== orderUserId && authEmail !== orderEmail) {
+      throw new Error('Unauthorized: You can only send messages for your own orders');
+    }
+  } else if (isAdmin) {
+    if (authUser.role === 'seller' && authUser.sellerId && order.sellerId && order.sellerId !== authUser.sellerId) {
+      throw new Error('Unauthorized: You can only message orders assigned to your seller account');
+    }
+  } else {
+    throw new Error('Unauthorized: Invalid role for chat');
+  }
+
+  const newMsg = {
+    id: `msg_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+    senderRole: isCustomer ? 'customer' : 'seller',
+    senderName: authUser.name || (isCustomer ? order.customerName : 'Nakoda Seller Support'),
+    message: cleanMessage,
+    createdAt: new Date().toISOString(),
+  };
+
+  let updatedMessages = [];
+
+  if (db) {
+    const updated = await Order.findOneAndUpdate(
+      { id: orderId },
+      { $push: { chatMessages: newMsg } },
+      { returnDocument: 'after' }
+    ).lean();
+    updatedMessages = updated?.chatMessages || [];
+  }
+
+  const jdb = readJSONDB();
+  const localOrder = (jdb.orders || []).find((o) => o.id === orderId);
+  if (localOrder) {
+    localOrder.chatMessages = localOrder.chatMessages || [];
+    localOrder.chatMessages.push(newMsg);
+    writeJSONDB(jdb);
+    if (!updatedMessages.length) {
+      updatedMessages = localOrder.chatMessages;
+    }
+  }
+
+  // Broadcast realtime event
+  broadcastCatalogEvent(CATALOG_EVENTS.ORDER_CHAT_MESSAGE, {
+    orderId,
+    message: newMsg,
+  });
+
+  return {
+    success: true,
+    message: newMsg,
+    chatMessages: updatedMessages.map(({ _id, ...clean }) => clean),
+  };
 }
 
 // ─── INQUIRIES CRUD ──────────────────────────────────────────────────────────

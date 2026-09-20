@@ -178,6 +178,68 @@ export async function sendOrderConfirmationEmail(order, storeConfig = {}) {
   });
 }
 
+// ─── Order Rejection Email for Customer ───
+export async function sendOrderRejectionEmail(order, reason = '', storeConfig = {}) {
+  const currency = storeConfig.currency || '₹';
+  const storeName = escapeHtml(storeConfig.name || 'Nakoda Imitation');
+  const whatsapp = (process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || process.env.WHATSAPP_NUMBER || storeConfig.whatsappNumber || '919876543210').replace(/[^0-9]/g, '');
+
+  const rejectionText = reason ? escapeHtml(reason) : 'Item(s) currently out of stock or unavailable for fulfillment.';
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #F6F5F0; color: #171717; margin: 0; padding: 20px; }
+        .card { max-width: 600px; margin: 0 auto; background: #FFFFFF; border-radius: 24px; border: 1px solid #E3DFD5; overflow: hidden; box-shadow: 0 10px 35px rgba(0,0,0,0.06); }
+        .header { background: #171717; padding: 32px; text-align: center; color: #FFFFFF; border-bottom: 3px solid #E11D48; }
+        .content { padding: 32px; }
+        .reason-box { background: #FFF1F2; border-radius: 16px; padding: 16px; margin: 20px 0; border: 1px solid #FECDD3; color: #9F1239; }
+        .btn { display: inline-block; background: #171717; color: #FFFFFF; text-decoration: none; padding: 12px 24px; border-radius: 14px; font-weight: bold; font-size: 14px; margin-top: 16px; }
+      </style>
+    </head>
+    <body>
+      <div class="card">
+        <div class="header">
+          <h1 style="margin: 0; font-size: 22px; font-weight: 800;">Order Update — ${escapeHtml(order.id)}</h1>
+          <p style="margin: 8px 0 0; opacity: 0.9; font-size: 14px;">${storeName}</p>
+        </div>
+        <div class="content">
+          <p style="font-size: 15px; color: #4B5563; margin-top: 0;">Hi <strong>${escapeHtml(order.customerName || 'Valued Customer')}</strong>,</p>
+          <p style="font-size: 14px; color: #4B5563; line-height: 1.6;">
+            We regret to inform you that we are unable to fulfill your order <strong>${escapeHtml(order.id)}</strong> at this time.
+          </p>
+
+          <div class="reason-box">
+            <div style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Reason for Cancellation</div>
+            <div style="font-size: 14px; font-weight: 500;">${rejectionText}</div>
+          </div>
+
+          <p style="font-size: 13px; color: #6B7280; line-height: 1.5;">
+            If you have paid online, any debited amount will be refunded automatically to your original payment method within 3–5 business days.
+          </p>
+
+          <div style="text-align: center; margin-top: 24px;">
+            <a href="https://wa.me/${whatsapp}?text=${encodeURIComponent(`Hi ${storeConfig.name || 'Nakoda Imitation'}, I have a question regarding my rejected order ${order.id}`)}" class="btn">
+              Contact Support via WhatsApp
+            </a>
+          </div>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  return sendEmail({
+    to: order.customerEmail || process.env.ADMIN_NOTIFICATION_EMAIL || 'customer@example.com',
+    subject: `Important Update Regarding Order ${order.id} | ${storeConfig.name || 'Nakoda Imitation'}`,
+    html,
+    text: `Your order ${order.id} could not be accepted. Reason: ${reason || 'Item unavailable'}. If you need assistance, please contact us.`,
+  });
+}
+
 // ─── Admin Notification Email on New Order ───
 export async function sendAdminNewOrderNotification(order, storeConfig = {}) {
   const adminEmail = process.env.ADMIN_NOTIFICATION_EMAIL || process.env.ADMIN_EMAIL || 'admin@nakodaimitation.com';

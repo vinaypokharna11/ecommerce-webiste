@@ -2,6 +2,7 @@
 
 import React, { useState, useCallback, useMemo, useRef, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import {
   Navbar,
   HeroSection,
@@ -10,16 +11,53 @@ import {
   FeatureBenefits,
   PromoBanner,
   RecentlyViewed,
-  CatalogPage,
-  OffersPage,
-  CartPage,
-  ProfilePage,
-  ContactInquirePage,
-  QuickViewModal,
   Footer,
   Toast,
   BrandLoadingScreen,
 } from '@/components';
+
+// Dynamic code splitting for non-initial off-screen views and heavy modals
+const CatalogPage = dynamic(() => import('@/components/catalog/CatalogPage'), {
+  loading: () => (
+    <div className="min-h-[60vh] flex items-center justify-center">
+      <span className="loading loading-spinner loading-lg text-[#0071E3]" />
+    </div>
+  ),
+});
+
+const OffersPage = dynamic(() => import('@/components/offers/OffersPage'), {
+  loading: () => (
+    <div className="min-h-[60vh] flex items-center justify-center">
+      <span className="loading loading-spinner loading-lg text-[#0071E3]" />
+    </div>
+  ),
+});
+
+const CartPage = dynamic(() => import('@/components/cart/CartPage'), {
+  loading: () => (
+    <div className="min-h-[60vh] flex items-center justify-center">
+      <span className="loading loading-spinner loading-lg text-[#0071E3]" />
+    </div>
+  ),
+});
+
+const ProfilePage = dynamic(() => import('@/components/profile/ProfilePage'), {
+  loading: () => (
+    <div className="min-h-[60vh] flex items-center justify-center">
+      <span className="loading loading-spinner loading-lg text-[#0071E3]" />
+    </div>
+  ),
+});
+
+const ContactInquirePage = dynamic(() => import('@/components/contact/ContactInquirePage'), {
+  loading: () => (
+    <div className="min-h-[60vh] flex items-center justify-center">
+      <span className="loading loading-spinner loading-lg text-[#0071E3]" />
+    </div>
+  ),
+});
+
+const QuickViewModal = dynamic(() => import('@/components/common/QuickViewModal'));
 import { useCatalog } from '@/context/CatalogContext';
 import { useAuth } from '@/context/AuthContext';
 import { createHelpWhatsAppUrl } from '@/utils/whatsapp';

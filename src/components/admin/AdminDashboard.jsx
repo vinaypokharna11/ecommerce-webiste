@@ -41,6 +41,15 @@ export const AdminDashboard = ({ onNavigate, onOpenAddProduct }) => {
 
   const metrics = [
     {
+      title: 'Customer Orders',
+      value: 'Orders',
+      subtitle: 'Review incoming orders & bills',
+      icon: ShoppingBag,
+      bgLight: 'bg-[#F8FDF0]',
+      textColor: 'text-[#709E1E]',
+      action: () => onNavigate('orders'),
+    },
+    {
       title: 'Total Products',
       value: catalogStats.totalProducts,
       subtitle: `${catalogStats.inStockCount} in stock, ${catalogStats.outOfStockCount} out of stock`,

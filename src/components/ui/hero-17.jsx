@@ -116,14 +116,6 @@ export function Hero17({
                   className={`${item.imageFit === 'contain' ? 'object-contain' : 'object-cover'} object-center scale-100 group-hover:scale-108 transition-transform duration-500 ease-out`}
                 />
 
-                {/* Top Badge Tag */}
-                {item.badge && (
-                  <div className="relative z-10 p-2 sm:p-2.5 md:p-3 lg:p-2 xl:p-2.5 self-start">
-                    <span className="px-2 sm:px-2.5 md:px-3 lg:px-2 xl:px-2.5 py-0.5 sm:py-1 rounded-full text-[7.5px] sm:text-[8.5px] md:text-[11px] lg:text-[8.5px] xl:text-[10px] font-bold uppercase tracking-wider text-white bg-black/65 backdrop-blur-md border border-white/15 shadow-xs">
-                      {item.badge}
-                    </span>
-                  </div>
-                )}
 
                 {/* Cinematic Bottom Gradient Overlay with Product Info */}
                 <div className="relative z-10 p-2 sm:p-2.5 md:p-3.5 lg:p-2 xl:p-2.5 bg-gradient-to-t from-black/85 via-black/45 to-transparent flex flex-col justify-end text-white">

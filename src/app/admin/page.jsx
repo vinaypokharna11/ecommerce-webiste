@@ -25,15 +25,13 @@ function AdminPageContent() {
     async function checkAuth(isPeriodic = false) {
       try {
         const token = localStorage.getItem('nakoda_admin_token') || localStorage.getItem('shopease_admin_token');
-        if (!token) {
-          if (isMounted) {
-            setIsAuthenticated(false);
-          }
-          return;
+        const headers = {};
+        if (token) {
+          headers.Authorization = `Bearer ${token}`;
         }
 
         const res = await fetch('/api/admin/auth', {
-          headers: { Authorization: `Bearer ${token}` },
+          headers,
           credentials: 'include',
         });
         const data = await res.json();

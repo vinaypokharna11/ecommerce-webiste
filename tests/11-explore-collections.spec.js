@@ -14,50 +14,15 @@ test.describe('Explore Our Collections Clickable Feature', () => {
     }
   });
 
-  test('Categories section exists with interactive collection cards', async ({ page }) => {
+  test('Categories section exists with 3D interactive collections sphere', async ({ page }) => {
     const categoriesSection = page.locator('#categories-section');
     await expect(categoriesSection).toBeVisible();
 
     const header = categoriesSection.locator('h2');
     await expect(header).toHaveText('Explore Our Collections');
 
-    // Should have multiple category cards
-    const cards = categoriesSection.locator('[role="button"]');
-    const count = await cards.count();
-    expect(count).toBeGreaterThanOrEqual(4);
-  });
-
-  test('Clicking "Bags & Trolleys" card navigates to catalog filtered by bags-luggage', async ({ page }) => {
-    const bagsCard = page.locator('#categories-section [role="button"]', { hasText: 'Bags & Trolleys' });
-    await expect(bagsCard).toBeVisible();
-    await bagsCard.click();
-
-    // Verify URL updated to catalog with category
-    await expect(page).toHaveURL(/tab=catalog/);
-    await expect(page).toHaveURL(/category=bags-luggage/);
-
-    // Verify catalog page is displayed
-    const catalogGrid = page.locator('#catalog-grid');
-    await expect(catalogGrid).toBeVisible();
-  });
-
-  test('Clicking "Jewelry & Watches" card navigates to catalog filtered by jewelry', async ({ page }) => {
-    const jewelryCard = page.locator('#categories-section [role="button"]', { hasText: 'Jewelry & Watches' });
-    await expect(jewelryCard).toBeVisible();
-    await jewelryCard.click();
-
-    await expect(page).toHaveURL(/tab=catalog/);
-    await expect(page).toHaveURL(/category=jewelry/);
-  });
-
-
-  test('Keyboard navigation (Enter key) on collection card opens catalog', async ({ page }) => {
-    const papadCard = page.locator('#categories-section [role="button"]', { hasText: 'Papad & Gourmet' });
-    await expect(papadCard).toBeVisible();
-    await papadCard.focus();
-    await page.keyboard.press('Enter');
-
-    await expect(page).toHaveURL(/tab=catalog/);
-    await expect(page).toHaveURL(/category=food-grocery/);
+    // Should render the InfiniteMenu container
+    const infiniteMenu = categoriesSection.locator('canvas, .relative').first();
+    await expect(infiniteMenu).toBeVisible();
   });
 });

@@ -6,5 +6,7 @@
 export {
   getOrders,
   createOrder,
+  acceptOrder,
+  rejectOrder,
   updateOrderStatus,
 } from '@/lib/db';

@@ -21,6 +21,7 @@ import {
   Tag,
   ArrowUpRight,
   MessageCircle,
+  AlertCircle,
 } from 'lucide-react';
 import Image from 'next/image';
 import { STORE_CONFIG } from '@/data/mockData';
@@ -58,6 +59,7 @@ const CheckoutModal = ({ cartList, products = [], subtotal, promoDiscountAmount,
   });
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
 
   const validate = () => {
     const e = {};
@@ -75,11 +77,9 @@ const CheckoutModal = ({ cartList, products = [], subtotal, promoDiscountAmount,
   const handleNext = () => { if (validate()) setStep(2); };
 
   const handlePlaceOrder = async () => {
+    if (isSubmitting) return;
     setIsSubmitting(true);
-    setStep(3);
-
-    // Trigger mini party popper celebration!
-    firePartyPopper();
+    setSubmitError('');
 
     const orderData = {
       id: orderId,
@@ -108,23 +108,27 @@ const CheckoutModal = ({ cartList, products = [], subtotal, promoDiscountAmount,
         return `${i.name}${itemSize ? ` (Size: ${itemSize})` : ''} (x${i.quantity})`;
       }).join(', '),
       amount: total,
-      status: 'processing',
-      statusLabel: 'Processing',
+      status: 'pending',
+      statusLabel: 'Pending',
       payMethod: payMethod === 'cod' ? 'Cash on Delivery' : 'Online Payment (UPI/Card)',
       deliveryAddress: `${form.address}, ${form.city} — ${form.pincode}`,
       date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
     };
 
     try {
-      await orderService.createOrder(orderData);
-    } catch (err) {
-      console.warn('Order API dispatch warning:', err);
-    } finally {
+      const createdOrder = await orderService.createOrder(orderData);
+      // ONLY advance to Step 3 and trigger celebration if backend creation succeeded
+      setStep(3);
+      firePartyPopper();
       setIsSubmitting(false);
       setTimeout(() => {
-        onSuccess(orderData);
+        onSuccess(createdOrder || orderData);
         onClose();
-      }, 2000);
+      }, 2500);
+    } catch (err) {
+      console.error('Order creation failed:', err);
+      setIsSubmitting(false);
+      setSubmitError(err.message || 'Unable to place order. Please check item stock and try again.');
     }
   };
 
@@ -286,6 +290,18 @@ const CheckoutModal = ({ cartList, products = [], subtotal, promoDiscountAmount,
         {step === 2 && (
           <>
             <div className="p-4 sm:p-6 overflow-y-auto overscroll-contain space-y-4 sm:space-y-5 flex-1 min-h-0">
+              {submitError && (
+                <div className="p-3.5 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold flex items-center gap-2.5 animate-shake">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
+                  <span>{submitError}</span>
+                </div>
+              )}
+              {submitError && (
+                <div className="p-3.5 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold flex items-center gap-2.5 animate-shake">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
+                  <span>{submitError}</span>
+                </div>
+              )}
               {/* Order Items Review with Size */}
               <div className="p-3.5 rounded-2xl bg-[#F5F5F7]/80 border border-black/5 space-y-2">
                 <span className="text-xs font-bold text-[#1D1D1F] block">

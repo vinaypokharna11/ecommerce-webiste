@@ -98,6 +98,15 @@ export async function POST(request) {
       return NextResponse.json({ success: false, error: 'Image data is required.' }, { status: 400 });
     }
 
+    // Protect against memory exhaustion / heap overflow: 5MB binary ~= 7MB base64 string
+    const MAX_BASE64_LENGTH = 7 * 1024 * 1024;
+    if (typeof imageData === 'string' && imageData.length > MAX_BASE64_LENGTH) {
+      return NextResponse.json(
+        { success: false, error: 'Image payload exceeds 5MB limit.' },
+        { status: 400 }
+      );
+    }
+
     // If Base64 data URL, validate MIME prefix
     if (imageData.startsWith('data:')) {
       const mimeMatch = imageData.match(/^data:([^;]+);base64,/);

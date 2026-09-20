@@ -21,6 +21,7 @@ const ProductSchema = new mongoose.Schema(
     stockStatus: { type: String, enum: ['in_stock', 'low_stock', 'out_of_stock'], default: 'in_stock' },
     stockCount: { type: Number, default: 10 },
     image: { type: String, default: '' },
+    images: [{ type: String }],
     description: { type: String, default: '' },
     colors: [ColorSchema],
     sizes: [String],
@@ -28,6 +29,7 @@ const ProductSchema = new mongoose.Schema(
     tags: [String],
     isPopular: { type: Boolean, default: false, index: true },
     isFeatured: { type: Boolean, default: false, index: true },
+    sellerId: { type: String, default: 'nakoda_seller', index: true },
   },
   { timestamps: true }
 );

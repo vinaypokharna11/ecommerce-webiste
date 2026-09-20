@@ -75,10 +75,10 @@ export default function AdminLoginPage() {
       const data = await res.json();
 
       if (res.ok && data.success) {
-        if (data.token) {
-          localStorage.setItem('nakoda_admin_token', data.token);
-          localStorage.setItem('shopease_admin_token', data.token);
-        }
+        try {
+          localStorage.removeItem('nakoda_admin_token');
+          localStorage.removeItem('shopease_admin_token');
+        } catch (e) {}
         router.push('/admin');
       } else {
         setError(data.error || 'Invalid administrator credentials. Access denied.');

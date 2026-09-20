@@ -40,3 +40,4 @@ export { default as CatalogPage } from './catalog/CatalogPage';
 export { default as OffersPage } from './offers/OffersPage';
 export { default as ProfilePage } from './profile/ProfilePage';
 export { default as ContactInquirePage } from './contact/ContactInquirePage';
+export { OrderChatModal } from './orders/OrderChatModal';

@@ -75,10 +75,11 @@ export const AuthProvider = ({ children }) => {
 
       if (data.success) {
         if (data.isAdmin || data.role === 'admin' || data.role === 'superadmin') {
-          if (data.token) {
-            localStorage.setItem('nakoda_admin_token', data.token);
-            localStorage.setItem('shopease_admin_token', data.token);
-          }
+          // Session is preserved securely via HttpOnly admin_token cookie
+          try {
+            localStorage.removeItem('nakoda_admin_token');
+            localStorage.removeItem('shopease_admin_token');
+          } catch (e) {}
           setAuthCancelCallback(null);
           setIsAuthModalOpen(false);
           return { success: true, isAdmin: true, redirectTo: '/admin', user: data.user };

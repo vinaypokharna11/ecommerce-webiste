@@ -50,8 +50,8 @@ export const AdminInquiries = () => {
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
       const [inqRes, contRes] = await Promise.all([
-        fetch('/api/inquiries', { headers }).then((r) => r.json()).catch(() => ({ success: false })),
-        fetch('/api/contact', { headers }).then((r) => r.json()).catch(() => ({ success: false })),
+        fetch('/api/inquiries', { headers, credentials: 'include' }).then((r) => r.json()).catch(() => ({ success: false })),
+        fetch('/api/contact', { headers, credentials: 'include' }).then((r) => r.json()).catch(() => ({ success: false })),
       ]);
 
       if (inqRes.success && inqRes.inquiries) {
@@ -147,9 +147,10 @@ export const AdminInquiries = () => {
         prev.map((i) => (i.id === id ? { ...i, status: newStatus } : i))
       );
       try {
-        const token = localStorage.getItem('nakoda_admin_token') || localStorage.getItem('shopease_admin_token');
+        const token = typeof window !== 'undefined' ? (localStorage.getItem('nakoda_admin_token') || localStorage.getItem('shopease_admin_token')) : null;
         await fetch('/api/inquiries', {
           method: 'PUT',
+          credentials: 'include',
           headers: {
             'Content-Type': 'application/json',
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -173,9 +174,10 @@ export const AdminInquiries = () => {
       if (itemType === 'inquiry') {
         setInquiries((prev) => prev.filter((i) => i.id !== id));
         try {
-          const token = localStorage.getItem('nakoda_admin_token') || localStorage.getItem('shopease_admin_token');
+          const token = typeof window !== 'undefined' ? (localStorage.getItem('nakoda_admin_token') || localStorage.getItem('shopease_admin_token')) : null;
           await fetch(`/api/inquiries?id=${id}`, {
             method: 'DELETE',
+            credentials: 'include',
             headers: token ? { Authorization: `Bearer ${token}` } : {},
           });
         } catch (e) {}

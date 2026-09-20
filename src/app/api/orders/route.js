@@ -8,15 +8,22 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const status = searchParams.get('status');
+    const search = searchParams.get('search');
+    const limit = searchParams.get('limit');
+    const sellerId = searchParams.get('sellerId');
+
     const admin = verifyAdminAuth(request);
     if (admin) {
-      const orders = await getOrders();
+      const filterSeller = (admin.role === 'seller' && admin.sellerId) ? admin.sellerId : sellerId;
+      const orders = await getOrders(null, { status, sellerId: filterSeller, search, limit });
       return NextResponse.json({ success: true, count: orders.length, orders });
     }
 
     const customer = verifyCustomerAuth(request);
     if (customer) {
-      const orders = await getOrders(customer.email || customer.id);
+      const orders = await getOrders(customer.email || customer.id, { status, search, limit });
       return NextResponse.json({ success: true, count: orders.length, orders });
     }
 
@@ -63,11 +70,10 @@ export async function POST(request) {
     const newOrder = await createOrder(orderData);
     const storeConfig = await getStoreConfig();
 
-    // Trigger automated emails asynchronously (without blocking response)
+    // Notify the seller immediately about the new incoming pending order
     Promise.allSettled([
-      sendOrderConfirmationEmail(newOrder, storeConfig),
       sendAdminNewOrderNotification(newOrder, storeConfig),
-    ]).catch((err) => console.error('Error dispatching order emails:', err));
+    ]).catch((err) => console.error('Error dispatching seller order notification:', err));
 
     return NextResponse.json({ success: true, order: newOrder }, { status: 201 });
   } catch (error) {
@@ -82,18 +88,18 @@ export async function PUT(request) {
       return unauthorizedResponse();
     }
 
-    const { id, status } = await request.json();
+    const { id, status, sellerNotes } = await request.json();
     if (!id || !status) {
       return NextResponse.json({ success: false, error: 'Order ID and status are required' }, { status: 400 });
     }
 
-    const updated = await updateOrderStatus(id, status);
+    const updated = await updateOrderStatus(id, status, sellerNotes);
     if (!updated) {
       return NextResponse.json({ success: false, error: 'Order not found' }, { status: 404 });
     }
 
     return NextResponse.json({ success: true, order: updated });
   } catch (error) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json({ success: false, error: error.message }, { status: 400 });
   }
 }
