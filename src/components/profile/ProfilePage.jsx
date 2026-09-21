@@ -240,7 +240,7 @@ const EditProfileModal = ({ profile, onClose, onSave }) => {
               value={form.name || ''}
               onChange={handleNameChange}
               placeholder="e.g. Himanshi Sharma"
-              className="w-full pl-10 pr-3.5 sm:pr-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl border border-black/5 bg-[#F5F5F7]/60 text-xs sm:text-sm text-[#1D1D1F] focus:outline-none focus:ring-2 focus:ring-[#1D1D1F] focus:bg-white font-medium transition-all"
+              className="w-full pl-10 pr-3.5 sm:pr-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl border-0 border-transparent bg-[#F5F5F7] text-xs sm:text-sm text-[#1D1D1F] focus:outline-none focus:ring-0 focus:border-transparent font-medium transition-all"
               required
             />
           </div>
@@ -258,7 +258,7 @@ const EditProfileModal = ({ profile, onClose, onSave }) => {
               value={form.email || ''}
               onChange={handleEmailChange}
               placeholder="e.g. yourname@example.com"
-              className="w-full pl-10 pr-3.5 sm:pr-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl border border-black/5 bg-[#F5F5F7]/60 text-xs sm:text-sm text-[#1D1D1F] focus:outline-none focus:ring-2 focus:ring-[#1D1D1F] focus:bg-white font-medium transition-all"
+              className="w-full pl-10 pr-3.5 sm:pr-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl border-0 border-transparent bg-[#F5F5F7] text-xs sm:text-sm text-[#1D1D1F] focus:outline-none focus:ring-0 focus:border-transparent font-medium transition-all"
               required
             />
           </div>
@@ -278,7 +278,7 @@ const EditProfileModal = ({ profile, onClose, onSave }) => {
               value={form.phone || ''}
               onChange={handlePhoneChange}
               placeholder="9876543210"
-              className="w-full pl-10 pr-3.5 sm:pr-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl border border-black/5 bg-[#F5F5F7]/60 text-xs sm:text-sm text-[#1D1D1F] focus:outline-none focus:ring-2 focus:ring-[#1D1D1F] focus:bg-white font-medium transition-all tracking-wider"
+              className="w-full pl-10 pr-3.5 sm:pr-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl border-0 border-transparent bg-[#F5F5F7] text-xs sm:text-sm text-[#1D1D1F] focus:outline-none focus:ring-0 focus:border-transparent font-medium transition-all tracking-wider"
               required
             />
           </div>
@@ -296,7 +296,7 @@ const EditProfileModal = ({ profile, onClose, onSave }) => {
               value={form.dob || ''}
               onChange={(e) => setForm((prev) => ({ ...prev, dob: e.target.value }))}
               max={new Date().toISOString().split('T')[0]}
-              className="w-full pl-10 pr-3.5 sm:pr-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl border border-black/5 bg-[#F5F5F7]/60 text-xs sm:text-sm text-[#1D1D1F] focus:outline-none focus:ring-2 focus:ring-[#1D1D1F] focus:bg-white font-medium transition-all"
+              className="w-full pl-10 pr-3.5 sm:pr-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl border-0 border-transparent bg-[#F5F5F7] text-xs sm:text-sm text-[#1D1D1F] focus:outline-none focus:ring-0 focus:border-transparent font-medium transition-all"
             />
           </div>
           <p className="text-[10px] text-[#86868B] mt-1">Optional. Used for birthday surprises & offers.</p>
@@ -600,6 +600,7 @@ export const ProfilePage = ({ orders = [], onExploreCatalog, onNavigate }) => {
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [chatOrder, setChatOrder] = useState(null);
   const [userOrders, setUserOrders] = useState(orders);
 
   const handleDeleteAccount = async () => {

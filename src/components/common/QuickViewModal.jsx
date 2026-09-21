@@ -154,6 +154,13 @@ export const QuickViewModal = ({
       lenis.stop();
     }
 
+    // Prevent browser auto-scroll on popstate back navigation
+    let prevScrollRestoration = 'auto';
+    if (typeof window !== 'undefined' && 'scrollRestoration' in window.history) {
+      prevScrollRestoration = window.history.scrollRestoration;
+      window.history.scrollRestoration = 'manual';
+    }
+
     const origBodyOverflow = document.body.style.overflow;
     const origHtmlOverflow = document.documentElement.style.overflow;
 
@@ -194,11 +201,25 @@ export const QuickViewModal = ({
       }
 
       // Restore exact scroll position and synchronize with Lenis
-      window.scrollTo({ top: scrollY, left: 0, behavior: 'instant' });
-      if (lenis) {
-        lenis.scrollTo(scrollY, { immediate: true });
-        lenis.start();
-      }
+      const restoreScroll = () => {
+        if (lenis) {
+          lenis.start();
+          lenis.scrollTo(scrollY, { immediate: true });
+        }
+        window.scrollTo({ top: scrollY, left: 0, behavior: 'instant' });
+        if (document.documentElement) document.documentElement.scrollTop = scrollY;
+        if (document.body) document.body.scrollTop = scrollY;
+      };
+
+      restoreScroll();
+      requestAnimationFrame(restoreScroll);
+      setTimeout(restoreScroll, 25);
+      setTimeout(() => {
+        restoreScroll();
+        if (typeof window !== 'undefined' && 'scrollRestoration' in window.history) {
+          window.history.scrollRestoration = prevScrollRestoration;
+        }
+      }, 75);
     };
   }, [isOpen, onClose, handleModalClose]);
 

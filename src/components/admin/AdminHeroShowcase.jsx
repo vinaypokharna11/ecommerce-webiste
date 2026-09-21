@@ -359,7 +359,7 @@ export const AdminHeroShowcase = () => {
                   )}
 
                   {/* Bottom Gradient Overlay */}
-                  <div className="relative z-10 p-2.5 bg-gradient-to-t from-black/85 via-black/45 to-transparent flex flex-col justify-end text-white">
+                  <div className="relative z-10 mt-auto w-full p-2.5 bg-gradient-to-t from-black/85 via-black/45 to-transparent flex flex-col justify-end text-white">
                     <span className="text-[7.5px] font-bold uppercase tracking-wider text-white/80 block truncate">
                       {item.category}
                     </span>

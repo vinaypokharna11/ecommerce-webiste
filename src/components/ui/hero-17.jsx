@@ -105,7 +105,7 @@ export function Hero17({
                 whileHover={{ scale: 1.045 }}
                 transition={{ duration: 0.28, ease: 'easeOut' }}
                 onClick={() => item.onClick && item.onClick()}
-                className="relative z-10 hover:z-20 aspect-square w-full rounded-2xl sm:rounded-3xl md:rounded-[28px] lg:rounded-2xl xl:rounded-3xl overflow-hidden bg-[#F5F5F7] border border-black/[0.08] shadow-[0_4px_16px_rgba(0,0,0,0.04)] hover:shadow-[0_16px_36px_rgba(0,0,0,0.15)] cursor-pointer group select-none flex flex-col justify-between"
+                className="relative z-10 hover:z-20 aspect-square w-full rounded-2xl sm:rounded-3xl md:rounded-[28px] lg:rounded-2xl xl:rounded-3xl overflow-hidden bg-[#F5F5F7] border border-black/[0.08] shadow-[0_4px_16px_rgba(0,0,0,0.04)] hover:shadow-[0_16px_36px_rgba(0,0,0,0.15)] cursor-pointer group select-none flex flex-col justify-end"
               >
                 <Image
                   src={item.image}
@@ -118,7 +118,7 @@ export function Hero17({
 
 
                 {/* Cinematic Bottom Gradient Overlay with Product Info */}
-                <div className="relative z-10 p-2 sm:p-2.5 md:p-3.5 lg:p-2 xl:p-2.5 bg-gradient-to-t from-black/85 via-black/45 to-transparent flex flex-col justify-end text-white">
+                <div className="relative z-10 mt-auto w-full p-2.5 sm:p-3 md:p-3.5 lg:p-2.5 xl:p-3 bg-gradient-to-t from-black/85 via-black/45 to-transparent flex flex-col justify-end text-white">
                   <span className="text-[7.5px] sm:text-[8.5px] md:text-[11px] lg:text-[8px] xl:text-[9.5px] font-bold uppercase tracking-wider text-white/80 block truncate">
                     {item.category}
                   </span>

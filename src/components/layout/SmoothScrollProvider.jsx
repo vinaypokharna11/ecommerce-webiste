@@ -127,10 +127,8 @@ export function SmoothScrollProvider({ children }) {
     };
 
     window.addEventListener('nakoda:scroll-to-top', handleScrollToTop);
-    window.addEventListener('popstate', handleScrollToTop);
     return () => {
       window.removeEventListener('nakoda:scroll-to-top', handleScrollToTop);
-      window.removeEventListener('popstate', handleScrollToTop);
     };
   }, []);
 
