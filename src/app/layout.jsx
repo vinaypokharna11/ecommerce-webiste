@@ -1,4 +1,5 @@
 import './globals.css';
+import React, { Suspense } from 'react';
 import { DM_Sans } from 'next/font/google';
 import { CatalogProvider } from '@/context/CatalogContext';
 import { AuthProvider } from '@/context/AuthContext';
@@ -53,7 +54,9 @@ export default function RootLayout({ children }) {
           <AuthProvider>
             <CatalogProvider>
               <GsapScrollAnimations>
-                <NavigationProgressBar />
+                <Suspense fallback={null}>
+                  <NavigationProgressBar />
+                </Suspense>
                 {children}
                 <AuthModal />
               </GsapScrollAnimations>

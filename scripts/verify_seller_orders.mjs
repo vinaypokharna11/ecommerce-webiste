@@ -88,12 +88,12 @@ async function runSellerOrdersTests() {
   assert(order1.statusLabel === 'Pending', `Order statusLabel is 'Pending' (got '${order1.statusLabel}')`);
   assert(order1.sellerId === 'nakoda_seller', `Order tagged with sellerId: ${order1.sellerId}`);
 
-  // ── TEST 2: Inventory is NOT Decremented at Checkout ──
-  console.log('\n📦 [TEST 2] Deferred Inventory Deduction Guardrail');
+  // ── TEST 2: Inventory is Atomically Reserved at Checkout ──
+  console.log('\n📦 [TEST 2] Atomic Inventory Reservation at Checkout');
   const prodAfterCheckout = await getProductById(testProductId);
   assert(
-    prodAfterCheckout.stockCount === initialStock,
-    `Inventory untouched at checkout: stock remains ${prodAfterCheckout.stockCount} === ${initialStock}`
+    prodAfterCheckout.stockCount === initialStock - 2,
+    `Inventory reserved at checkout: stock is ${prodAfterCheckout.stockCount} === ${initialStock - 2}`
   );
 
   // ── TEST 3: Seller Authorization Validation ──

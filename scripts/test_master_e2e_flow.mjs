@@ -247,19 +247,20 @@ async function runMasterFlow() {
     });
 
     // -------------------------------------------------------------
-    // STEP 6: Verify Database Record & Deferred Inventory Deduction
+    // STEP 6: Verify Database Record & Atomic Inventory Reservation
     // -------------------------------------------------------------
     const dbOrder = await Order.findOne({ id: createdOrderId }).lean();
     const dbProdAfterOrder = await Product.findOne({ id: testProdId }).lean();
+    const expectedStockAfterOrder = initialStock - orderQuantity; // 25 - 2 = 23
 
     recordStep({
       step: 6,
-      action: 'Database Inspection: Order initial status & Deferred Inventory Verification',
-      expected: `Order in status 'pending', inventory UNTOUCHED at ${initialStock} until seller confirms`,
+      action: 'Database Inspection: Order initial status & Inventory Reservation Verification',
+      expected: `Order in status 'pending', inventory reserved/deducted at ${expectedStockAfterOrder} to prevent overselling`,
       apiResult: `Order status: ${dbOrder?.status} | paymentStatus: ${dbOrder?.paymentStatus}`,
-      dbResult: `Atlas Order: ${dbOrder?.id} | status: '${dbOrder?.status}' | Product stockCount remains: ${dbProdAfterOrder?.stockCount}`,
+      dbResult: `Atlas Order: ${dbOrder?.id} | status: '${dbOrder?.status}' | inventoryDeducted: ${dbOrder?.inventoryDeducted} | Product stockCount: ${dbProdAfterOrder?.stockCount}`,
       frontendResult: 'Customer cart emptied, order placed in Pending Orders queue',
-      status: dbOrder?.status === 'pending' && dbProdAfterOrder?.stockCount === initialStock ? 'PASS' : 'FAIL',
+      status: dbOrder?.status === 'pending' && dbOrder?.inventoryDeducted === true && dbProdAfterOrder?.stockCount === expectedStockAfterOrder ? 'PASS' : 'FAIL',
     });
 
     // -------------------------------------------------------------
@@ -339,8 +340,8 @@ async function runMasterFlow() {
 
     recordStep({
       step: 10,
-      action: 'Admin confirms and accepts order (Atomic Stock Decrement)',
-      expected: `HTTP 200 OK, Order status advances to 'accepted', Product stock atomically decremented from ${initialStock} to ${expectedRemainingStock}`,
+      action: 'Admin confirms and accepts order (Status advances to accepted, no double deduction)',
+      expected: `HTTP 200 OK, Order status advances to 'accepted', Product stock preserved at ${expectedRemainingStock}`,
       apiResult: `HTTP ${acceptRes.status} | Order status: ${acceptData.order?.status}`,
       dbResult: `Atlas Order status: '${dbOrderAfterAccept?.status}' | Atlas Product stockCount: ${dbProdAfterAccept?.stockCount} (Expected: ${expectedRemainingStock})`,
       frontendResult: 'Admin dashboard updates row status badge to "Accepted" with toast confirmation',

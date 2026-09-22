@@ -8,13 +8,15 @@ import { ProductReviews } from '@/components/product/ProductReviews';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { STORE_CONFIG } from '@/data/mockData';
+import { formatPrice } from '@/utils/formatPrice';
 import { TrackProductView } from '@/components/product/TrackProductView';
 import { ProductGallery } from '@/components/product/ProductGallery';
 
 export const dynamic = 'force-dynamic';
 
 export async function generateMetadata({ params }) {
-  const product = await getProductByIdDB(params.id);
+  const resolvedParams = await Promise.resolve(params);
+  const product = await getProductByIdDB(resolvedParams?.id);
   if (!product) return { title: 'Product Not Found | Nakoda Store' };
 
   const title = `${product.name} | Nakoda Store`;
@@ -49,7 +51,8 @@ export async function generateMetadata({ params }) {
 }
 
 export default async function ProductDetailPage({ params }) {
-  const product = await getProductByIdDB(params.id);
+  const resolvedParams = await Promise.resolve(params);
+  const product = await getProductByIdDB(resolvedParams?.id);
 
   if (!product) {
     notFound();
@@ -190,7 +193,7 @@ export default async function ProductDetailPage({ params }) {
 
               <div className="pt-4 border-t border-black/10">
                 <Link
-                  href={`/catalog?product=${product.id}`}
+                  href={`/?tab=catalog&product=${product.id}`}
                   className="w-full py-3.5 rounded-full bg-[#171717] hover:bg-black text-white font-extrabold text-sm flex items-center justify-center gap-2 shadow-md active:scale-95 transition-all"
                 >
                   <ShoppingBag className="w-4 h-4 text-[#9FD842]" />

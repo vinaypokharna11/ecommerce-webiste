@@ -9,7 +9,7 @@ import { usePathname, useSearchParams } from 'next/navigation';
  * Ultra-lightweight (0-dependency) top progress bar that provides instant visual
  * feedback (<20ms) during route changes, tab switches, and internal link clicks.
  */
-export function NavigationProgressBar() {
+function ProgressBarInner() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [progress, setProgress] = useState(0);
@@ -94,6 +94,14 @@ export function NavigationProgressBar() {
         }}
       />
     </div>
+  );
+}
+
+export function NavigationProgressBar() {
+  return (
+    <React.Suspense fallback={null}>
+      <ProgressBarInner />
+    </React.Suspense>
   );
 }
 

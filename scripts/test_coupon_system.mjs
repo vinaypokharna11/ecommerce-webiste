@@ -13,6 +13,8 @@ import {
   updateOrderStatus,
 } from '../src/lib/db.js';
 
+import fs from 'fs';
+
 let passed = 0;
 let failed = 0;
 
@@ -24,6 +26,25 @@ function assert(condition, message) {
     console.error(`  ❌ FAIL: ${message}`);
     failed++;
   }
+}
+
+function cleanJSONDB(prefix) {
+  try {
+    const dbPath = 'src/data/db.json';
+    if (fs.existsSync(dbPath)) {
+      const data = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
+      if (Array.isArray(data.couponUsages)) {
+        data.couponUsages = data.couponUsages.filter((u) => !u.couponCode?.startsWith(prefix));
+      }
+      if (Array.isArray(data.offers)) {
+        data.offers = data.offers.filter((o) => !o.code?.startsWith(prefix));
+      }
+      if (Array.isArray(data.orders)) {
+        data.orders = data.orders.filter((ord) => !ord.id?.startsWith('#SETEST'));
+      }
+      fs.writeFileSync(dbPath, JSON.stringify(data, null, 2), 'utf8');
+    }
+  } catch (e) {}
 }
 
 async function run() {
@@ -39,13 +60,22 @@ async function run() {
   await Offer.deleteMany({ code: new RegExp(`^${TEST_PREFIX}`) });
   await CouponUsage.deleteMany({ couponCode: new RegExp(`^${TEST_PREFIX}`) });
   await Order.deleteMany({ id: new RegExp('^#SETEST') });
+  cleanJSONDB(TEST_PREFIX);
 
-  // Get a test product from catalog
-  let testProd = await Product.findOne().lean();
-  if (!testProd) {
-    testProd = { id: 'prod-test-1', name: 'Test Product', price: 1000, category: 'footwear', stockCount: 50 };
-    await Product.create(testProd);
-  }
+  // Create a dedicated isolated test product with sufficient stock
+  const testProdId = `prod-test-cpn-${Date.now()}`;
+  const testProd = {
+    id: testProdId,
+    name: 'Coupon Test Jewelry',
+    price: 1000,
+    category: 'footwear',
+    stockCount: 100,
+    stockStatus: 'in_stock',
+    isDeleted: false,
+    status: 'active',
+  };
+  await Product.deleteOne({ id: testProdId });
+  await Product.create(testProd);
 
   // ─────────────────────────────────────────────────────────────
   // SCENARIO 1: Create New Active Coupon & Customer Visibility
@@ -368,6 +398,8 @@ async function run() {
   await Offer.deleteMany({ code: new RegExp(`^${TEST_PREFIX}`) });
   await CouponUsage.deleteMany({ couponCode: new RegExp(`^${TEST_PREFIX}`) });
   await Order.deleteMany({ id: new RegExp('^#SETEST') });
+  await Product.deleteOne({ id: testProdId });
+  cleanJSONDB(TEST_PREFIX);
 
   console.log('\n═══════════════════════════════════════════════════════');
   console.log(`📊 FINAL TEST REPORT: ${passed} PASSED | ${failed} FAILED`);

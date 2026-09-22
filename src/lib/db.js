@@ -1610,6 +1610,13 @@ export async function adjustProductStockDB(id, delta = 0) {
   const idx = (jdb.products || []).findIndex((p) => String(p.id).trim() === cleanId);
   if (idx !== -1) {
     const cur = jdb.products[idx];
+    if (!db && numDelta < 0 && (cur.stockCount || 0) < Math.abs(numDelta)) {
+      return {
+        success: false,
+        error: `Cannot reduce stock below 0. Available: ${cur.stockCount || 0}, Requested reduction: ${Math.abs(numDelta)}`,
+        code: 'INSUFFICIENT_STOCK',
+      };
+    }
     const newStock = Math.max(0, (cur.stockCount || 0) + numDelta);
     cur.stockCount = newStock;
     cur.stockStatus = getStockStatus(newStock);
@@ -2585,20 +2592,22 @@ export async function createOrder(data) {
             (u.couponCode && u.couponCode.toUpperCase() === appliedCouponCode.toUpperCase())) &&
           String(u.userId) === authUserId
       );
-      if (isDup) {
+      if (!db && isDup) {
         const dupErr = new Error('This coupon has already been used on your account.');
         dupErr.code = 'COUPON_ALREADY_USED';
         dupErr.status = 400;
         throw dupErr;
       }
-      jdb.couponUsages.push({
-        couponId: matchedCoupon.id,
-        couponCode: appliedCouponCode,
-        userId: authUserId,
-        orderId: id,
-        discountAmount: appliedDiscountAmount,
-        usedAt: new Date().toISOString(),
-      });
+      if (!isDup) {
+        jdb.couponUsages.push({
+          couponId: matchedCoupon.id,
+          couponCode: appliedCouponCode,
+          userId: authUserId,
+          orderId: id,
+          discountAmount: appliedDiscountAmount,
+          usedAt: new Date().toISOString(),
+        });
+      }
       const offIdx = (jdb.offers || []).findIndex((o) => o.id === matchedCoupon.id);
       if (offIdx !== -1) {
         jdb.offers[offIdx].usageCount = (jdb.offers[offIdx].usageCount || 0) + 1;

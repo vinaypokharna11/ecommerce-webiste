@@ -3,40 +3,31 @@
 import React, { useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
 
-let gsapPromise = null;
-function loadGsap() {
-  if (!gsapPromise) {
-    gsapPromise = Promise.all([
-      import('gsap'),
-      import('gsap/ScrollTrigger')
-    ]).then(([gsapModule, stModule]) => {
-      const gsap = gsapModule.default || gsapModule;
-      const ScrollTrigger = stModule.ScrollTrigger || stModule.default;
-      gsap.registerPlugin(ScrollTrigger);
-      return { gsap, ScrollTrigger };
-    });
-  }
-  return gsapPromise;
-}
-
 export function GsapScrollAnimations({ children }) {
   const containerRef = useRef(null);
   const pathname = usePathname();
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
     if (pathname?.startsWith('/admin')) return;
 
-    let ctx = null;
-    let isMounted = true;
-
-    // Check if any GSAP target classes exist in container before loading library
     const container = containerRef.current;
     if (!container) return;
 
     const hasTargets = container.querySelector('.gsap-reveal, .gsap-stagger-cards, .gsap-parallax');
     if (!hasTargets) return;
 
-    loadGsap().then(({ gsap, ScrollTrigger }) => {
+    let ctx = null;
+    let isMounted = true;
+
+    Promise.all([
+      import('gsap'),
+      import('gsap/ScrollTrigger')
+    ]).then(([gsapModule, stModule]) => {
+      if (!isMounted || !containerRef.current) return;
+      const gsap = gsapModule.default || gsapModule;
+      const ScrollTrigger = stModule.ScrollTrigger || stModule.default;
+      gsap.registerPlugin(ScrollTrigger);
       if (!isMounted || !containerRef.current) return;
 
       ctx = gsap.context(() => {
