@@ -15,6 +15,11 @@ import StoreConfig from '../models/StoreConfig.js';
 import Wishlist from '../models/Wishlist.js';
 import Cart from '../models/Cart.js';
 import Review from '../models/Review.js';
+import CouponUsage from '../models/CouponUsage.js';
+import ExploreCollection from '../models/ExploreCollection.js';
+import Migration from '../models/Migration.js';
+import { validateCoupon, isCouponExpired } from './couponValidation.js';
+import { getStockStatus, isProductPurchasable } from './stockRules.js';
 import { broadcastCatalogEvent, CATALOG_EVENTS } from './events.js';
 
 const IS_SERVERLESS = Boolean(
@@ -890,6 +895,10 @@ const memoryCache = {
   configTime: 0,
   catalogBundle: null,
   catalogBundleTime: 0,
+  exploreSection: null,
+  exploreSectionTime: 0,
+  exploreSectionAdmin: null,
+  exploreSectionAdminTime: 0,
   TTL: 300000, // 5-minute hot cache — safe because all mutations immediately invalidate
   invalidateProducts() {
     memoryCache.products = null;
@@ -909,7 +918,19 @@ const memoryCache = {
   invalidateConfig() {
     memoryCache.config = null;
     memoryCache.configTime = 0;
+    memoryCache.exploreSection = null;
+    memoryCache.exploreSectionTime = 0;
+    memoryCache.exploreSectionAdmin = null;
+    memoryCache.exploreSectionAdminTime = 0;
     memoryCache.catalogBundle = null;
+  },
+  invalidateExplore() {
+    memoryCache.exploreSection = null;
+    memoryCache.exploreSectionTime = 0;
+    memoryCache.exploreSectionAdmin = null;
+    memoryCache.exploreSectionAdminTime = 0;
+    memoryCache.catalogBundle = null;
+    memoryCache.catalogBundleTime = 0;
   },
 };
 
@@ -918,11 +939,12 @@ export async function getCatalogBundle() {
     return memoryCache.catalogBundle;
   }
 
-  const [products, categories, offers, storeConfig] = await Promise.all([
+  const [products, categories, offers, storeConfig, exploreCollections] = await Promise.all([
     getProducts(),
     getCategories(),
-    getOffers(),
+    getOffers({ includeInactive: false, includeDeleted: false }),
     getStoreConfig(),
+    getExploreCollections({ includeInactive: false, includeDeleted: false }),
   ]);
 
   const bundle = {
@@ -930,7 +952,12 @@ export async function getCatalogBundle() {
     categories,
     offers,
     storeConfig,
-    exploreSection: storeConfig?.exploreSection || DEFAULT_EXPLORE_SECTION,
+    exploreSection: {
+      title: storeConfig?.exploreSection?.title || 'Explore Our Collections',
+      subtitle: storeConfig?.exploreSection?.subtitle || 'Find exactly what you’re looking for across our curated lifestyle, grocery, apparel, and travel categories.',
+      enabled: storeConfig?.exploreSection?.enabled !== false,
+      collections: exploreCollections,
+    },
     heroShowcase: storeConfig?.heroShowcase || DEFAULT_HERO_SHOWCASE,
   };
 
@@ -1125,6 +1152,56 @@ async function ensureMongoSeeded() {
           }).catch(() => {});
         }
 
+        // ─── ONE-TIME PERSISTENT EXPLORE COLLECTIONS SEED / MIGRATION ───────────────
+        const exploreMigration = await Migration.findOne({ key: 'explore_collections_seed_v1' }).catch(() => null);
+        if (!exploreMigration) {
+          const existingExploreCount = await ExploreCollection.countDocuments().catch(() => 0);
+          if (existingExploreCount === 0) {
+            const cfg = await StoreConfig.findOne().lean().catch(() => null);
+            const existingConfigCollections = cfg?.exploreSection?.collections;
+            if (Array.isArray(existingConfigCollections) && existingConfigCollections.length > 0) {
+              console.log(`🌱 Migrating ${existingConfigCollections.length} existing explore collections to dedicated model...`);
+              const docsToMigrate = existingConfigCollections.map((col, idx) => ({
+                id: col.id || `col_${Date.now()}_${idx}`,
+                name: col.name,
+                slug: col.slug || (col.name ? col.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') : `col-${idx}`),
+                description: col.description || '',
+                image: col.image || '/assets/images/prod_backpack.jpg',
+                categoryId: col.categoryId || col.id || 'all',
+                target: col.target || col.categoryId || '',
+                badge: col.badge || '',
+                order: typeof col.order === 'number' ? col.order : idx + 1,
+                isActive: col.isActive !== false,
+                isDeleted: false,
+                deletedAt: null,
+              }));
+              await ExploreCollection.insertMany(docsToMigrate).catch((e) => console.warn('Explore migration notice:', e.message));
+            } else {
+              console.log(`🌱 Seeding initial factory explore collections to MongoDB Atlas...`);
+              const defaultDocs = DEFAULT_EXPLORE_SECTION.collections.map((col, idx) => ({
+                id: col.id,
+                name: col.name,
+                slug: col.id,
+                description: '',
+                image: col.image,
+                categoryId: col.categoryId,
+                target: col.categoryId,
+                badge: col.badge || '',
+                order: col.order || idx + 1,
+                isActive: col.isActive !== false,
+                isDeleted: false,
+                deletedAt: null,
+              }));
+              await ExploreCollection.insertMany(defaultDocs).catch((e) => console.warn('Explore seed notice:', e.message));
+            }
+          }
+          await Migration.create({
+            key: 'explore_collections_seed_v1',
+            executedAt: new Date(),
+            metadata: { reason: 'Initial one-time Explore Collections setup' },
+          }).catch(() => {});
+        }
+
         isSeeded = true;
       } catch (err) {
         console.warn('MongoDB initial seed notice:', err.message);
@@ -1139,12 +1216,14 @@ async function ensureMongoSeeded() {
 
 // ─── PRODUCTS CRUD ───────────────────────────────────────────────────────────
 export async function getProducts(filters = {}) {
+  const includeDeleted = Boolean(filters.includeDeleted);
   const hasFilters = Boolean(
     (filters.category && filters.category !== 'all') ||
     (filters.stockStatus && filters.stockStatus !== 'all') ||
     filters.isPopular ||
     filters.isFeatured ||
-    filters.search
+    filters.search ||
+    includeDeleted
   );
 
   // Return from high-speed memory cache for default catalog load (<1ms)
@@ -1156,6 +1235,9 @@ export async function getProducts(filters = {}) {
   if (db) {
     await ensureMongoSeeded();
     const query = {};
+    if (!includeDeleted) {
+      query.isDeleted = { $ne: true };
+    }
     if (filters.category && filters.category !== 'all') query.category = filters.category;
     if (filters.stockStatus && filters.stockStatus !== 'all') query.stockStatus = filters.stockStatus;
     if (filters.isPopular) query.isPopular = true;
@@ -1163,7 +1245,7 @@ export async function getProducts(filters = {}) {
     if (filters.search) {
       const cleanSearch = String(filters.search).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       const regex = new RegExp(cleanSearch, 'i');
-      query.$or = [{ name: regex }, { categoryName: regex }, { tags: regex }, { id: regex }];
+      query.$or = [{ name: regex }, { categoryName: regex }, { tags: regex }, { id: regex }, { sku: regex }];
     }
     const products = await Product.find(query).sort({ createdAt: -1 }).lean();
     const cleanProducts = products.map(({ _id, __v, ...p }) => p);
@@ -1179,6 +1261,9 @@ export async function getProducts(filters = {}) {
   // Fallback
   const jdb = readJSONDB();
   let list = jdb.products || [];
+  if (!includeDeleted) {
+    list = list.filter((p) => p.isDeleted !== true);
+  }
   if (filters.category && filters.category !== 'all') list = list.filter((p) => p.category === filters.category);
   if (filters.stockStatus && filters.stockStatus !== 'all') list = list.filter((p) => p.stockStatus === filters.stockStatus);
   if (filters.isPopular) list = list.filter((p) => p.isPopular);
@@ -1189,6 +1274,7 @@ export async function getProducts(filters = {}) {
       (p) =>
         p.name?.toLowerCase().includes(q) ||
         p.id?.toLowerCase().includes(q) ||
+        p.sku?.toLowerCase().includes(q) ||
         p.categoryName?.toLowerCase().includes(q) ||
         (p.tags && p.tags.some((t) => t.toLowerCase().includes(q)))
     );
@@ -1211,7 +1297,12 @@ export function sanitizeProductPayload(data = {}) {
     ...rest
   } = data;
 
-  const sanitized = { ...rest };
+  const sanitized = {};
+  for (const [key, val] of Object.entries(rest)) {
+    if (!key.startsWith('$')) {
+      sanitized[key] = val;
+    }
+  }
   if (sanitized.price !== undefined) sanitized.price = Number(sanitized.price) || 0;
   if (sanitized.oldPrice !== undefined) sanitized.oldPrice = Number(sanitized.oldPrice) || undefined;
   if (sanitized.stockCount !== undefined) {
@@ -1263,32 +1354,48 @@ export function sanitizeProductPayload(data = {}) {
   return sanitized;
 }
 
-export async function getProductById(id) {
+export async function getProductById(id, { includeDeleted = false } = {}) {
   const cleanId = String(id || '').trim();
   if (!cleanId) return null;
 
   const db = await connectToDatabase();
   if (db) {
     await ensureMongoSeeded();
-    const prod = await Product.findOne({ id: cleanId }).lean();
+    const query = { id: cleanId };
+    if (!includeDeleted) {
+      query.isDeleted = { $ne: true };
+    }
+    const prod = await Product.findOne(query).lean();
     if (prod) {
       const { _id, __v, ...rest } = prod;
       return rest;
     }
   }
   const jdb = readJSONDB();
-  return (jdb.products || []).find((p) => String(p.id).trim() === cleanId) || null;
+  return (jdb.products || []).find((p) => String(p.id).trim() === cleanId && (includeDeleted || p.isDeleted !== true)) || null;
 }
 
 export const getProductByIdDB = getProductById;
 
 export async function createProduct(productData) {
   const generateUniqueId = () => `prod-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
-  let cleanId = String(productData.id || '').trim();
+  let cleanId = String(productData.id || productData.sku || '').trim();
+  const explicitIdProvided = Boolean(cleanId);
 
   const db = await connectToDatabase();
   if (db) {
-    if (!cleanId || (await Product.exists({ id: cleanId }))) {
+    if (explicitIdProvided) {
+      const existing = await Product.findOne({
+        $or: [{ id: cleanId }, { sku: cleanId }],
+        isDeleted: { $ne: true },
+      });
+      if (existing) {
+        const err = new Error(`This SKU is already in use (${cleanId}). Please use a unique SKU.`);
+        err.code = 'SKU_ALREADY_EXISTS';
+        err.status = 400;
+        throw err;
+      }
+    } else {
       cleanId = generateUniqueId();
       while (await Product.exists({ id: cleanId })) {
         cleanId = generateUniqueId();
@@ -1296,7 +1403,15 @@ export async function createProduct(productData) {
     }
   } else {
     const jdb = readJSONDB();
-    if (!cleanId || (jdb.products || []).some((p) => String(p.id).trim() === cleanId)) {
+    if (explicitIdProvided) {
+      const existing = (jdb.products || []).find((p) => (p.id === cleanId || p.sku === cleanId) && p.isDeleted !== true);
+      if (existing) {
+        const err = new Error(`This SKU is already in use (${cleanId}). Please use a unique SKU.`);
+        err.code = 'SKU_ALREADY_EXISTS';
+        err.status = 400;
+        throw err;
+      }
+    } else {
       cleanId = generateUniqueId();
     }
   }
@@ -1308,11 +1423,15 @@ export async function createProduct(productData) {
     ? Math.round(((oldPrice - price) / oldPrice) * 100)
     : Number(sanitized.discountPercent) || 0;
   const stockCount = Number(sanitized.stockCount) || 0;
-  const stockStatus = stockCount <= 0 ? 'out_of_stock' : stockCount < 5 ? 'low_stock' : 'in_stock';
+  const stockStatus = getStockStatus(stockCount);
 
   let newProduct = {
     ...sanitized,
     id: cleanId,
+    sku: sanitized.sku ? String(sanitized.sku).trim() : cleanId,
+    status: sanitized.status || 'active',
+    isDeleted: false,
+    deletedAt: null,
     price,
     oldPrice: oldPrice || undefined,
     discountPercent,
@@ -1337,6 +1456,7 @@ export async function createProduct(productData) {
         console.warn(`Product ID collision on ${newProduct.id} (E11000). Generating fresh ID and retrying...`);
         newProduct.id = generateUniqueId();
         cleanId = newProduct.id;
+        newProduct.sku = newProduct.sku || cleanId;
         await Product.create(newProduct);
       } else {
         throw err;
@@ -1364,11 +1484,31 @@ export async function updateProduct(id, updateData) {
   const sanitized = sanitizeProductPayload(updateData);
   delete sanitized.id; // Prevent modifying unique business key ID
 
+  if (sanitized.stockCount !== undefined) {
+    const sc = Number(sanitized.stockCount);
+    sanitized.stockCount = sc;
+    sanitized.stockStatus = getStockStatus(sc);
+  }
+
   let updatedProduct = null;
 
   // 1. Update in MongoDB if available
   const db = await connectToDatabase();
   if (db) {
+    if (sanitized.sku) {
+      const existingSku = await Product.findOne({
+        id: { $ne: cleanId },
+        $or: [{ id: sanitized.sku }, { sku: sanitized.sku }],
+        isDeleted: { $ne: true },
+      });
+      if (existingSku) {
+        const err = new Error(`This SKU is already in use (${sanitized.sku}).`);
+        err.code = 'SKU_ALREADY_EXISTS';
+        err.status = 400;
+        throw err;
+      }
+    }
+
     const updated = await Product.findOneAndUpdate(
       { id: cleanId },
       { $set: sanitized },
@@ -1391,7 +1531,7 @@ export async function updateProduct(id, updateData) {
     if (merged.stockCount !== undefined) {
       const sc = Number(merged.stockCount);
       merged.stockCount = sc;
-      merged.stockStatus = sc <= 0 ? 'out_of_stock' : sc < 5 ? 'low_stock' : 'in_stock';
+      merged.stockStatus = getStockStatus(sc);
     }
     jdb.products[index] = merged;
     writeJSONDB(jdb);
@@ -1408,36 +1548,193 @@ export async function updateProduct(id, updateData) {
   return updatedProduct;
 }
 
-export async function deleteProduct(id) {
+/**
+ * adjustProductStockDB
+ * Atomically increments or decrements product stock without race conditions.
+ * Prevents negative inventory at the database level and auto-updates stockStatus.
+ */
+export async function adjustProductStockDB(id, delta = 0) {
+  const cleanId = String(id || '').trim();
+  const numDelta = parseInt(delta, 10);
+  if (!cleanId || isNaN(numDelta)) {
+    return { success: false, error: 'Valid Product ID and numeric delta are required', code: 'INVALID_INPUT' };
+  }
+
+  const db = await connectToDatabase();
+  let updatedProduct = null;
+
+  if (db) {
+    // If reducing stock, strictly require current stockCount >= |delta| to prevent negative stock
+    const query = {
+      id: cleanId,
+      isDeleted: { $ne: true },
+      ...(numDelta < 0 ? { stockCount: { $gte: Math.abs(numDelta) } } : {}),
+    };
+
+    const updated = await Product.findOneAndUpdate(
+      query,
+      { $inc: { stockCount: numDelta } },
+      { returnDocument: 'after' }
+    ).lean();
+
+    if (!updated) {
+      const existing = await Product.findOne({ id: cleanId }).lean();
+      if (!existing || existing.isDeleted) {
+        return {
+          success: false,
+          error: `Product "${cleanId}" not found or has been deleted.`,
+          code: 'PRODUCT_NOT_FOUND',
+        };
+      }
+      if (numDelta < 0 && (existing.stockCount || 0) < Math.abs(numDelta)) {
+        return {
+          success: false,
+          error: `Cannot reduce stock below 0. Available: ${existing.stockCount || 0}, Requested reduction: ${Math.abs(numDelta)}`,
+          code: 'INSUFFICIENT_STOCK',
+        };
+      }
+      return { success: false, error: 'Stock adjustment condition not met', code: 'STOCK_UPDATE_FAILED' };
+    }
+
+    const { _id, __v, ...rest } = updated;
+    const computedStatus = getStockStatus(rest.stockCount);
+    if (rest.stockStatus !== computedStatus) {
+      await Product.updateOne({ id: cleanId }, { $set: { stockStatus: computedStatus } });
+      rest.stockStatus = computedStatus;
+    }
+    updatedProduct = rest;
+  }
+
+  // Update local JSON DB
+  const jdb = readJSONDB();
+  const idx = (jdb.products || []).findIndex((p) => String(p.id).trim() === cleanId);
+  if (idx !== -1) {
+    const cur = jdb.products[idx];
+    const newStock = Math.max(0, (cur.stockCount || 0) + numDelta);
+    cur.stockCount = newStock;
+    cur.stockStatus = getStockStatus(newStock);
+    jdb.products[idx] = cur;
+    writeJSONDB(jdb);
+    if (!updatedProduct) {
+      updatedProduct = cur;
+    }
+  }
+
+  if (!updatedProduct) {
+    return { success: false, error: `Product "${cleanId}" not found`, code: 'PRODUCT_NOT_FOUND' };
+  }
+
+  memoryCache.invalidateProducts();
+  broadcastCatalogEvent(CATALOG_EVENTS.PRODUCT_UPDATED, { product: updatedProduct });
+  return { success: true, product: updatedProduct };
+}
+
+export async function deleteProduct(id, { soft = true } = {}) {
   const cleanId = String(id || '').trim();
   if (!cleanId) return false;
 
   let deleted = false;
-
-  // 1. Delete from MongoDB if available
   const db = await connectToDatabase();
+
   if (db) {
-    const res = await Product.deleteOne({ id: cleanId });
-    if (res.deletedCount > 0) deleted = true;
-  } else if (process.env.MONGODB_URI) {
-    console.warn('⚠️ MongoDB Atlas unavailable — deleting product from local fallback only.');
+    if (soft) {
+      const res = await Product.updateOne(
+        { id: cleanId },
+        {
+          $set: {
+            isDeleted: true,
+            deletedAt: new Date(),
+            status: 'archived',
+            stockStatus: 'out_of_stock',
+          },
+        }
+      );
+      if (res.matchedCount > 0) deleted = true;
+    } else {
+      const res = await Product.deleteOne({ id: cleanId });
+      if (res.deletedCount > 0) deleted = true;
+    }
   }
 
-
-  // 2. Always delete from local JSON database
+  // Update JSON DB
   const jdb = readJSONDB();
-  const initLen = (jdb.products || []).length;
-  jdb.products = (jdb.products || []).filter((p) => String(p.id).trim() !== cleanId);
-  if (jdb.products.length < initLen) {
-    deleted = true;
+  if (soft) {
+    const idx = (jdb.products || []).findIndex((p) => String(p.id).trim() === cleanId);
+    if (idx !== -1) {
+      jdb.products[idx].isDeleted = true;
+      jdb.products[idx].deletedAt = new Date().toISOString();
+      jdb.products[idx].status = 'archived';
+      jdb.products[idx].stockStatus = 'out_of_stock';
+      deleted = true;
+      writeJSONDB(jdb);
+    }
+  } else {
+    const initLen = (jdb.products || []).length;
+    jdb.products = (jdb.products || []).filter((p) => String(p.id).trim() !== cleanId);
+    if (jdb.products.length < initLen) {
+      deleted = true;
+    }
+    writeJSONDB(jdb);
   }
-  writeJSONDB(jdb);
 
   memoryCache.invalidateProducts();
   memoryCache.invalidateCategories();
   broadcastCatalogEvent(CATALOG_EVENTS.PRODUCT_DELETED, { id: cleanId });
-
   return deleted;
+}
+
+export async function restoreProduct(id) {
+  const cleanId = String(id || '').trim();
+  if (!cleanId) return null;
+
+  let restoredProduct = null;
+  const db = await connectToDatabase();
+
+  if (db) {
+    const existing = await Product.findOne({ id: cleanId }).lean();
+    if (!existing) return null;
+
+    const newStatus = getStockStatus(existing.stockCount);
+    const updated = await Product.findOneAndUpdate(
+      { id: cleanId },
+      {
+        $set: {
+          isDeleted: false,
+          deletedAt: null,
+          status: 'active',
+          stockStatus: newStatus,
+        },
+      },
+      { returnDocument: 'after' }
+    ).lean();
+
+    if (updated) {
+      const { _id, __v, ...rest } = updated;
+      restoredProduct = rest;
+    }
+  }
+
+  // Update JSON DB
+  const jdb = readJSONDB();
+  const idx = (jdb.products || []).findIndex((p) => String(p.id).trim() === cleanId);
+  if (idx !== -1) {
+    const p = jdb.products[idx];
+    p.isDeleted = false;
+    p.deletedAt = null;
+    p.status = 'active';
+    p.stockStatus = getStockStatus(p.stockCount);
+    jdb.products[idx] = p;
+    writeJSONDB(jdb);
+    if (!restoredProduct) restoredProduct = p;
+  }
+
+  if (restoredProduct) {
+    memoryCache.invalidateProducts();
+    memoryCache.invalidateCategories();
+    broadcastCatalogEvent(CATALOG_EVENTS.PRODUCT_CREATED, { product: restoredProduct });
+  }
+
+  return restoredProduct;
 }
 
 export async function bulkDeleteProductsDB(ids = []) {
@@ -1829,34 +2126,86 @@ export async function deleteCategory(id) {
 }
 
 // ─── OFFERS CRUD ─────────────────────────────────────────────────────────────
-export async function getOffers() {
-  if (memoryCache.offers && Date.now() - memoryCache.offersTime < memoryCache.TTL) {
+export async function getOffers(options = {}) {
+  const { includeInactive = false, includeDeleted = false } = options;
+  const isDefaultPublicCall = !includeInactive && !includeDeleted;
+
+  if (isDefaultPublicCall && memoryCache.offers && Date.now() - memoryCache.offersTime < memoryCache.TTL) {
     return memoryCache.offers;
   }
 
   const db = await connectToDatabase();
   if (db) {
     await ensureMongoSeeded();
-    const offers = await Offer.find().lean();
-    const result = offers.map(({ _id, __v, ...o }) => o);
-    memoryCache.offers = result;
-    memoryCache.offersTime = Date.now();
+    const query = {};
+    if (!includeDeleted) {
+      query.isDeleted = { $ne: true };
+      query.status = { $ne: 'DELETED' };
+    }
+    if (!includeInactive) {
+      query.isActive = { $ne: false };
+      query.status = { $nin: ['PAUSED', 'DELETED', 'EXPIRED'] };
+    }
+
+    const offers = await Offer.find(query).lean();
+    let result = offers.map(({ _id, __v, ...o }) => ({
+      ...o,
+      status: o.status || (o.isActive === false ? 'PAUSED' : 'ACTIVE'),
+      isDeleted: !!o.isDeleted,
+      usageCount: Number(o.usageCount) || 0,
+      minOrderAmount: Number(o.minOrderAmount) || 0,
+    }));
+
+    if (!includeInactive) {
+      result = result.filter((o) => !isCouponExpired(o) && o.isActive !== false && o.status === 'ACTIVE');
+    }
+
+    if (isDefaultPublicCall) {
+      memoryCache.offers = result;
+      memoryCache.offersTime = Date.now();
+    }
     return result;
   }
+
   const jdb = readJSONDB();
-  const result = jdb.offers || [];
-  memoryCache.offers = result;
-  memoryCache.offersTime = Date.now();
+  let result = (jdb.offers || []).map((o) => ({
+    ...o,
+    status: o.status || (o.isActive === false ? 'PAUSED' : 'ACTIVE'),
+    isDeleted: !!o.isDeleted,
+    usageCount: Number(o.usageCount) || 0,
+    minOrderAmount: Number(o.minOrderAmount) || 0,
+  }));
+
+  if (!includeDeleted) {
+    result = result.filter((o) => o.isDeleted !== true && o.status !== 'DELETED');
+  }
+  if (!includeInactive) {
+    result = result.filter((o) => o.isActive !== false && o.status === 'ACTIVE' && !isCouponExpired(o));
+  }
+
+  if (isDefaultPublicCall) {
+    memoryCache.offers = result;
+    memoryCache.offersTime = Date.now();
+  }
   return result;
 }
 
 export async function createOffer(data) {
   const id = data.id || `offer-${Date.now()}`;
+  const isAct = data.isActive !== false && data.status !== 'PAUSED';
   const newOffer = {
     ...data,
     id,
     code: (data.code || 'DEAL10').toUpperCase().trim(),
-    isActive: data.isActive !== false,
+    status: isAct ? 'ACTIVE' : 'PAUSED',
+    isActive: isAct,
+    isDeleted: false,
+    usageCount: Number(data.usageCount) || 0,
+    minOrderAmount: Number(data.minOrderAmount) || 0,
+    usageLimit: data.usageLimit ? Number(data.usageLimit) : null,
+    perUserLimit: Number(data.perUserLimit) || 1,
+    startDate: data.startDate ? new Date(data.startDate) : null,
+    endDate: data.endDate ? new Date(data.endDate) : null,
     popular: !!data.popular,
     gradient: data.gradient || 'from-[#6257FF] to-[#4F46E5]',
     bgLight: data.bgLight || 'bg-[#F5F3FF]',
@@ -1885,8 +2234,37 @@ export async function createOffer(data) {
 
 export async function updateOffer(id, updateData) {
   const db = await connectToDatabase();
+  const sanitized = { ...updateData };
+
+  // Synchronize status and isActive
+  if (sanitized.isActive === false || sanitized.status === 'PAUSED') {
+    sanitized.isActive = false;
+    sanitized.status = 'PAUSED';
+  } else if (sanitized.isActive === true || sanitized.status === 'ACTIVE') {
+    // Check if offer is expired before activating
+    const currentOffer = db ? await Offer.findOne({ id }).lean() : (readJSONDB().offers || []).find((o) => o.id === id);
+    const checkCandidate = { ...(currentOffer || {}), ...sanitized };
+    if (isCouponExpired(checkCandidate)) {
+      sanitized.status = 'EXPIRED';
+      sanitized.isActive = false;
+    } else {
+      sanitized.isActive = true;
+      sanitized.status = 'ACTIVE';
+    }
+  }
+
+  if (sanitized.code) {
+    sanitized.code = sanitized.code.toUpperCase().trim();
+  }
+  if (sanitized.minOrderAmount !== undefined) {
+    sanitized.minOrderAmount = Number(sanitized.minOrderAmount) || 0;
+  }
+  if (sanitized.discountPercent !== undefined) {
+    sanitized.discountPercent = Number(sanitized.discountPercent) || 0;
+  }
+
   if (db) {
-    const updated = await Offer.findOneAndUpdate({ id }, updateData, { returnDocument: 'after' }).lean();
+    const updated = await Offer.findOneAndUpdate({ id }, sanitized, { returnDocument: 'after' }).lean();
     if (!updated) return null;
     const { _id, __v, ...rest } = updated;
     memoryCache.invalidateOffers();
@@ -1897,7 +2275,7 @@ export async function updateOffer(id, updateData) {
   const jdb = readJSONDB();
   const index = (jdb.offers || []).findIndex((o) => o.id === id);
   if (index === -1) return null;
-  jdb.offers[index] = { ...jdb.offers[index], ...updateData };
+  jdb.offers[index] = { ...jdb.offers[index], ...sanitized };
   writeJSONDB(jdb);
   memoryCache.invalidateOffers();
   broadcastCatalogEvent(CATALOG_EVENTS.OFFER_UPDATED, { offer: jdb.offers[index] });
@@ -1906,26 +2284,31 @@ export async function updateOffer(id, updateData) {
 
 export async function deleteOffer(id) {
   const db = await connectToDatabase();
+  const softDeleteFields = {
+    isDeleted: true,
+    status: 'DELETED',
+    isActive: false,
+    deletedAt: new Date(),
+  };
+
   if (db) {
-    const res = await Offer.deleteOne({ id });
-    const ok = res.deletedCount > 0;
-    if (ok) {
+    const updated = await Offer.findOneAndUpdate({ id }, softDeleteFields, { returnDocument: 'after' }).lean();
+    if (updated) {
       memoryCache.invalidateOffers();
       broadcastCatalogEvent(CATALOG_EVENTS.OFFER_DELETED, { id });
+      return true;
     }
-    return ok;
+    return false;
   }
 
   const jdb = readJSONDB();
-  const initLen = (jdb.offers || []).length;
-  jdb.offers = (jdb.offers || []).filter((o) => o.id !== id);
-  const deleted = jdb.offers.length < initLen;
-  if (deleted) {
-    writeJSONDB(jdb);
-    memoryCache.invalidateOffers();
-    broadcastCatalogEvent(CATALOG_EVENTS.OFFER_DELETED, { id });
-  }
-  return deleted;
+  const index = (jdb.offers || []).findIndex((o) => o.id === id);
+  if (index === -1) return false;
+  jdb.offers[index] = { ...jdb.offers[index], ...softDeleteFields };
+  writeJSONDB(jdb);
+  memoryCache.invalidateOffers();
+  broadcastCatalogEvent(CATALOG_EVENTS.OFFER_DELETED, { id });
+  return true;
 }
 
 // ─── ORDERS CRUD ─────────────────────────────────────────────────────────────
@@ -2005,9 +2388,9 @@ export async function getOrders(userId = null, options = {}) {
 }
 
 export async function createOrder(data) {
-  const id = data.id && typeof data.id === 'string' && data.id.startsWith('#SE')
-    ? data.id
-    : `#SE${Math.floor(1000 + Math.random() * 9000)}`;
+  const id = (data._internalTestId && typeof data._internalTestId === 'string' && data._internalTestId.startsWith('#SE'))
+    ? data._internalTestId
+    : `#SE${Date.now().toString().slice(-6)}${Math.floor(1000 + Math.random() * 9000)}`;
   const dateStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
   // 1. Validate items array
@@ -2025,15 +2408,28 @@ export async function createOrder(data) {
   for (const item of data.items) {
     const pId = item.productId || item.id;
     const dbProd = allProducts.find((p) => p.id === pId);
-    if (!dbProd) {
-      throw new Error(`Invalid item: product "${pId}" does not exist in catalog`);
+    if (!dbProd || dbProd.isDeleted) {
+      const err = new Error(`Product "${dbProd?.name || pId}" is no longer available.`);
+      err.code = 'PRODUCT_UNAVAILABLE';
+      err.status = 400;
+      throw err;
+    }
+
+    if (dbProd.status === 'inactive' || dbProd.status === 'archived') {
+      const err = new Error(`Product "${dbProd.name}" is currently unavailable.`);
+      err.code = 'PRODUCT_UNAVAILABLE';
+      err.status = 400;
+      throw err;
     }
 
     const safeQty = Math.max(1, Math.min(100, parseInt(item.quantity, 10) || 1));
     
     // Preliminary Stock Verification: Ensure catalog has enough available stock
     if (dbProd.stockCount !== undefined && dbProd.stockCount < safeQty) {
-      throw new Error(`Insufficient stock for "${dbProd.name}". Available: ${dbProd.stockCount}, Requested: ${safeQty}`);
+      const err = new Error(`Insufficient stock for "${dbProd.name}". Available: ${dbProd.stockCount}, Requested: ${safeQty}`);
+      err.code = 'INSUFFICIENT_STOCK';
+      err.status = 400;
+      throw err;
     }
 
     // Strict DB unit price — completely ignore client-supplied unit price
@@ -2055,30 +2451,52 @@ export async function createOrder(data) {
   // 3. Server-side coupon / discount validation
   let appliedDiscountPercent = 0;
   let appliedCouponCode = '';
+  let appliedDiscountAmount = 0;
+  let matchedCoupon = null;
 
-  if (data.couponCode && typeof data.couponCode === 'string') {
-    const cleanCode = data.couponCode.trim().toUpperCase();
-    const allOffers = db
-      ? await Offer.find({ isActive: true }).lean()
-      : (readJSONDB().offers || []).filter((o) => o.isActive !== false);
+  if (data.couponCode && typeof data.couponCode === 'string' && data.couponCode.trim()) {
+    const authUserId = data.userId || data.customerId;
+    const validationResult = await validateCoupon({
+      couponCode: data.couponCode,
+      userId: authUserId,
+      items: verifiedItems,
+      cartSubtotal: calculatedAmount,
+    });
 
-    const validOffer = allOffers.find(
-      (o) => (o.code || '').trim().toUpperCase() === cleanCode
-    );
-
-    if (validOffer) {
-      const discount = Math.min(100, Math.max(0, Number(validOffer.discountPercent || validOffer.discount) || 0));
-      if (discount > 0) {
-        appliedDiscountPercent = discount;
-        appliedCouponCode = cleanCode;
-        calculatedAmount = Math.round(calculatedAmount * (1 - discount / 100));
-      }
+    if (!validationResult.valid) {
+      const err = new Error(validationResult.message || 'Invalid coupon code applied.');
+      err.code = validationResult.code || 'INVALID_COUPON';
+      err.status = 400;
+      throw err;
     }
+
+    matchedCoupon = validationResult.coupon;
+    appliedDiscountPercent = validationResult.discountPercent;
+    appliedCouponCode = matchedCoupon.code;
+    appliedDiscountAmount = validationResult.discountAmount;
+    calculatedAmount = Math.max(0, calculatedAmount - appliedDiscountAmount);
   }
 
   const finalAmount = Math.max(0, calculatedAmount);
 
-  // 4. Force strict initial order status: PENDING (Do NOT confirm or deduct inventory yet)
+  // 4. Atomically reserve inventory for all items in the order
+  const decrementedItems = [];
+  for (const item of verifiedItems) {
+    const adjRes = await adjustProductStockDB(item.id, -item.quantity);
+    if (!adjRes.success) {
+      // Roll back any previously decremented items in this order
+      for (const prev of decrementedItems) {
+        await adjustProductStockDB(prev.id, prev.quantity).catch(() => {});
+      }
+      const err = new Error(adjRes.error || `Insufficient stock for "${item.name}".`);
+      err.code = 'INSUFFICIENT_STOCK';
+      err.status = 400;
+      throw err;
+    }
+    decrementedItems.push(item);
+  }
+
+  // 5. Build order document
   const addressVal = String(data.deliveryAddress || data.shippingAddress || data.address || '').trim();
   const payMethodVal = String(data.paymentMethod || data.payMethod || 'Cash on Delivery').trim();
   const newOrder = {
@@ -2104,34 +2522,100 @@ export async function createOrder(data) {
     paymentMethod: payMethodVal,
     payMethod: payMethodVal,
     sellerId: data.sellerId || verifiedItems[0]?.sellerId || 'nakoda_seller',
+    inventoryDeducted: true,
+    inventoryRestored: false,
     createdAt: new Date().toISOString(),
   };
 
   let savedOrder = newOrder;
 
-  // 5. Persist to MongoDB Atlas (Inventory is NOT decremented until seller accepts)
-  if (db) {
-    const created = await Order.create(newOrder);
-    savedOrder = created.toObject();
-    delete savedOrder._id;
-    delete savedOrder.__v;
+  try {
+    // 6. Persist to MongoDB Atlas
+    if (db) {
+      const created = await Order.create(newOrder);
+      savedOrder = created.toObject();
+      delete savedOrder._id;
+      delete savedOrder.__v;
 
-    // Clear customer's server cart if authenticated
-    const targetUserId = newOrder.userId || newOrder.customerId;
-    if (targetUserId) {
-      await Cart.deleteOne({ userId: targetUserId }).catch(() => {});
+      // Record Coupon Usage atomically with compound unique index
+      if (matchedCoupon && (newOrder.userId || newOrder.customerId)) {
+        const authUserId = String(newOrder.userId || newOrder.customerId);
+        const usageRecord = {
+          couponId: matchedCoupon.id,
+          couponCode: appliedCouponCode,
+          userId: authUserId,
+          orderId: id,
+          discountAmount: appliedDiscountAmount,
+          usedAt: new Date(),
+        };
+
+        try {
+          await CouponUsage.create(usageRecord);
+          await Offer.updateOne({ id: matchedCoupon.id }, { $inc: { usageCount: 1 } });
+        } catch (err) {
+          // Handle race-condition duplicate usage
+          if (err.code === 11000) {
+            await Order.deleteOne({ id });
+            const dupErr = new Error('This coupon has already been used on your account.');
+            dupErr.code = 'COUPON_ALREADY_USED';
+            dupErr.status = 400;
+            throw dupErr;
+          }
+          console.error('Coupon usage recording notice:', err.message);
+        }
+      }
+
+      // Clear customer's server cart if authenticated
+      const targetUserId = newOrder.userId || newOrder.customerId;
+      if (targetUserId) {
+        await Cart.deleteOne({ userId: targetUserId }).catch(() => {});
+      }
+    } else if (process.env.MONGODB_URI) {
+      console.warn('⚠️ MongoDB Atlas unavailable — placing order in local fallback only.');
     }
-  } else if (process.env.MONGODB_URI) {
-    console.warn('⚠️ MongoDB Atlas unavailable — placing order in local fallback only.');
+
+    // 7. Update local JSON backup
+    const jdb = readJSONDB();
+    if (matchedCoupon && (newOrder.userId || newOrder.customerId)) {
+      if (!jdb.couponUsages) jdb.couponUsages = [];
+      const authUserId = String(newOrder.userId || newOrder.customerId);
+      const isDup = jdb.couponUsages.some(
+        (u) =>
+          ((u.couponId && u.couponId === matchedCoupon.id) ||
+            (u.couponCode && u.couponCode.toUpperCase() === appliedCouponCode.toUpperCase())) &&
+          String(u.userId) === authUserId
+      );
+      if (isDup) {
+        const dupErr = new Error('This coupon has already been used on your account.');
+        dupErr.code = 'COUPON_ALREADY_USED';
+        dupErr.status = 400;
+        throw dupErr;
+      }
+      jdb.couponUsages.push({
+        couponId: matchedCoupon.id,
+        couponCode: appliedCouponCode,
+        userId: authUserId,
+        orderId: id,
+        discountAmount: appliedDiscountAmount,
+        usedAt: new Date().toISOString(),
+      });
+      const offIdx = (jdb.offers || []).findIndex((o) => o.id === matchedCoupon.id);
+      if (offIdx !== -1) {
+        jdb.offers[offIdx].usageCount = (jdb.offers[offIdx].usageCount || 0) + 1;
+      }
+    }
+    jdb.orders = [newOrder, ...(jdb.orders || [])];
+    writeJSONDB(jdb);
+
+    broadcastCatalogEvent(CATALOG_EVENTS.ORDER_CREATED, { order: savedOrder });
+    return savedOrder;
+  } catch (err) {
+    // If order persistence fails, roll back deducted inventory
+    for (const item of decrementedItems) {
+      await adjustProductStockDB(item.id, item.quantity).catch(() => {});
+    }
+    throw err;
   }
-
-  // 6. Update local JSON backup
-  const jdb = readJSONDB();
-  jdb.orders = [newOrder, ...(jdb.orders || [])];
-  writeJSONDB(jdb);
-
-  broadcastCatalogEvent(CATALOG_EVENTS.ORDER_CREATED, { order: savedOrder });
-  return savedOrder;
 }
 
 /**
@@ -2176,24 +2660,26 @@ export async function acceptOrder(orderId, sellerUser = null) {
     throw new Error('Order contains no line items to fulfill');
   }
 
-  // 3. Verify stock availability for all items before any deduction
-  const allProducts = db ? await Product.find().lean() : (readJSONDB().products || []);
-  for (const item of verifiedItems) {
-    const pId = item.productId || item.id;
-    const dbProd = allProducts.find((p) => p.id === pId);
-    if (!dbProd) {
-      throw new Error(`Product "${item.name || pId}" no longer exists in catalog`);
-    }
-    const reqQty = Number(item.quantity) || 1;
-    const currentStock = dbProd.stockCount !== undefined ? dbProd.stockCount : 999;
-    if (currentStock < reqQty) {
-      throw new Error(`Insufficient stock for "${dbProd.name}". Available: ${currentStock}, Required: ${reqQty}`);
+  // 3. Verify stock availability for all items before deduction (if not already deducted at order placement)
+  if (!order.inventoryDeducted) {
+    const allProducts = db ? await Product.find().lean() : (readJSONDB().products || []);
+    for (const item of verifiedItems) {
+      const pId = item.productId || item.id;
+      const dbProd = allProducts.find((p) => p.id === pId);
+      if (!dbProd) {
+        throw new Error(`Product "${item.name || pId}" no longer exists in catalog`);
+      }
+      const reqQty = Number(item.quantity) || 1;
+      const currentStock = dbProd.stockCount !== undefined ? dbProd.stockCount : 999;
+      if (currentStock < reqQty) {
+        throw new Error(`Insufficient stock for "${dbProd.name}". Available: ${currentStock}, Required: ${reqQty}`);
+      }
     }
   }
 
   const acceptedAtIso = new Date().toISOString();
 
-  // 4. Atomically update Order status to 'accepted' and decrement inventory
+  // 4. Atomically update Order status to 'accepted' and decrement inventory (if not already deducted)
   let acceptedOrder = null;
   const decrementedProductIds = [];
 
@@ -2206,6 +2692,7 @@ export async function acceptOrder(orderId, sellerUser = null) {
           status: 'accepted',
           statusLabel: 'Accepted',
           acceptedAt: new Date(acceptedAtIso),
+          inventoryDeducted: true,
         },
       },
       { returnDocument: 'after' }
@@ -2215,30 +2702,32 @@ export async function acceptOrder(orderId, sellerUser = null) {
       throw new Error(`Order "${orderId}" is no longer pending or has already been accepted by another request`);
     }
 
-    // Atomically decrement stock in MongoDB for each product
-    for (const item of verifiedItems) {
-      const pId = item.productId || item.id;
-      const reqQty = Number(item.quantity) || 1;
-      const updatedProd = await Product.findOneAndUpdate(
-        { id: pId, stockCount: { $gte: reqQty } },
-        { $inc: { stockCount: -reqQty } },
-        { returnDocument: 'after' }
-      );
-      if (updatedProd) {
-        decrementedProductIds.push({ id: pId, qty: reqQty });
-        const sc = updatedProd.stockCount;
-        const newStatus = sc <= 0 ? 'out_of_stock' : sc < 5 ? 'low_stock' : 'in_stock';
-        if (updatedProd.stockStatus !== newStatus) {
-          await Product.updateOne({ id: pId }, { $set: { stockStatus: newStatus } });
+    // If inventory was NOT already deducted at order placement, decrement now
+    if (!order.inventoryDeducted) {
+      for (const item of verifiedItems) {
+        const pId = item.productId || item.id;
+        const reqQty = Number(item.quantity) || 1;
+        const updatedProd = await Product.findOneAndUpdate(
+          { id: pId, stockCount: { $gte: reqQty } },
+          { $inc: { stockCount: -reqQty } },
+          { returnDocument: 'after' }
+        );
+        if (updatedProd) {
+          decrementedProductIds.push({ id: pId, qty: reqQty });
+          const sc = updatedProd.stockCount;
+          const newStatus = sc <= 0 ? 'out_of_stock' : sc < 5 ? 'low_stock' : 'in_stock';
+          if (updatedProd.stockStatus !== newStatus) {
+            await Product.updateOne({ id: pId }, { $set: { stockStatus: newStatus } });
+          }
+        } else {
+          // Roll back previous decrements if this item failed
+          for (const dec of decrementedProductIds) {
+            await Product.updateOne({ id: dec.id }, { $inc: { stockCount: dec.qty } });
+          }
+          // Roll back order status
+          await Order.updateOne({ id: orderId }, { $set: { status: 'pending', statusLabel: 'Pending', acceptedAt: null, inventoryDeducted: false } });
+          throw new Error(`Stock decrement failed for "${item.name}". Order acceptance rolled back.`);
         }
-      } else {
-        // Roll back previous decrements if this item failed
-        for (const dec of decrementedProductIds) {
-          await Product.updateOne({ id: dec.id }, { $inc: { stockCount: dec.qty } });
-        }
-        // Roll back order status
-        await Order.updateOne({ id: orderId }, { $set: { status: 'pending', statusLabel: 'Pending', acceptedAt: null } });
-        throw new Error(`Stock decrement failed for "${item.name}". Order acceptance rolled back.`);
       }
     }
 
@@ -2254,13 +2743,14 @@ export async function acceptOrder(orderId, sellerUser = null) {
     localOrder.status = 'accepted';
     localOrder.statusLabel = 'Accepted';
     localOrder.acceptedAt = acceptedAtIso;
+    localOrder.inventoryDeducted = true;
     if (!acceptedOrder) {
       acceptedOrder = { ...localOrder };
     }
   }
 
-  // Decrement stock in local JSON DB
-  if (jdb.products) {
+  // Decrement stock in local JSON DB if not already deducted
+  if (!order.inventoryDeducted && jdb.products) {
     for (const item of verifiedItems) {
       const pId = item.productId || item.id;
       const reqQty = Number(item.quantity) || 1;
@@ -2284,7 +2774,7 @@ export async function acceptOrder(orderId, sellerUser = null) {
 /**
  * rejectOrder
  * Seller explicitly rejects a pending order.
- * Marks status as 'rejected', captures rejection reason, keeps inventory intact,
+ * Marks status as 'rejected', captures rejection reason, restores inventory if previously deducted,
  * and permanently locks order against acceptance.
  */
 export async function rejectOrder(orderId, sellerUser = null, reason = '') {
@@ -2321,6 +2811,15 @@ export async function rejectOrder(orderId, sellerUser = null, reason = '') {
   const rejectedAtIso = new Date().toISOString();
   const cleanReason = String(reason || 'Seller was unable to accept this order').trim();
 
+  // 3. Atomically restore inventory if previously deducted
+  if (order.inventoryDeducted && !order.inventoryRestored) {
+    for (const item of (order.items || [])) {
+      const pId = item.productId || item.id;
+      const qty = Number(item.quantity) || 1;
+      await adjustProductStockDB(pId, qty).catch(() => {});
+    }
+  }
+
   let rejectedOrder = null;
 
   if (db) {
@@ -2332,6 +2831,7 @@ export async function rejectOrder(orderId, sellerUser = null, reason = '') {
           statusLabel: 'Rejected',
           rejectionReason: cleanReason,
           rejectedAt: new Date(rejectedAtIso),
+          inventoryRestored: true,
         },
       },
       { returnDocument: 'after' }
@@ -2346,7 +2846,7 @@ export async function rejectOrder(orderId, sellerUser = null, reason = '') {
     delete rejectedOrder.__v;
   }
 
-  // Synchronize local JSON DB fallback (inventory is NOT touched)
+  // Synchronize local JSON DB fallback
   const jdb = readJSONDB();
   const localOrder = (jdb.orders || []).find((o) => o.id === orderId);
   if (localOrder) {
@@ -2354,6 +2854,7 @@ export async function rejectOrder(orderId, sellerUser = null, reason = '') {
     localOrder.statusLabel = 'Rejected';
     localOrder.rejectionReason = cleanReason;
     localOrder.rejectedAt = rejectedAtIso;
+    localOrder.inventoryRestored = true;
     if (!rejectedOrder) {
       rejectedOrder = { ...localOrder };
     }
@@ -2397,6 +2898,35 @@ export async function updateOrderStatus(id, status, sellerNotes = '') {
     updateFields.sellerNotes = String(sellerNotes).trim();
   }
 
+  // If order is cancelled or rejected, restore inventory if previously deducted and not yet restored
+  if ((normalizedStatus === 'cancelled' || normalizedStatus === 'rejected') && existingOrder.inventoryDeducted && !existingOrder.inventoryRestored) {
+    for (const item of (existingOrder.items || [])) {
+      const pId = item.productId || item.id;
+      const qty = Number(item.quantity) || 1;
+      await adjustProductStockDB(pId, qty).catch(() => {});
+    }
+    updateFields.inventoryRestored = true;
+  }
+
+  // If order is cancelled, release the coupon usage so customer can reuse it
+  if (normalizedStatus === 'cancelled' && existingOrder.couponCode) {
+    if (db) {
+      await CouponUsage.deleteMany({ orderId: id }).catch(() => {});
+      await Offer.updateOne({ code: existingOrder.couponCode.toUpperCase() }, { $inc: { usageCount: -1 } }).catch(() => {});
+    }
+    const jdbForCancel = readJSONDB();
+    if (jdbForCancel.couponUsages) {
+      jdbForCancel.couponUsages = jdbForCancel.couponUsages.filter((u) => u.orderId !== id);
+      const offIdx = (jdbForCancel.offers || []).findIndex(
+        (o) => (o.code || '').toUpperCase() === existingOrder.couponCode.toUpperCase()
+      );
+      if (offIdx !== -1 && jdbForCancel.offers[offIdx].usageCount > 0) {
+        jdbForCancel.offers[offIdx].usageCount -= 1;
+      }
+      writeJSONDB(jdbForCancel);
+    }
+  }
+
   if (db) {
     const updated = await Order.findOneAndUpdate({ id }, { $set: updateFields }, { returnDocument: 'after' }).lean();
     if (!updated) return null;
@@ -2410,6 +2940,7 @@ export async function updateOrderStatus(id, status, sellerNotes = '') {
   if (!order) return null;
   order.status = normalizedStatus;
   order.statusLabel = statusLabel;
+  if (updateFields.inventoryRestored) order.inventoryRestored = true;
   if (sellerNotes) order.sellerNotes = String(sellerNotes).trim();
   writeJSONDB(jdb);
   broadcastCatalogEvent(CATALOG_EVENTS.ORDER_UPDATED, { order });
@@ -2733,9 +3264,12 @@ export async function getStoreConfig() {
       const { _id, __v, ...rest } = config;
       if (!rest.name || rest.name === 'ShopEase') rest.name = 'Nakoda Imitation';
       if (!rest.exploreSection) {
-        rest.exploreSection = DEFAULT_EXPLORE_SECTION;
-      } else if (!Array.isArray(rest.exploreSection.collections)) {
-        rest.exploreSection.collections = DEFAULT_EXPLORE_SECTION.collections;
+        rest.exploreSection = {
+          title: 'Explore Our Collections',
+          subtitle: 'Find exactly what you’re looking for across our curated lifestyle, grocery, apparel, and travel categories.',
+          enabled: true,
+          collections: [],
+        };
       }
       if (!rest.heroShowcase || !Array.isArray(rest.heroShowcase) || rest.heroShowcase.length === 0) {
         rest.heroShowcase = DEFAULT_HERO_SHOWCASE;
@@ -2752,9 +3286,12 @@ export async function getStoreConfig() {
   const cfg = { ...(jdb.storeConfig || INITIAL_DB_STATE.storeConfig) };
   if (!cfg.name || cfg.name === 'ShopEase') cfg.name = 'Nakoda Imitation';
   if (!cfg.exploreSection) {
-    cfg.exploreSection = DEFAULT_EXPLORE_SECTION;
-  } else if (!Array.isArray(cfg.exploreSection.collections)) {
-    cfg.exploreSection.collections = DEFAULT_EXPLORE_SECTION.collections;
+    cfg.exploreSection = {
+      title: 'Explore Our Collections',
+      subtitle: 'Find exactly what you’re looking for across our curated lifestyle, grocery, apparel, and travel categories.',
+      enabled: true,
+      collections: [],
+    };
   }
   if (!cfg.heroShowcase || !Array.isArray(cfg.heroShowcase) || cfg.heroShowcase.length === 0) {
     cfg.heroShowcase = DEFAULT_HERO_SHOWCASE;
@@ -2809,22 +3346,483 @@ export async function updateStoreConfig(configData) {
   return jdb.storeConfig;
 }
 
-export async function getExploreSection() {
+// ─── EXPLORE COLLECTIONS CRUD & PERSISTENCE ─────────────────────────────────
+
+export async function getExploreCollections(options = {}) {
+  const includeInactive = Boolean(options.includeInactive);
+  const includeDeleted = Boolean(options.includeDeleted);
+
+  const db = await connectToDatabase();
+  if (db) {
+    await ensureMongoSeeded();
+    const query = {};
+    if (!includeDeleted) {
+      query.isDeleted = { $ne: true };
+    }
+    if (!includeInactive) {
+      query.isActive = true;
+    }
+    const docs = await ExploreCollection.find(query)
+      .sort({ order: 1, createdAt: 1 })
+      .lean();
+    return docs.map((doc) => {
+      const { _id, __v, ...rest } = doc;
+      return rest;
+    });
+  }
+
+  const jdb = readJSONDB();
+  let cols = Array.isArray(jdb.exploreCollections)
+    ? jdb.exploreCollections
+    : (jdb.storeConfig?.exploreSection?.collections || []);
+  if (!includeDeleted) {
+    cols = cols.filter((c) => !c.isDeleted);
+  }
+  if (!includeInactive) {
+    cols = cols.filter((c) => c.isActive !== false);
+  }
+  return cols.sort((a, b) => (a.order || 0) - (b.order || 0));
+}
+
+export async function getExploreCollectionByIdOrSlug(identifier) {
+  if (!identifier) return null;
+  const cleanId = String(identifier).trim();
+  const db = await connectToDatabase();
+  if (db) {
+    await ensureMongoSeeded();
+    const doc = await ExploreCollection.findOne({
+      $or: [{ id: cleanId }, { slug: cleanId }],
+      isDeleted: { $ne: true },
+    }).lean();
+    if (!doc) return null;
+    const { _id, __v, ...rest } = doc;
+    return rest;
+  }
+
+  const cols = await getExploreCollections({ includeInactive: true, includeDeleted: false });
+  return cols.find((c) => c.id === cleanId || c.slug === cleanId) || null;
+}
+
+export async function createExploreCollection(data) {
+  if (!data || !data.name) {
+    throw new Error('Collection name is required');
+  }
+
+  const db = await connectToDatabase();
+  const cleanName = data.name.trim();
+  const cleanSlug = (data.slug || cleanName)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '');
+  const cleanId = data.id || `col_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+
+  const existingCols = await getExploreCollections({ includeInactive: true, includeDeleted: false });
+  const maxOrder = existingCols.reduce((max, c) => Math.max(max, c.order || 0), 0);
+  const nextOrder = typeof data.order === 'number' ? data.order : maxOrder + 1;
+
+  const newRecord = {
+    id: cleanId,
+    name: cleanName,
+    slug: cleanSlug,
+    description: data.description || '',
+    image: data.image || '/assets/images/prod_backpack.jpg',
+    categoryId: data.categoryId || 'all',
+    target: data.target || data.categoryId || '',
+    badge: data.badge ? data.badge.trim() : '',
+    order: nextOrder,
+    isActive: data.isActive !== false,
+    isDeleted: false,
+    deletedAt: null,
+  };
+
+  if (db) {
+    await ensureMongoSeeded();
+    const existing = await ExploreCollection.findOne({ id: cleanId });
+    let created;
+    if (existing) {
+      if (existing.isDeleted) {
+        Object.assign(existing, newRecord);
+        existing.isDeleted = false;
+        existing.deletedAt = null;
+        created = await existing.save();
+      } else {
+        throw new Error(`A collection with ID "${cleanId}" already exists`);
+      }
+    } else {
+      created = await ExploreCollection.create(newRecord);
+    }
+    const raw = created.toObject ? created.toObject() : created;
+    const { _id, __v, ...rest } = raw;
+
+    memoryCache.invalidateExplore();
+    const updatedSection = await getExploreSection({ admin: true });
+    broadcastCatalogEvent(CATALOG_EVENTS.EXPLORE_UPDATED, { exploreSection: updatedSection });
+    return rest;
+  }
+
+  const jdb = readJSONDB();
+  if (!Array.isArray(jdb.exploreCollections)) jdb.exploreCollections = [];
+  const existingIdx = jdb.exploreCollections.findIndex((c) => c.id === cleanId);
+  if (existingIdx !== -1) {
+    if (jdb.exploreCollections[existingIdx].isDeleted) {
+      jdb.exploreCollections[existingIdx] = newRecord;
+    } else {
+      throw new Error(`A collection with ID "${cleanId}" already exists`);
+    }
+  } else {
+    jdb.exploreCollections.push(newRecord);
+  }
+  writeJSONDB(jdb);
+
+  memoryCache.invalidateExplore();
+  const updatedSection = await getExploreSection({ admin: true });
+  broadcastCatalogEvent(CATALOG_EVENTS.EXPLORE_UPDATED, { exploreSection: updatedSection });
+  return newRecord;
+}
+
+export async function updateExploreCollection(id, updateData) {
+  if (!id) throw new Error('Collection ID is required');
+  const cleanId = String(id).trim();
+
+  const fieldsToUpdate = {};
+  if (updateData.name !== undefined) {
+    fieldsToUpdate.name = String(updateData.name).trim();
+    if (!updateData.slug) {
+      fieldsToUpdate.slug = fieldsToUpdate.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    }
+  }
+  if (updateData.slug !== undefined) fieldsToUpdate.slug = String(updateData.slug).trim();
+  if (updateData.description !== undefined) fieldsToUpdate.description = updateData.description;
+  if (updateData.image !== undefined) fieldsToUpdate.image = updateData.image;
+  if (updateData.categoryId !== undefined) {
+    fieldsToUpdate.categoryId = updateData.categoryId;
+    fieldsToUpdate.target = updateData.categoryId;
+  }
+  if (updateData.target !== undefined) fieldsToUpdate.target = updateData.target;
+  if (updateData.badge !== undefined) fieldsToUpdate.badge = String(updateData.badge).trim();
+  if (updateData.order !== undefined) fieldsToUpdate.order = Number(updateData.order);
+  if (updateData.isActive !== undefined) fieldsToUpdate.isActive = Boolean(updateData.isActive);
+
+  const db = await connectToDatabase();
+  if (db) {
+    await ensureMongoSeeded();
+    const updated = await ExploreCollection.findOneAndUpdate(
+      { id: cleanId, isDeleted: { $ne: true } },
+      { $set: fieldsToUpdate },
+      { returnDocument: 'after' }
+    ).lean();
+
+    if (!updated) {
+      throw new Error(`Collection not found with ID: ${cleanId}`);
+    }
+
+    const { _id, __v, ...rest } = updated;
+    memoryCache.invalidateExplore();
+    const updatedSection = await getExploreSection({ admin: true });
+    broadcastCatalogEvent(CATALOG_EVENTS.EXPLORE_UPDATED, { exploreSection: updatedSection });
+    return rest;
+  }
+
+  const jdb = readJSONDB();
+  const cols = Array.isArray(jdb.exploreCollections) ? jdb.exploreCollections : [];
+  const idx = cols.findIndex((c) => c.id === cleanId && !c.isDeleted);
+  if (idx === -1) throw new Error(`Collection not found with ID: ${cleanId}`);
+  cols[idx] = { ...cols[idx], ...fieldsToUpdate };
+  jdb.exploreCollections = cols;
+  writeJSONDB(jdb);
+
+  memoryCache.invalidateExplore();
+  const updatedSection = await getExploreSection({ admin: true });
+  broadcastCatalogEvent(CATALOG_EVENTS.EXPLORE_UPDATED, { exploreSection: updatedSection });
+  return cols[idx];
+}
+
+export async function deleteExploreCollection(id) {
+  if (!id) throw new Error('Collection ID is required');
+  const cleanId = String(id).trim();
+
+  const db = await connectToDatabase();
+  if (db) {
+    await ensureMongoSeeded();
+    const target = await ExploreCollection.findOneAndUpdate(
+      { id: cleanId, isDeleted: { $ne: true } },
+      { $set: { isDeleted: true, deletedAt: new Date() } },
+      { returnDocument: 'after' }
+    );
+
+    if (!target) {
+      throw new Error(`Collection not found with ID: ${cleanId}`);
+    }
+
+    // Atomic gap-free reordering for remaining non-deleted collections
+    const remaining = await ExploreCollection.find({ isDeleted: { $ne: true } })
+      .sort({ order: 1, createdAt: 1 });
+
+    for (let i = 0; i < remaining.length; i++) {
+      if (remaining[i].order !== i + 1) {
+        await ExploreCollection.updateOne({ _id: remaining[i]._id }, { $set: { order: i + 1 } });
+      }
+    }
+
+    memoryCache.invalidateExplore();
+    const updatedSection = await getExploreSection({ admin: true });
+    broadcastCatalogEvent(CATALOG_EVENTS.EXPLORE_UPDATED, { exploreSection: updatedSection });
+    return { success: true, deletedId: cleanId };
+  }
+
+  const jdb = readJSONDB();
+  const cols = Array.isArray(jdb.exploreCollections) ? jdb.exploreCollections : [];
+  const idx = cols.findIndex((c) => c.id === cleanId && !c.isDeleted);
+  if (idx === -1) throw new Error(`Collection not found with ID: ${cleanId}`);
+  cols[idx].isDeleted = true;
+  cols[idx].deletedAt = new Date().toISOString();
+
+  const activeRemaining = cols.filter((c) => !c.isDeleted).sort((a, b) => (a.order || 0) - (b.order || 0));
+  activeRemaining.forEach((col, i) => {
+    col.order = i + 1;
+  });
+
+  jdb.exploreCollections = cols;
+  writeJSONDB(jdb);
+
+  memoryCache.invalidateExplore();
+  const updatedSection = await getExploreSection({ admin: true });
+  broadcastCatalogEvent(CATALOG_EVENTS.EXPLORE_UPDATED, { exploreSection: updatedSection });
+  return { success: true, deletedId: cleanId };
+}
+
+export async function reorderExploreCollections(orderedIds) {
+  if (!Array.isArray(orderedIds) || orderedIds.length === 0) {
+    throw new Error('Array of collection IDs is required for reordering');
+  }
+
+  const db = await connectToDatabase();
+  if (db) {
+    await ensureMongoSeeded();
+    const bulkOps = orderedIds.map((id, index) => ({
+      updateOne: {
+        filter: { id: String(id).trim(), isDeleted: { $ne: true } },
+        update: { $set: { order: index + 1 } },
+      },
+    }));
+
+    if (bulkOps.length > 0) {
+      await ExploreCollection.bulkWrite(bulkOps);
+    }
+
+    memoryCache.invalidateExplore();
+    const updatedSection = await getExploreSection({ admin: true });
+    broadcastCatalogEvent(CATALOG_EVENTS.EXPLORE_UPDATED, { exploreSection: updatedSection });
+    return updatedSection.collections;
+  }
+
+  const jdb = readJSONDB();
+  const cols = Array.isArray(jdb.exploreCollections) ? jdb.exploreCollections : [];
+  orderedIds.forEach((id, index) => {
+    const item = cols.find((c) => c.id === id);
+    if (item) item.order = index + 1;
+  });
+  jdb.exploreCollections = cols;
+  writeJSONDB(jdb);
+
+  memoryCache.invalidateExplore();
+  const updatedSection = await getExploreSection({ admin: true });
+  broadcastCatalogEvent(CATALOG_EVENTS.EXPLORE_UPDATED, { exploreSection: updatedSection });
+  return updatedSection.collections;
+}
+
+export async function toggleExploreCollectionVisibility(id) {
+  if (!id) throw new Error('Collection ID is required');
+  const cleanId = String(id).trim();
+
+  const db = await connectToDatabase();
+  if (db) {
+    await ensureMongoSeeded();
+    const current = await ExploreCollection.findOne({ id: cleanId, isDeleted: { $ne: true } });
+    if (!current) throw new Error(`Collection not found with ID: ${cleanId}`);
+
+    current.isActive = !current.isActive;
+    await current.save();
+    const { _id, __v, ...rest } = current.toObject();
+
+    memoryCache.invalidateExplore();
+    const updatedSection = await getExploreSection({ admin: true });
+    broadcastCatalogEvent(CATALOG_EVENTS.EXPLORE_UPDATED, { exploreSection: updatedSection });
+    return rest;
+  }
+
+  const jdb = readJSONDB();
+  const cols = Array.isArray(jdb.exploreCollections) ? jdb.exploreCollections : [];
+  const item = cols.find((c) => c.id === cleanId && !c.isDeleted);
+  if (!item) throw new Error(`Collection not found with ID: ${cleanId}`);
+  item.isActive = !item.isActive;
+  jdb.exploreCollections = cols;
+  writeJSONDB(jdb);
+
+  memoryCache.invalidateExplore();
+  const updatedSection = await getExploreSection({ admin: true });
+  broadcastCatalogEvent(CATALOG_EVENTS.EXPLORE_UPDATED, { exploreSection: updatedSection });
+  return item;
+}
+
+export function invalidateExploreCache() {
+  memoryCache.invalidateExplore();
+}
+
+export async function getExploreSection({ admin = false, bypassCache = false } = {}) {
+  if (!bypassCache) {
+    if (admin && memoryCache.exploreSectionAdmin && Date.now() - memoryCache.exploreSectionAdminTime < memoryCache.TTL) {
+      return memoryCache.exploreSectionAdmin;
+    }
+    if (!admin && memoryCache.exploreSection && Date.now() - memoryCache.exploreSectionTime < memoryCache.TTL) {
+      return memoryCache.exploreSection;
+    }
+  }
+
   const config = await getStoreConfig();
-  return config?.exploreSection || DEFAULT_EXPLORE_SECTION;
+  const collections = await getExploreCollections({ includeInactive: admin, includeDeleted: false });
+
+  const section = {
+    title: config?.exploreSection?.title || 'Explore Our Collections',
+    subtitle: config?.exploreSection?.subtitle || 'Find exactly what you’re looking for across our curated lifestyle, grocery, apparel, and travel categories.',
+    enabled: config?.exploreSection?.enabled !== false,
+    collections,
+  };
+
+  if (admin) {
+    memoryCache.exploreSectionAdmin = section;
+    memoryCache.exploreSectionAdminTime = Date.now();
+  } else {
+    memoryCache.exploreSection = section;
+    memoryCache.exploreSectionTime = Date.now();
+  }
+
+  return section;
 }
 
 export async function updateExploreSection(exploreData) {
+  const db = await connectToDatabase();
+
+  // 1. Check if admin explicitly asked to reset to factory defaults
+  if (exploreData.action === 'reset_defaults') {
+    if (db) {
+      await ensureMongoSeeded();
+      await ExploreCollection.updateMany(
+        { isDeleted: { $ne: true } },
+        { $set: { isDeleted: true, deletedAt: new Date() } }
+      );
+      const defaultDocs = DEFAULT_EXPLORE_SECTION.collections.map((col, idx) => ({
+        id: col.id,
+        name: col.name,
+        slug: col.id,
+        description: '',
+        image: col.image,
+        categoryId: col.categoryId,
+        target: col.categoryId,
+        badge: col.badge || '',
+        order: idx + 1,
+        isActive: col.isActive !== false,
+        isDeleted: false,
+        deletedAt: null,
+      }));
+      const bulkOps = defaultDocs.map((doc) => ({
+        updateOne: {
+          filter: { id: doc.id },
+          update: { $set: doc },
+          upsert: true,
+        },
+      }));
+      await ExploreCollection.bulkWrite(bulkOps);
+    } else {
+      const jdb = readJSONDB();
+      jdb.exploreCollections = DEFAULT_EXPLORE_SECTION.collections.map((col, idx) => ({
+        ...col,
+        order: idx + 1,
+        isDeleted: false,
+        deletedAt: null,
+      }));
+      writeJSONDB(jdb);
+    }
+
+    const currentConfig = await getStoreConfig();
+    const updatedSectionMeta = {
+      title: 'Explore Our Collections',
+      subtitle: 'Find exactly what you’re looking for across our curated lifestyle, grocery, apparel, and travel categories.',
+      enabled: true,
+    };
+    await updateStoreConfig({ exploreSection: updatedSectionMeta });
+
+    memoryCache.invalidateExplore();
+    const updatedSection = await getExploreSection({ admin: true });
+    broadcastCatalogEvent(CATALOG_EVENTS.EXPLORE_UPDATED, { exploreSection: updatedSection });
+    return updatedSection;
+  }
+
+  // 2. Synchronize collections if an updated array was provided
+  if (Array.isArray(exploreData.collections)) {
+    const inputCols = exploreData.collections;
+    const inputIds = inputCols.map((c) => String(c.id).trim()).filter(Boolean);
+
+    if (db) {
+      await ensureMongoSeeded();
+      // Soft delete collections not present in input array
+      await ExploreCollection.updateMany(
+        { id: { $nin: inputIds }, isDeleted: { $ne: true } },
+        { $set: { isDeleted: true, deletedAt: new Date() } }
+      );
+
+      // Upsert / update each input collection
+      for (let i = 0; i < inputCols.length; i++) {
+        const col = inputCols[i];
+        const cleanId = String(col.id || `col_${Date.now()}_${i}`).trim();
+        const cleanName = String(col.name || 'Collection').trim();
+        const cleanSlug = (col.slug || cleanName).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+
+        await ExploreCollection.findOneAndUpdate(
+          { id: cleanId },
+          {
+            $set: {
+              name: cleanName,
+              slug: cleanSlug,
+              description: col.description || '',
+              image: col.image || '/assets/images/prod_backpack.jpg',
+              categoryId: col.categoryId || 'all',
+              target: col.target || col.categoryId || '',
+              badge: col.badge ? String(col.badge).trim() : '',
+              order: i + 1,
+              isActive: col.isActive !== false,
+              isDeleted: false,
+              deletedAt: null,
+            },
+          },
+          { upsert: true, new: true }
+        );
+      }
+    } else {
+      const jdb = readJSONDB();
+      jdb.exploreCollections = inputCols.map((c, i) => ({
+        ...c,
+        order: i + 1,
+        isDeleted: false,
+        deletedAt: null,
+      }));
+      writeJSONDB(jdb);
+    }
+  }
+
+  // 3. Update section metadata in StoreConfig
   const currentConfig = await getStoreConfig();
-  const updatedSection = {
-    ...(currentConfig.exploreSection || DEFAULT_EXPLORE_SECTION),
-    ...exploreData,
+  const metaUpdate = {
+    title: exploreData.title !== undefined ? exploreData.title : (currentConfig.exploreSection?.title || 'Explore Our Collections'),
+    subtitle: exploreData.subtitle !== undefined ? exploreData.subtitle : (currentConfig.exploreSection?.subtitle || ''),
+    enabled: exploreData.enabled !== undefined ? Boolean(exploreData.enabled) : (currentConfig.exploreSection?.enabled !== false),
   };
-  const updatedConfig = await updateStoreConfig({
-    exploreSection: updatedSection,
-  });
-  broadcastCatalogEvent(CATALOG_EVENTS.EXPLORE_UPDATED, { exploreSection: updatedConfig.exploreSection });
-  return updatedConfig.exploreSection;
+  await updateStoreConfig({ exploreSection: metaUpdate });
+
+  memoryCache.invalidateExplore();
+  const updatedSection = await getExploreSection({ admin: true });
+  broadcastCatalogEvent(CATALOG_EVENTS.EXPLORE_UPDATED, { exploreSection: updatedSection });
+  return updatedSection;
 }
 
 export async function getHeroShowcase() {
@@ -2936,9 +3934,17 @@ export async function loginCustomer({ email, password }) {
 }
 
 export async function getCustomerById(id) {
+  if (!id) return null;
+  const cleanId = String(id).trim();
   const db = await connectToDatabase();
   if (db) {
-    const user = await User.findById(id).lean();
+    let user = null;
+    if (mongoose.Types.ObjectId.isValid(cleanId)) {
+      user = await User.findById(cleanId).lean();
+    }
+    if (!user) {
+      user = await User.findOne({ email: cleanId.toLowerCase() }).lean();
+    }
     if (!user) return null;
     const { passwordHash, __v, ...sanitized } = user;
     return sanitized;

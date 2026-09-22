@@ -17,44 +17,39 @@ import {
 } from '@/components';
 
 // Dynamic code splitting for non-initial off-screen views and heavy modals
-const CatalogPage = dynamic(() => import('@/components/catalog/CatalogPage'), {
-  loading: () => (
-    <div className="min-h-[60vh] flex items-center justify-center">
-      <span className="loading loading-spinner loading-lg text-[#0071E3]" />
+const TabSkeleton = () => (
+  <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-pulse space-y-6">
+    <div className="h-8 bg-neutral-200/70 rounded-2xl w-48" />
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+      {[1, 2, 3, 4].map((n) => (
+        <div key={n} className="bg-white rounded-3xl border border-black/5 p-4 space-y-3 shadow-xs">
+          <div className="aspect-square bg-neutral-100 rounded-2xl" />
+          <div className="h-4 bg-neutral-100 rounded-md w-3/4" />
+          <div className="h-4 bg-neutral-100 rounded-md w-1/3" />
+        </div>
+      ))}
     </div>
-  ),
+  </div>
+);
+
+const CatalogPage = dynamic(() => import('@/components/catalog/CatalogPage'), {
+  loading: () => <TabSkeleton />,
 });
 
 const OffersPage = dynamic(() => import('@/components/offers/OffersPage'), {
-  loading: () => (
-    <div className="min-h-[60vh] flex items-center justify-center">
-      <span className="loading loading-spinner loading-lg text-[#0071E3]" />
-    </div>
-  ),
+  loading: () => <TabSkeleton />,
 });
 
 const CartPage = dynamic(() => import('@/components/cart/CartPage'), {
-  loading: () => (
-    <div className="min-h-[60vh] flex items-center justify-center">
-      <span className="loading loading-spinner loading-lg text-[#0071E3]" />
-    </div>
-  ),
+  loading: () => <TabSkeleton />,
 });
 
 const ProfilePage = dynamic(() => import('@/components/profile/ProfilePage'), {
-  loading: () => (
-    <div className="min-h-[60vh] flex items-center justify-center">
-      <span className="loading loading-spinner loading-lg text-[#0071E3]" />
-    </div>
-  ),
+  loading: () => <TabSkeleton />,
 });
 
 const ContactInquirePage = dynamic(() => import('@/components/contact/ContactInquirePage'), {
-  loading: () => (
-    <div className="min-h-[60vh] flex items-center justify-center">
-      <span className="loading loading-spinner loading-lg text-[#0071E3]" />
-    </div>
-  ),
+  loading: () => <TabSkeleton />,
 });
 
 const QuickViewModal = dynamic(() => import('@/components/common/QuickViewModal'));
@@ -83,9 +78,23 @@ function StorefrontContent() {
   const [orders, setOrders] = useState([]);
   const [isClientStorageLoaded, setIsClientStorageLoaded] = useState(false);
 
-  // Brand Loading Screen & Navbar Morph Animation state
-  const [isBrandLoading, setIsBrandLoading] = useState(true);
-  const [isLogoHidden, setIsLogoHidden] = useState(true);
+  // Brand Loading Screen & Navbar Morph Animation state (session-aware)
+  const [isBrandLoading, setIsBrandLoading] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    try {
+      return sessionStorage.getItem('nakoda_brand_loaded') !== 'true';
+    } catch (e) {
+      return false;
+    }
+  });
+  const [isLogoHidden, setIsLogoHidden] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    try {
+      return sessionStorage.getItem('nakoda_brand_loaded') !== 'true';
+    } catch (e) {
+      return false;
+    }
+  });
 
   // Synchronize activeTab whenever searchParams changes (e.g. Back/Forward navigation, direct links)
   useEffect(() => {
@@ -118,25 +127,26 @@ function StorefrontContent() {
   // Ensure the page always starts from the top whenever switching tabs/pages from navbar
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const resetScroll = () => {
-      window.dispatchEvent(new Event('nakoda:scroll-to-top'));
-      if (window.__lenis) {
-        window.__lenis.scrollTo(0, { immediate: true });
-      }
-      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-      document.documentElement.scrollTop = 0;
-      document.body.scrollTop = 0;
-    };
-
-    resetScroll();
-    const raf = requestAnimationFrame(resetScroll);
-    const timer = setTimeout(resetScroll, 60);
-
-    return () => {
-      cancelAnimationFrame(raf);
-      clearTimeout(timer);
-    };
+    window.dispatchEvent(new Event('nakoda:scroll-to-top'));
   }, [activeTab]);
+
+  // Preload tab component bundles during idle time so tab clicks render instantly
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const preloadTabs = () => {
+      import('@/components/catalog/CatalogPage');
+      import('@/components/offers/OffersPage');
+      import('@/components/cart/CartPage');
+      import('@/components/profile/ProfilePage');
+      import('@/components/contact/ContactInquirePage');
+    };
+
+    if ('requestIdleCallback' in window) {
+      window.requestIdleCallback(preloadTabs, { timeout: 1500 });
+    } else {
+      setTimeout(preloadTabs, 600);
+    }
+  }, []);
 
   // Cart & Wishlist state: strictly isolated per user session
   const [cartItems, setCartItems] = useState({});
@@ -227,6 +237,10 @@ function StorefrontContent() {
     prevUserRef.current = user;
   }, [user]);
 
+  // Maintain latest products reference for cart synchronization without triggering re-fetches
+  const productsRef = useRef(products);
+  productsRef.current = products;
+
   // ─── SYNCHRONIZE WISHLIST AND CART FROM BACKEND (AUTHENTICATED ONLY) ───────────
   useEffect(() => {
     if (!user) {
@@ -261,7 +275,7 @@ function StorefrontContent() {
           const freshCart = {};
           data.cart.items.forEach((it) => {
             if (it.productId) {
-              const catalogProd = (products || []).find((p) => p.id === it.productId);
+              const catalogProd = (productsRef.current || []).find((p) => p.id === it.productId);
               freshCart[it.productId] = {
                 ...(catalogProd || {}),
                 id: it.productId,
@@ -288,7 +302,7 @@ function StorefrontContent() {
     return () => {
       isMounted = false;
     };
-  }, [user, products]);
+  }, [user]);
 
   // ─── SYNCHRONIZE CART CHANGES TO MONGODB ATLAS (AUTHENTICATED ONLY) ───────────
   const cartSyncTimeoutRef = useRef(null);

@@ -527,7 +527,7 @@ export const AdminProducts = ({ onPreviewStore, initialCategory = 'all', onCateg
                               {product.name}
                             </h4>
                             <span className="text-[10px] text-[#777777] font-mono">
-                              SKU: {product.id}
+                              SKU: {product.sku || product.id}
                             </span>
                           </div>
                         </div>

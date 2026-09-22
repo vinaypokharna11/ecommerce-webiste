@@ -18,6 +18,19 @@ const OfferSchema = new mongoose.Schema(
     expiry: { type: String, default: 'Limited Period' },
     popular: { type: Boolean, default: false },
     isActive: { type: Boolean, default: true },
+    status: {
+      type: String,
+      enum: ['ACTIVE', 'PAUSED', 'EXPIRED', 'DELETED'],
+      default: 'ACTIVE',
+      index: true,
+    },
+    isDeleted: { type: Boolean, default: false, index: true },
+    minOrderAmount: { type: Number, default: 0, min: 0 },
+    usageLimit: { type: Number, default: null },
+    perUserLimit: { type: Number, default: 1 },
+    usageCount: { type: Number, default: 0, min: 0 },
+    startDate: { type: Date, default: null },
+    endDate: { type: Date, default: null },
   },
   { timestamps: true }
 );

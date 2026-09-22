@@ -2,7 +2,7 @@ import './globals.css';
 import { DM_Sans } from 'next/font/google';
 import { CatalogProvider } from '@/context/CatalogContext';
 import { AuthProvider } from '@/context/AuthContext';
-import { AuthModal, SmoothScrollProvider, GsapScrollAnimations } from '@/components';
+import { AuthModal, SmoothScrollProvider, GsapScrollAnimations, NavigationProgressBar } from '@/components';
 
 const dmSans = DM_Sans({
   subsets: ['latin'],
@@ -53,6 +53,7 @@ export default function RootLayout({ children }) {
           <AuthProvider>
             <CatalogProvider>
               <GsapScrollAnimations>
+                <NavigationProgressBar />
                 {children}
                 <AuthModal />
               </GsapScrollAnimations>

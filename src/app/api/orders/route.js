@@ -77,7 +77,7 @@ export async function POST(request) {
 
     return NextResponse.json({ success: true, order: newOrder }, { status: 201 });
   } catch (error) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 400 });
+    return NextResponse.json({ success: false, code: error.code || 'ORDER_FAILED', error: error.message }, { status: error.status || 400 });
   }
 }
 

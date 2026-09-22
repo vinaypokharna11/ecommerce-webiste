@@ -29,23 +29,15 @@ import { useAuth } from '@/context/AuthContext';
 import { useCatalog } from '@/context/CatalogContext';
 import { firePartyPopper } from '@/utils/confetti';
 import { orderService } from '@/services/orderService';
+import { offerService } from '@/services/offerService';
 import { formatPrice } from '@/utils/formatPrice';
 import { getProductSizes, isProductSizeAvailable, getProductColors, getProductColorHex } from '@/utils/productOptions';
 import { createCartWhatsAppUrl } from '@/utils/whatsapp';
 
 const SHIPPING_THRESHOLD = 999;
 
-const VALID_PROMOS = {
-  ELEC20: { discount: 0.20, label: 'Electronics 20% OFF',   categories: ['electronics'] },
-  FASH30: { discount: 0.30, label: 'Fashion 30% OFF',        categories: ['clothing', 'fashion'] },
-  HOME15: { discount: 0.15, label: 'Home & Living 15% OFF', categories: ['home-living', 'home'] },
-  ACC25:  { discount: 0.25, label: 'Accessories 25% OFF',   categories: ['accessories', 'jewelry', 'bags-luggage'] },
-  FEET35: { discount: 0.35, label: 'Footwear 35% OFF',       categories: ['footwear'] },
-  GIFT10: { discount: 0.10, label: 'Gift Hampers 10% OFF',   categories: ['gift-hampers', 'food-grocery', 'papad'] },
-};
-
 // ─── Checkout Modal ───────────────────────────────────────────────────────────
-const CheckoutModal = ({ cartList, products = [], subtotal, promoDiscountAmount, shippingFee, total, onClose, onSuccess, user }) => {
+const CheckoutModal = ({ cartList, products = [], subtotal, promoDiscountAmount, shippingFee, total, couponCode = '', onClose, onSuccess, user }) => {
   const [step, setStep] = useState(1);
   const [payMethod, setPayMethod] = useState('cod');
   
@@ -108,6 +100,7 @@ const CheckoutModal = ({ cartList, products = [], subtotal, promoDiscountAmount,
         return `${i.name}${itemSize ? ` (Size: ${itemSize})` : ''} (x${i.quantity})`;
       }).join(', '),
       amount: total,
+      couponCode: couponCode ? String(couponCode).trim().toUpperCase() : '',
       status: 'pending',
       statusLabel: 'Pending',
       payMethod: payMethod === 'cod' ? 'Cash on Delivery' : 'Online Payment (UPI/Card)',
@@ -475,11 +468,13 @@ export const CartPage = ({
   onExploreCatalog,
   onPlaceOrder,
 }) => {
-  const { storeConfig } = useCatalog();
+  const { storeConfig, products: liveCatalogProducts } = useCatalog();
+  const effectiveProducts = (liveCatalogProducts && liveCatalogProducts.length > 0) ? liveCatalogProducts : products;
   const { user, isAuthenticated, openAuthModal } = useAuth();
   const [promoCode, setPromoCode] = useState('');
-  const [appliedPromo, setAppliedPromo] = useState(null);
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [promoError, setPromoError] = useState('');
+  const [isApplyingPromo, setIsApplyingPromo] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [viewTab, setViewTab] = useState(initialTab || 'cart'); // 'cart' | 'wishlist'
@@ -501,23 +496,26 @@ export const CartPage = ({
   const cartList = Object.values(cartItems).filter((item) => item.quantity > 0);
   const subtotal = cartList.reduce((sum, item) => sum + (item.price || 0) * item.quantity, 0);
 
-  // Eligible cart items for active promo (matching coupon's categories)
-  const eligibleCartItems = appliedPromo && VALID_PROMOS[appliedPromo]
-    ? cartList.filter((item) => {
+  // Revalidate availability against live catalog
+  const unavailableItems = cartList.filter((item) => {
+    const p = effectiveProducts.find((prod) => String(prod.id).trim() === String(item.id || item.productId).trim());
+    return !p || p.isDeleted || p.status === 'inactive' || p.status === 'archived' || p.stockCount <= 0 || p.stockCount < item.quantity;
+  });
+
+  // Dynamic server-verified coupon discount calculation
+  const promoDiscountAmount = (() => {
+    if (!appliedCoupon) return 0;
+    const cat = (appliedCoupon.category || 'all').toLowerCase();
+    let eligibleSub = subtotal;
+    if (cat !== 'all') {
+      const eligibleItems = cartList.filter((item) => {
         const itemCat = (item.category || item.categoryId || '').toLowerCase();
-        return (VALID_PROMOS[appliedPromo].categories || []).some(
-          (c) => itemCat === c || itemCat.includes(c) || c.includes(itemCat)
-        );
-      })
-    : [];
-
-  const eligibleSubtotal = eligibleCartItems.reduce(
-    (sum, item) => sum + (item.price || 0) * item.quantity, 0
-  );
-
-  const promoDiscountAmount = appliedPromo && VALID_PROMOS[appliedPromo]
-    ? Math.round(eligibleSubtotal * VALID_PROMOS[appliedPromo].discount)
-    : 0;
+        return itemCat === cat || itemCat.includes(cat) || cat.includes(itemCat);
+      });
+      eligibleSub = eligibleItems.reduce((sum, item) => sum + (item.price || 0) * item.quantity, 0);
+    }
+    return Math.round((eligibleSub * (appliedCoupon.discountPercent || 0)) / 100);
+  })();
 
   const shippingFee = subtotal >= SHIPPING_THRESHOLD || subtotal === 0 ? 0 : 99;
   const total = Math.max(0, subtotal - promoDiscountAmount + shippingFee);
@@ -528,7 +526,7 @@ export const CartPage = ({
   const wishlistProducts = Object.keys(wishlist)
     .filter((id) => wishlist[id])
     .map((id) => {
-      const found = products.find((p) => p.id === id || p.id === (wishlist[id]?.productId));
+      const found = effectiveProducts.find((p) => p.id === id || p.id === (wishlist[id]?.productId));
       if (found) return found;
       const raw = wishlist[id];
       if (raw && typeof raw === 'object') {
@@ -547,36 +545,71 @@ export const CartPage = ({
     .filter(Boolean);
 
   // Special featured products for bottom section
-  const specialProducts = products
+  const specialProducts = effectiveProducts
     .filter((p) => p.isPopular || p.badgeType === 'special' || p.discountPercent >= 30)
     .slice(0, 4);
 
-  const handleApplyPromo = () => {
+  const handleApplyPromo = async () => {
     const code = promoCode.trim().toUpperCase();
-    if (!code) return;
-    if (!VALID_PROMOS[code]) {
-      setPromoError('Invalid promo code. Try ELEC20, FASH30, HOME15, ACC25, FEET35, GIFT10');
+    if (!code) {
+      setPromoError('Please enter a coupon code.');
       return;
     }
-    // Check that at least one cart item belongs to the coupon's categories
-    const promo = VALID_PROMOS[code];
-    const hasMatchingItem = cartList.some((item) => {
-      const itemCat = (item.category || item.categoryId || '').toLowerCase();
-      return (promo.categories || []).some(
-        (c) => itemCat === c || itemCat.includes(c) || c.includes(itemCat)
-      );
-    });
-    if (!hasMatchingItem) {
-      setPromoError(
-        `This coupon is only valid for: ${promo.label.split(' ')[0]} products. No matching items found in your cart.`
-      );
+    if (cartList.length === 0) {
+      setPromoError('Your cart is empty. Add items to apply a coupon.');
       return;
     }
-    setAppliedPromo(code);
+
+    setIsApplyingPromo(true);
     setPromoError('');
+
+    try {
+      const res = await offerService.validateCoupon(code, cartList, subtotal);
+      if (res && res.valid) {
+        setAppliedCoupon({
+          code: res.coupon.code,
+          title: res.coupon.title,
+          category: res.coupon.category || 'all',
+          discountPercent: res.discountPercent,
+          discountAmount: res.discountAmount,
+          label: `${res.coupon.code} (${res.discountPercent}% OFF)`,
+        });
+        setPromoError('');
+      } else {
+        setAppliedCoupon(null);
+        setPromoError(res?.message || 'Invalid coupon code.');
+      }
+    } catch (err) {
+      setAppliedCoupon(null);
+      const msg = err.data?.message || err.message || 'Invalid coupon code. Please try another offer.';
+      setPromoError(msg);
+    } finally {
+      setIsApplyingPromo(false);
+    }
   };
 
-  const handleCheckoutClick = () => {
+  const handleCheckoutClick = async () => {
+    if (unavailableItems.length > 0) {
+      setPromoError(`Cannot checkout: "${unavailableItems[0].name}" is unavailable or out of stock. Please remove it to proceed.`);
+      return;
+    }
+
+    // If a coupon is applied, re-validate with backend before opening checkout to prevent stale discounts
+    if (appliedCoupon) {
+      try {
+        const res = await offerService.validateCoupon(appliedCoupon.code, cartList, subtotal);
+        if (!res || !res.valid) {
+          setAppliedCoupon(null);
+          setPromoError('This coupon is no longer available. Please remove it and try another offer.');
+          return;
+        }
+      } catch (err) {
+        setAppliedCoupon(null);
+        setPromoError(err.data?.message || 'This coupon is no longer available. Please remove it and try another offer.');
+        return;
+      }
+    }
+
     if (!isAuthenticated) {
       openAuthModal(() => {
         setCheckoutOpen(true);
@@ -686,7 +719,11 @@ export const CartPage = ({
                 <div className="lg:col-span-7 space-y-3">
                   <AnimatePresence>
                     {cartList.map((item) => {
-                      const fullProduct = products?.find((p) => p.id === item.id || p.id === item.productId) || item;
+                      const fullProduct = effectiveProducts?.find((p) => p.id === item.id || p.id === item.productId) || item;
+                      const liveProduct = effectiveProducts?.find((p) => p.id === item.id || p.id === item.productId);
+                      const isUnavailable = !liveProduct || liveProduct.isDeleted || liveProduct.status === 'inactive' || liveProduct.status === 'archived';
+                      const isOutOfStock = !isUnavailable && (liveProduct.stockCount <= 0 || liveProduct.stockStatus === 'out_of_stock');
+                      const isStockInsufficient = !isUnavailable && !isOutOfStock && liveProduct.stockCount < item.quantity;
                       const availableSizes = getProductSizes(fullProduct);
                       const activeSize = item.selectedSize || (availableSizes.length > 0 ? availableSizes[0] : null);
                       const isSelected = selectedItemId === item.id;
@@ -700,9 +737,11 @@ export const CartPage = ({
                           exit={{ opacity: 0, scale: 0.95 }}
                           onClick={() => {
                             setSelectedItemId(item.id);
-                            if (onQuickView) onQuickView(fullProduct);
+                            if (onQuickView && !isUnavailable) onQuickView(fullProduct);
                           }}
-                          className="bg-white/95 backdrop-blur-md rounded-2xl sm:rounded-[24px] border border-black/[0.06] p-3 sm:p-4 shadow-sm flex gap-3 sm:gap-4 items-center cursor-pointer hover:border-black/20 hover:shadow-md transition-all duration-200 group"
+                          className={`bg-white/95 backdrop-blur-md rounded-2xl sm:rounded-[24px] border p-3 sm:p-4 shadow-sm flex gap-3 sm:gap-4 items-center cursor-pointer hover:shadow-md transition-all duration-200 group ${
+                            isUnavailable || isOutOfStock ? 'border-rose-200 bg-rose-50/20' : 'border-black/[0.06] hover:border-black/20'
+                          }`}
                         >
                           <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl sm:rounded-2xl bg-[#F5F5F7] overflow-hidden shrink-0 relative">
                             <Image
@@ -710,13 +749,30 @@ export const CartPage = ({
                               alt={item.name}
                               fill
                               sizes="80px"
-                              className="object-cover"
+                              className={`object-cover ${isUnavailable || isOutOfStock ? 'grayscale opacity-75' : ''}`}
                             />
                           </div>
 
                           <div className="flex-1 min-w-0">
-                            <span className="text-[10px] font-bold text-[#777777] uppercase tracking-wider">{item.categoryName}</span>
-                            <h3 className="text-xs sm:text-sm font-bold text-[#1D1D1F] line-clamp-1 mt-0.5">{item.name}</h3>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="text-[10px] font-bold text-[#777777] uppercase tracking-wider">{item.categoryName}</span>
+                              {isUnavailable && (
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-700">
+                                  Unavailable
+                                </span>
+                              )}
+                              {isOutOfStock && (
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-700">
+                                  Out of Stock
+                                </span>
+                              )}
+                              {isStockInsufficient && (
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">
+                                  Only {liveProduct.stockCount} in stock
+                                </span>
+                              )}
+                            </div>
+                            <h3 className={`text-xs sm:text-sm font-bold mt-0.5 ${isUnavailable || isOutOfStock ? 'text-rose-700 line-through' : 'text-[#1D1D1F]'}`}>{item.name}</h3>
 
                             {/* Size Option Selector (Only for Clothing & Shoes) */}
                             {availableSizes.length > 0 && (
@@ -886,20 +942,22 @@ export const CartPage = ({
                         value={promoCode}
                         onChange={(e) => { setPromoCode(e.target.value.toUpperCase()); setPromoError(''); }}
                         placeholder="Promo Code (e.g. FASH30)"
-                        className="flex-1 px-4 py-2.5 rounded-full bg-[#F5F5F7]/70 border border-black/5 text-xs font-bold text-[#1D1D1F] placeholder:text-[#888888] outline-none focus:ring-2 focus:ring-[#1D1D1F] focus:bg-white transition-all"
+                        disabled={isApplyingPromo}
+                        className="flex-1 px-4 py-2.5 rounded-full bg-[#F5F5F7]/70 border border-black/5 text-xs font-bold text-[#1D1D1F] placeholder:text-[#888888] outline-none focus:ring-2 focus:ring-[#1D1D1F] focus:bg-white transition-all disabled:opacity-60"
                       />
                       <button
                         onClick={handleApplyPromo}
-                        className="px-5 py-2.5 rounded-full bg-[#1D1D1F] text-white font-bold text-xs hover:bg-black transition-all cursor-pointer"
+                        disabled={isApplyingPromo}
+                        className="px-5 py-2.5 rounded-full bg-[#1D1D1F] text-white font-bold text-xs hover:bg-black transition-all cursor-pointer disabled:opacity-50"
                       >
-                        Apply
+                        {isApplyingPromo ? 'Applying...' : 'Apply'}
                       </button>
                     </div>
                     {promoError && <p className="text-[11px] text-red-500 mt-1.5 font-medium">{promoError}</p>}
-                    {appliedPromo && (
+                    {appliedCoupon && (
                       <div className="mt-2 flex items-center justify-between text-xs font-bold bg-[#EBF5FF] text-[#0071E3] rounded-full px-3 py-1">
-                        <span>{VALID_PROMOS[appliedPromo].label}</span>
-                        <button onClick={() => { setAppliedPromo(null); setPromoCode(''); }}>
+                        <span>{appliedCoupon.label}</span>
+                        <button onClick={() => { setAppliedCoupon(null); setPromoCode(''); setPromoError(''); }}>
                           <X className="w-3.5 h-3.5" />
                         </button>
                       </div>
@@ -930,9 +988,20 @@ export const CartPage = ({
                       </div>
                     </div>
 
+                    {unavailableItems.length > 0 && (
+                      <div className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-start gap-2">
+                        <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                        <div>
+                          <span className="font-bold block">Items Unavailable</span>
+                          <span>Some items in your bag are no longer available or out of stock. Please remove them to proceed.</span>
+                        </div>
+                      </div>
+                    )}
+
                     <button
                       onClick={handleCheckoutClick}
-                      className="w-full mt-3 py-3.5 rounded-full bg-[#1D1D1F] hover:bg-black text-white font-extrabold text-sm shadow-sm flex items-center justify-center gap-2 active:scale-95 transition-all cursor-pointer"
+                      disabled={unavailableItems.length > 0}
+                      className="w-full mt-3 py-3.5 rounded-full bg-[#1D1D1F] hover:bg-black text-white font-extrabold text-sm shadow-sm flex items-center justify-center gap-2 active:scale-95 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                       <span>Proceed to Checkout</span>
                       <ArrowRight className="w-4 h-4" />
@@ -1019,16 +1088,18 @@ export const CartPage = ({
         {checkoutOpen && (
           <CheckoutModal
             cartList={cartList}
-            products={products}
+            products={effectiveProducts}
             subtotal={subtotal}
             promoDiscountAmount={promoDiscountAmount}
             shippingFee={shippingFee}
             total={total}
+            couponCode={appliedCoupon?.code || ''}
             user={user}
             onClose={() => setCheckoutOpen(false)}
             onSuccess={(orderData) => {
               setCheckoutOpen(false);
               setOrderPlaced(true);
+              setAppliedCoupon(null);
               if (onPlaceOrder && orderData) onPlaceOrder(orderData);
               cartList.forEach(item => onUpdateQuantity(item.id, 0));
             }}

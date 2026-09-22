@@ -2,14 +2,21 @@ import { NextResponse } from 'next/server';
 import { updateOffer, deleteOffer } from '@/lib/db';
 import { verifyAdminAuth, unauthorizedResponse } from '@/lib/auth';
 
-export async function PUT(request, { params }) {
+export const dynamic = 'force-dynamic';
+
+export async function PUT(request, context) {
   try {
     const admin = verifyAdminAuth(request);
     if (!admin) {
-      return unauthorizedResponse();
+      return unauthorizedResponse('Administrative access required to update offers.');
     }
 
-    const { id } = params;
+    const params = await context.params;
+    const id = params?.id;
+    if (!id) {
+      return NextResponse.json({ success: false, error: 'Offer ID is required' }, { status: 400 });
+    }
+
     const body = await request.json();
     const updated = await updateOffer(id, body);
 
@@ -23,14 +30,19 @@ export async function PUT(request, { params }) {
   }
 }
 
-export async function DELETE(request, { params }) {
+export async function DELETE(request, context) {
   try {
     const admin = verifyAdminAuth(request);
     if (!admin) {
-      return unauthorizedResponse();
+      return unauthorizedResponse('Administrative access required to delete offers.');
     }
 
-    const { id } = params;
+    const params = await context.params;
+    const id = params?.id;
+    if (!id) {
+      return NextResponse.json({ success: false, error: 'Offer ID is required' }, { status: 400 });
+    }
+
     const deleted = await deleteOffer(id);
 
     if (!deleted) {

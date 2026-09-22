@@ -24,21 +24,30 @@ export const BrandLoadingScreen = ({ onLanded, onComplete }) => {
   const brandText = 'Nakoda Imitation';
   const letters = Array.from(brandText);
 
-  // Check reduced-motion preference on mount
+  // Check reduced-motion preference and session state on mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
+      try {
+        if (sessionStorage.getItem('nakoda_brand_loaded') === 'true') {
+          if (onLanded) onLanded();
+          if (onComplete) onComplete();
+          setPhase('completed');
+          return;
+        }
+      } catch (e) {}
+
       const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
       setReducedMotion(mediaQuery.matches);
       const listener = (e) => setReducedMotion(e.matches);
       mediaQuery.addEventListener('change', listener);
       return () => mediaQuery.removeEventListener('change', listener);
     }
-  }, []);
+  }, [onLanded, onComplete]);
 
-  // Ready State Trigger: Minimum display floor combined with asset readiness
+  // Ready State Trigger: Snappy minimum display floor combined with asset readiness
   useEffect(() => {
     let isCancelled = false;
-    const minDelay = new Promise((resolve) => setTimeout(resolve, 1400));
+    const minDelay = new Promise((resolve) => setTimeout(resolve, 350));
 
     const checkReady = new Promise((resolve) => {
       if (typeof document !== 'undefined') {
@@ -54,7 +63,7 @@ export const BrandLoadingScreen = ({ onLanded, onComplete }) => {
           const fallbackTimer = setTimeout(() => {
             window.removeEventListener('load', onLoad);
             resolve();
-          }, 2500);
+          }, 800);
         }
       } else {
         resolve();
@@ -75,6 +84,12 @@ export const BrandLoadingScreen = ({ onLanded, onComplete }) => {
   useEffect(() => {
     if (phase !== 'ready') return;
 
+    const markSessionLoaded = () => {
+      try {
+        sessionStorage.setItem('nakoda_brand_loaded', 'true');
+      } catch (e) {}
+    };
+
     if (reducedMotion) {
       // For reduced motion users, skip physical fly and cross-fade directly
       if (onLanded) onLanded();
@@ -82,14 +97,15 @@ export const BrandLoadingScreen = ({ onLanded, onComplete }) => {
         setPhase('landed');
         const doneTimer = setTimeout(() => {
           setPhase('completed');
+          markSessionLoaded();
           if (onComplete) onComplete();
-        }, 300);
+        }, 150);
         return () => clearTimeout(doneTimer);
-      }, 200);
+      }, 100);
       return () => clearTimeout(fadeTimer);
     }
 
-    // 1. Give sub-elements (progress bar & tagline) 180ms to fade out cleanly
+    // 1. Give sub-elements 80ms to fade out cleanly
     const prepTimer = setTimeout(() => {
       const sourceEl = sourceRef.current;
       const targetEl = document.getElementById('navbar-brand-logo');
@@ -100,8 +116,9 @@ export const BrandLoadingScreen = ({ onLanded, onComplete }) => {
         setPhase('landed');
         setTimeout(() => {
           setPhase('completed');
+          markSessionLoaded();
           if (onComplete) onComplete();
-        }, 350);
+        }, 180);
         return;
       }
 
@@ -124,7 +141,7 @@ export const BrandLoadingScreen = ({ onLanded, onComplete }) => {
       setPhase('flying');
       setTransformStyle({
         transform: `translate3d(${deltaX}px, ${deltaY}px, 0) scale(${scale})`,
-        transition: 'transform 720ms cubic-bezier(0.65, 0, 0.35, 1)',
+        transition: 'transform 420ms cubic-bezier(0.25, 1, 0.5, 1)',
         transformOrigin: 'center center',
         willChange: 'transform',
       });
@@ -137,14 +154,15 @@ export const BrandLoadingScreen = ({ onLanded, onComplete }) => {
         // 5. Fade out background overlay and unmount
         const completionTimer = setTimeout(() => {
           setPhase('completed');
+          markSessionLoaded();
           if (onComplete) onComplete();
-        }, 380);
+        }, 200);
 
         return () => clearTimeout(completionTimer);
-      }, 720);
+      }, 420);
 
       return () => clearTimeout(flightTimer);
-    }, 200);
+    }, 80);
 
     return () => clearTimeout(prepTimer);
   }, [phase, reducedMotion, onLanded, onComplete]);

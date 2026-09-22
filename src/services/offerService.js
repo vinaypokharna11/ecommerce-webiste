@@ -22,6 +22,10 @@ export const offerService = {
   async deleteOffer(id) {
     return apiClient.delete(`/api/offers/${encodeURIComponent(id)}`);
   },
+
+  async validateCoupon(couponCode, items = [], subtotal = null) {
+    return apiClient.post('/api/offers/validate', { couponCode, items, subtotal });
+  },
 };
 
 export default offerService;

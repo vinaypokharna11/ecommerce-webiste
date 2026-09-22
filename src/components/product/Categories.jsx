@@ -29,14 +29,19 @@ export const Categories = ({
     : rawTitle;
   const sectionSubtitle = exploreSection?.subtitle || 'Find exactly what you’re looking for across our curated lifestyle, grocery, apparel, and travel categories.';
 
-  const rawCollections = (exploreSection?.collections && exploreSection.collections.length > 0)
+  const rawCollections = Array.isArray(exploreSection?.collections)
     ? exploreSection.collections
-    : CATALOG_CATEGORIES.filter((c) => c.id !== 'all');
+    : [];
 
-  // Filter active and sort by order
+  // Filter active and non-deleted collections and sort by order
   const displayCollections = rawCollections
-    .filter((c) => c.isActive !== false)
+    .filter((c) => c.isActive !== false && !c.isDeleted)
     .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
+  // If no active collections exist, do not render section
+  if (displayCollections.length === 0) {
+    return null;
+  }
 
   const handleCardClick = (catId) => {
     if (onCategoryClick) {
@@ -48,16 +53,18 @@ export const Categories = ({
     }
   };
 
-  const menuItems = displayCollections.map((col) => {
-    const targetId = col.categoryId || col.id;
-    return {
-      image: col.image || '/assets/images/prod_backpack.jpg',
-      link: `/?tab=catalog&category=${targetId}`,
-      title: col.name,
-      description: col.badge ? `${col.badge} Collection` : 'Explore curated collection',
-      categoryId: targetId,
-    };
-  });
+  const menuItems = React.useMemo(() => {
+    return displayCollections.map((col) => {
+      const targetId = col.categoryId || col.id || 'all';
+      return {
+        image: col.image || '/assets/images/prod_backpack.jpg',
+        link: `/?tab=catalog&category=${targetId}`,
+        title: col.name,
+        description: col.badge ? `${col.badge} Collection` : 'Explore curated collection',
+        categoryId: targetId,
+      };
+    });
+  }, [displayCollections]);
 
   return (
     <section

@@ -13,9 +13,20 @@ export async function GET(request) {
     const stockStatus = searchParams.get('stockStatus');
     const isPopular = searchParams.get('isPopular') === 'true';
     const isFeatured = searchParams.get('isFeatured') === 'true';
+    const admin = verifyAdminAuth(request);
+    const includeDeleted = Boolean(admin && searchParams.get('includeDeleted') === 'true');
 
-    const products = await getProducts({ category, search, stockStatus, isPopular, isFeatured });
-    return NextResponse.json({ success: true, count: products.length, products });
+    const products = await getProducts({ category, search, stockStatus, isPopular, isFeatured, includeDeleted });
+    return NextResponse.json(
+      { success: true, count: products.length, products },
+      {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0',
+        },
+      }
+    );
   } catch (error) {
     console.error('Error fetching products:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
@@ -48,6 +59,7 @@ export async function POST(request) {
     return NextResponse.json({ success: true, product: newProduct }, { status: 201 });
   } catch (error) {
     console.error('Error creating product:', error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    const status = error.code === 'SKU_ALREADY_EXISTS' ? 409 : 500;
+    return NextResponse.json({ success: false, code: error.code, error: error.message }, { status });
   }
 }

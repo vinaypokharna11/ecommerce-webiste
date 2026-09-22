@@ -269,7 +269,7 @@ export const CatalogPage = ({
 
           {/* Product Grid */}
           {filteredProducts.length > 0 ? (
-            <div id="catalog-products-grid" className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 xs:gap-3.5 sm:gap-5 lg:gap-6">
+            <div id="catalog-grid" data-testid="catalog-products-grid" className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 xs:gap-3.5 sm:gap-5 lg:gap-6">
               {filteredProducts.map((product) => {
                 const currentCartItem = cartItems[product.id];
                 const currentQty = currentCartItem?.quantity || 0;

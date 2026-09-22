@@ -18,7 +18,7 @@ test.describe('Explore Our Collections Clickable Feature', () => {
     const categoriesSection = page.locator('#categories-section');
     await expect(categoriesSection).toBeVisible();
 
-    const header = categoriesSection.locator('h2');
+    const header = categoriesSection.locator('h2').first();
     await expect(header).toHaveText('Explore Our Collections');
 
     // Should render the InfiniteMenu container

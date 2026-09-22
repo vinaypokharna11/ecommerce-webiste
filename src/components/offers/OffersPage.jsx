@@ -20,10 +20,20 @@ const CouponCard = ({ offer, index, onExploreCatalog }) => {
 
   const handleCopy = (e) => {
     e.stopPropagation();
-    navigator.clipboard.writeText(offer.code).then(() => {
+    if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(offer.code)
+        .then(() => {
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+        })
+        .catch(() => {
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+        });
+    } else {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    });
+    }
   };
 
   return (
@@ -63,6 +73,14 @@ const CouponCard = ({ offer, index, onExploreCatalog }) => {
               {offer.description}
             </p>
           </div>
+        </div>
+
+        {/* Terms: Expiry & Min Order */}
+        <div className="flex items-center justify-between text-[11px] text-[#86868B] font-medium mb-3">
+          <span>{offer.expiry || 'Limited Period'}</span>
+          {Number(offer.minOrderAmount) > 0 && (
+            <span className="font-semibold text-[#1D1D1F]">Min order ₹{offer.minOrderAmount}</span>
+          )}
         </div>
       </div>
 
@@ -113,7 +131,15 @@ const CouponCard = ({ offer, index, onExploreCatalog }) => {
 
 export const OffersPage = ({ onExploreCatalog }) => {
   const { offers = [] } = useCatalog();
-  const activeOffers = offers.filter(o => o.isActive !== false);
+
+  // Public customer view strictly filters out paused, deleted, and expired offers
+  const activeOffers = offers.filter((o) => {
+    if (o.isDeleted === true || o.status === 'DELETED') return false;
+    if (o.status === 'PAUSED' || o.isActive === false) return false;
+    if (o.status === 'EXPIRED') return false;
+    if (o.endDate && new Date(o.endDate).getTime() < Date.now()) return false;
+    return true;
+  });
 
   return (
     <section className="pt-20 sm:pt-28 pb-28 sm:pb-24 min-h-screen bg-[#FBFBFD] text-[#1D1D1F]">
@@ -162,17 +188,37 @@ export const OffersPage = ({ onExploreCatalog }) => {
           </span>
         </div>
 
-        {/* Coupons Grid Mode Only */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5 sm:gap-6">
-          {activeOffers.map((offer, index) => (
-            <CouponCard
-              key={offer.id || index}
-              offer={offer}
-              index={index}
-              onExploreCatalog={onExploreCatalog}
-            />
-          ))}
-        </div>
+        {/* Coupons Grid or Empty State */}
+        {activeOffers.length === 0 ? (
+          <div className="text-center py-16 px-4 bg-white rounded-3xl border border-black/[0.06] shadow-sm max-w-lg mx-auto space-y-3">
+            <div className="w-14 h-14 rounded-2xl bg-[#F5F5F7] flex items-center justify-center text-2xl mx-auto">
+              🏷️
+            </div>
+            <h3 className="text-lg font-bold text-[#1D1D1F]">No Active Coupons Right Now</h3>
+            <p className="text-xs text-[#6E6E73] max-w-xs mx-auto">
+              All promotional deals are currently paused or concluded. Please check back soon for upcoming flash sales and festive offers!
+            </p>
+            {onExploreCatalog && (
+              <button
+                onClick={() => onExploreCatalog('all')}
+                className="mt-2 px-5 py-2.5 rounded-full bg-[#1D1D1F] hover:bg-black text-white text-xs font-bold transition-all cursor-pointer"
+              >
+                Browse Catalog
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5 sm:gap-6">
+            {activeOffers.map((offer, index) => (
+              <CouponCard
+                key={offer.id || index}
+                offer={offer}
+                index={index}
+                onExploreCatalog={onExploreCatalog}
+              />
+            ))}
+          </div>
+        )}
 
       </div>
     </section>

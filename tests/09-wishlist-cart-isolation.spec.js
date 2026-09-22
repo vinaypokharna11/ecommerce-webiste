@@ -110,7 +110,7 @@ test.describe('Wishlist & Cart User Isolation Tests', () => {
     await page.waitForTimeout(400);
 
     // Click available in-stock size on the card if present
-    const sizeBtn = firstCard.locator('button:not([class*="cursor-not-allowed"])').filter({ hasNotText: /add to cart|quick view/i }).first();
+    const sizeBtn = firstCard.locator('button[title^="Select Size"]').first();
     if (await sizeBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
       await sizeBtn.click({ force: true });
       await page.waitForTimeout(300);

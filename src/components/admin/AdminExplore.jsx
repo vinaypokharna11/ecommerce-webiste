@@ -30,6 +30,11 @@ import { useCatalog } from '../../context/CatalogContext';
 import { DEFAULT_EXPLORE_SECTION } from '../../data/mockData';
 import { uploadToCloudinary } from '../../lib/uploadClient';
 import { InfiniteMenu } from '@/components/ui/InfiniteMenu';
+import { ExploreSectionSettings } from './explore/ExploreSectionSettings';
+import { ExploreCardList } from './explore/ExploreCardList';
+import { ExploreLivePreview } from './explore/ExploreLivePreview';
+import { ExploreEditModal } from './explore/ExploreEditModal';
+import { ExploreDeleteModal, ExploreResetModal } from './explore/ExploreConfirmModals';
 
 // Quick image presets for imitation jewelry & lifestyle
 const PRESET_IMAGES = [
@@ -45,18 +50,42 @@ const PRESET_IMAGES = [
 ];
 
 export const AdminExplore = () => {
-  const { exploreSection, updateExploreSection, categories, getAuthHeaders } = useCatalog();
+  const {
+    exploreSection,
+    updateExploreSection,
+    fetchExploreSection,
+    createCollection,
+    updateCollection,
+    deleteCollection,
+    reorderCollections,
+    toggleCollectionVisibility,
+    categories,
+    getAuthHeaders,
+  } = useCatalog();
 
   // Local Form State
   const [formData, setFormData] = useState(() => {
-    return exploreSection || DEFAULT_EXPLORE_SECTION;
+    return exploreSection || {
+      title: 'Explore Our Collections',
+      subtitle: 'Find exactly what you’re looking for across our curated lifestyle, grocery, apparel, and travel categories.',
+      enabled: true,
+      collections: [],
+    };
   });
 
   const [collections, setCollections] = useState(() => {
-    return exploreSection?.collections || DEFAULT_EXPLORE_SECTION.collections;
+    return Array.isArray(exploreSection?.collections) ? exploreSection.collections : [];
   });
 
   const isSavingRef = useRef(false);
+  const [inFlightIds, setInFlightIds] = useState(new Set());
+
+  // Fetch admin-level collections (including hidden ones) on mount
+  useEffect(() => {
+    if (fetchExploreSection) {
+      fetchExploreSection({ admin: true });
+    }
+  }, [fetchExploreSection]);
 
   // Sync with context if external changes happen
   useEffect(() => {
@@ -87,43 +116,35 @@ export const AdminExplore = () => {
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef(null);
 
-  // Central Persistence Function: saves directly to server & context
-  const persistExploreData = async (newCollections, newFormData = formData) => {
+  // Central Persistence Function: saves section metadata
+  const handleSaveAll = async () => {
     isSavingRef.current = true;
     setIsSaving(true);
     setStatusMessage(null);
 
-    const payload = {
-      title: newFormData.title || 'Explore Our Collections',
-      subtitle: newFormData.subtitle || '',
-      enabled: newFormData.enabled !== false,
-      collections: newCollections.map((col, index) => ({
-        ...col,
-        order: index + 1,
-      })),
-    };
-
     try {
+      const payload = {
+        title: formData.title || 'Explore Our Collections',
+        subtitle: formData.subtitle || '',
+        enabled: formData.enabled !== false,
+      };
       const result = await updateExploreSection(payload);
       if (result && result.success !== false) {
         setStatusMessage({
           type: 'success',
-          text: 'Explore collections updated and saved live across the store!',
+          text: 'Explore section settings saved live across the store!',
         });
-        return true;
       } else {
         setStatusMessage({
           type: 'error',
-          text: result?.error || 'Failed to save changes.',
+          text: result?.error || 'Failed to save settings.',
         });
-        return false;
       }
     } catch (err) {
       setStatusMessage({
         type: 'error',
         text: err.message || 'An unexpected error occurred while saving.',
       });
-      return false;
     } finally {
       setIsSaving(false);
       setTimeout(() => {
@@ -135,61 +156,90 @@ export const AdminExplore = () => {
     }
   };
 
-  // Save changes to server
-  const handleSaveAll = async () => {
-    await persistExploreData(collections, formData);
-  };
-
   // Reset to default collections
   const handleResetDefaults = async () => {
     setResetConfirmOpen(false);
     setIsSaving(true);
     try {
-      const res = await fetch('/api/explore', {
-        method: 'PUT',
-        headers: getAuthHeaders ? getAuthHeaders() : { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ action: 'reset_defaults' }),
-      });
-      const data = await res.json();
-      if (data.success && data.exploreSection) {
-        setFormData(data.exploreSection);
-        setCollections(data.exploreSection.collections);
-        await updateExploreSection(data.exploreSection);
+      const result = await updateExploreSection({ action: 'reset_defaults' });
+      if (result && result.success !== false) {
+        if (result.exploreSection) {
+          setFormData(result.exploreSection);
+          setCollections(result.exploreSection.collections || []);
+        }
         setStatusMessage({
           type: 'success',
           text: 'Restored factory default explore collections.',
         });
       } else {
-        setStatusMessage({ type: 'error', text: data.error || 'Failed to reset defaults.' });
+        setStatusMessage({ type: 'error', text: result?.error || 'Failed to reset defaults.' });
       }
     } catch (e) {
       setStatusMessage({ type: 'error', text: 'Failed to reset defaults.' });
     } finally {
       setIsSaving(false);
+      setTimeout(() => setStatusMessage(null), 4000);
     }
   };
 
-  // Move Collection Up/Down
+  // Move Collection Up/Down with immediate atomic reordering
   const handleMove = async (index, direction) => {
     const targetIndex = direction === 'up' ? index - 1 : index + 1;
     if (targetIndex < 0 || targetIndex >= collections.length) return;
+    const colId = collections[index]?.id;
+    if (!colId || inFlightIds.has(colId)) return;
+
+    setInFlightIds((prev) => new Set(prev).add(colId));
+    const prevCollections = [...collections];
+
+    // Optimistic local reorder
     const updated = [...collections];
     const temp = updated[index];
     updated[index] = updated[targetIndex];
     updated[targetIndex] = temp;
     const reordered = updated.map((item, idx) => ({ ...item, order: idx + 1 }));
     setCollections(reordered);
-    await persistExploreData(reordered);
+
+    const orderedIds = reordered.map((c) => c.id);
+    const res = await reorderCollections(orderedIds);
+
+    setInFlightIds((prev) => {
+      const next = new Set(prev);
+      next.delete(colId);
+      return next;
+    });
+
+    if (!res.success) {
+      setStatusMessage({ type: 'error', text: res.error || 'Failed to reorder collections' });
+      setCollections(prevCollections);
+    }
   };
 
-  // Toggle active status for card
+  // Toggle active status for card with immediate persistence
   const handleToggleActive = async (id) => {
-    const updated = collections.map((col) =>
-      col.id === id ? { ...col, isActive: !col.isActive } : col
+    if (!id || inFlightIds.has(id)) return;
+    setInFlightIds((prev) => new Set(prev).add(id));
+
+    // Optimistic local toggle
+    setCollections((prev) =>
+      prev.map((col) => (col.id === id ? { ...col, isActive: !col.isActive } : col))
     );
-    setCollections(updated);
-    await persistExploreData(updated);
+
+    const res = await toggleCollectionVisibility(id);
+
+    setInFlightIds((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+
+    if (!res.success) {
+      setStatusMessage({ type: 'error', text: res.error || 'Failed to update visibility' });
+      // Rollback
+      setCollections((prev) =>
+        prev.map((col) => (col.id === id ? { ...col, isActive: !col.isActive } : col))
+      );
+    }
   };
 
   // Open Modal for Add
@@ -248,52 +298,90 @@ export const AdminExplore = () => {
       return;
     }
 
-    let updatedList;
-    if (editingCard) {
-      // Update existing
-      updatedList = collections.map((c) =>
-        c.id === editingCard.id
-          ? {
-              ...c,
-              name: modalName.trim(),
-              categoryId: modalCategoryId,
-              image: modalImage || '/assets/images/prod_backpack.jpg',
-              badge: modalBadge.trim(),
-              isActive: modalIsActive,
-            }
-          : c
-      );
-    } else {
-      // Add new
-      const newId = `col-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
-      const newCard = {
-        id: newId,
-        name: modalName.trim(),
-        categoryId: modalCategoryId,
-        image: modalImage || '/assets/images/prod_backpack.jpg',
-        badge: modalBadge.trim(),
-        order: collections.length + 1,
-        isActive: modalIsActive,
-      };
-      updatedList = [...collections, newCard];
-    }
+    setIsSaving(true);
+    setModalError('');
 
-    setCollections(updatedList);
-    setIsModalOpen(false);
-    await persistExploreData(updatedList);
+    try {
+      if (editingCard) {
+        const updateData = {
+          name: modalName.trim(),
+          categoryId: modalCategoryId,
+          target: modalCategoryId,
+          image: modalImage || '/assets/images/prod_backpack.jpg',
+          badge: modalBadge.trim(),
+          isActive: modalIsActive,
+        };
+        const res = await updateCollection(editingCard.id, updateData);
+        if (res.success) {
+          setIsModalOpen(false);
+          setStatusMessage({
+            type: 'success',
+            text: `Collection "${modalName.trim()}" updated successfully!`,
+          });
+          setTimeout(() => setStatusMessage(null), 3000);
+        } else {
+          setModalError(res.error || 'Failed to update collection');
+        }
+      } else {
+        const createData = {
+          name: modalName.trim(),
+          categoryId: modalCategoryId,
+          target: modalCategoryId,
+          image: modalImage || '/assets/images/prod_backpack.jpg',
+          badge: modalBadge.trim(),
+          isActive: modalIsActive,
+        };
+        const res = await createCollection(createData);
+        if (res.success) {
+          setIsModalOpen(false);
+          setStatusMessage({
+            type: 'success',
+            text: `Collection "${modalName.trim()}" created successfully!`,
+          });
+          setTimeout(() => setStatusMessage(null), 3000);
+        } else {
+          setModalError(res.error || 'Failed to create collection');
+        }
+      }
+    } catch (err) {
+      setModalError(err.message || 'An error occurred while saving.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  // Delete Card
+  // Delete Card with atomic gap-free reordering
   const handleDeleteCard = async (id) => {
-    const updatedList = collections.filter((c) => c.id !== id);
-    setCollections(updatedList);
+    if (!id || inFlightIds.has(id)) return;
+    setInFlightIds((prev) => new Set(prev).add(id));
     setDeleteConfirmId(null);
-    await persistExploreData(updatedList);
+
+    const prevList = [...collections];
+    // Optimistic removal
+    setCollections((prev) =>
+      prev.filter((c) => c.id !== id).map((c, idx) => ({ ...c, order: idx + 1 }))
+    );
+
+    const res = await deleteCollection(id);
+
+    setInFlightIds((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+
+    if (!res.success) {
+      setStatusMessage({ type: 'error', text: res.error || 'Failed to delete collection' });
+      setCollections(prevList);
+    } else {
+      setStatusMessage({ type: 'success', text: 'Collection deleted successfully.' });
+      setTimeout(() => setStatusMessage(null), 3000);
+    }
   };
 
   // Filter and sort active collections for preview
   const previewCollections = collections
-    .filter((c) => c.isActive !== false)
+    .filter((c) => c.isActive !== false && !c.isDeleted)
     .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
   return (
@@ -428,551 +516,70 @@ export const AdminExplore = () => {
         <div className="space-y-6">
 
           {/* 1. Section Header & Visibility Settings */}
-          <div className="bg-white p-6 rounded-2xl border border-black/10 shadow-xs space-y-5">
-            <div className="flex items-center justify-between border-b border-black/5 pb-4">
-              <div>
-                <h2 className="text-base font-bold text-[#171717]">Section Visibility & Typography</h2>
-                <p className="text-xs text-[#777777]">Set the main headline, subtitle, and storefront visibility.</p>
-              </div>
-
-              {/* Visibility Switch */}
-              <label className="flex items-center gap-2.5 cursor-pointer">
-                <span className="text-xs font-medium text-[#777777]">
-                  {formData.enabled !== false ? (
-                    <span className="inline-flex items-center gap-1 text-[#2D5A1E] font-semibold">
-                      <Eye className="w-3.5 h-3.5" /> Visible on Storefront
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 text-rose-600 font-semibold">
-                      <EyeOff className="w-3.5 h-3.5" /> Hidden from Storefront
-                    </span>
-                  )}
-                </span>
-                <input
-                  type="checkbox"
-                  checked={formData.enabled !== false}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, enabled: e.target.checked }))}
-                  className="toggle toggle-success toggle-sm"
-                />
-              </label>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Section Title */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-[#171717]">
-                  Section Title (Heading) <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={formData.title || ''}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, title: e.target.value }))}
-                  placeholder="e.g. Explore Our Collections"
-                  className="w-full px-3.5 py-2.5 bg-[#FBFBFB] border border-black/10 rounded-xl text-sm text-[#171717] focus:outline-none focus:border-[#171717] transition-all font-sans"
-                />
-              </div>
-
-              {/* Section Subtitle */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-[#171717]">
-                  Section Subtitle / Description
-                </label>
-                <input
-                  type="text"
-                  value={formData.subtitle || ''}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, subtitle: e.target.value }))}
-                  placeholder="e.g. Find exactly what you’re looking for..."
-                  className="w-full px-3.5 py-2.5 bg-[#FBFBFB] border border-black/10 rounded-xl text-sm text-[#171717] focus:outline-none focus:border-[#171717] transition-all font-sans"
-                />
-              </div>
-            </div>
-
-            {/* Save Button */}
-            <div className="flex justify-end pt-2 border-t border-black/5">
-              <button
-                type="button"
-                onClick={handleSaveAll}
-                disabled={isSaving}
-                className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-[#171717] hover:bg-black text-white text-xs font-bold shadow-sm active:scale-95 transition-all cursor-pointer disabled:opacity-50"
-              >
-                <Save className="w-3.5 h-3.5" />
-                {isSaving ? 'Saving...' : 'Save Changes'}
-              </button>
-            </div>
-          </div>
+          <ExploreSectionSettings
+            formData={formData}
+            setFormData={setFormData}
+            handleSaveAll={handleSaveAll}
+            isSaving={isSaving}
+          />
 
           {/* 2. Collection Cards List */}
-          <div className="bg-white p-6 rounded-2xl border border-black/10 shadow-xs space-y-4">
-            <div className="flex items-center justify-between border-b border-black/5 pb-3">
-              <div>
-                <h2 className="text-base font-bold text-[#171717]">
-                  Collection Cards ({collections.length})
-                </h2>
-                <p className="text-xs text-[#777777]">
-                  Drag/reorder cards, assign target categories, edit images, and add promotional badges.
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={handleOpenAdd}
-                className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-[#F5F5F3] hover:bg-[#EEEEEC] text-[#171717] border border-black/10 transition-colors flex items-center gap-1 cursor-pointer"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                Add Card
-              </button>
-            </div>
-
-            {/* Cards Table/List */}
-            <div className="divide-y divide-black/5">
-              {collections.map((col, index) => {
-                const categoryObj = (categories || []).find(
-                  (c) => c.id === (col.categoryId || col.id)
-                );
-                const categoryName = categoryObj ? categoryObj.name : col.categoryId || col.id;
-
-                return (
-                  <div
-                    key={col.id || index}
-                    className={`py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-colors ${
-                      col.isActive === false ? 'opacity-50 bg-[#FBFBFB]' : ''
-                    }`}
-                  >
-                    {/* Left: Drag/Order controls + Thumbnail + Details */}
-                    <div className="flex items-center gap-3">
-                      {/* Order Controls */}
-                      <div className="flex flex-col gap-0.5 text-[#777777]">
-                        <button
-                          type="button"
-                          disabled={index === 0}
-                          onClick={() => handleMove(index, 'up')}
-                          className="p-1 rounded hover:bg-[#EEEEEC] hover:text-[#171717] disabled:opacity-20 cursor-pointer"
-                          title="Move Up"
-                        >
-                          <ArrowUp className="w-3 h-3" />
-                        </button>
-                        <button
-                          type="button"
-                          disabled={index === collections.length - 1}
-                          onClick={() => handleMove(index, 'down')}
-                          className="p-1 rounded hover:bg-[#EEEEEC] hover:text-[#171717] disabled:opacity-20 cursor-pointer"
-                          title="Move Down"
-                        >
-                          <ArrowDown className="w-3 h-3" />
-                        </button>
-                      </div>
-
-                      {/* Card Thumbnail */}
-                      <div className="relative w-14 h-16 rounded-xl overflow-hidden bg-black/5 border border-black/10 shrink-0">
-                        <Image
-                          src={col.image || '/assets/images/prod_backpack.jpg'}
-                          alt={col.name}
-                          fill
-                          className="object-cover"
-                        />
-                        {col.badge && (
-                          <div className="absolute top-1 left-1 px-1 rounded bg-black/70 text-white text-[8px] font-bold uppercase">
-                            {col.badge}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Card Details */}
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <h3 className="text-sm font-bold text-[#171717]">{col.name}</h3>
-                          {col.badge && (
-                            <span className="px-2 py-0.5 rounded-full bg-[#9FD842]/30 text-[#171717] text-[10px] font-semibold uppercase tracking-wider">
-                              {col.badge}
-                            </span>
-                          )}
-                        </div>
-
-                        <div className="flex items-center gap-3 mt-1 text-xs text-[#777777]">
-                          <span className="flex items-center gap-1">
-                            <Layers className="w-3 h-3 text-[#9FD842]" />
-                            Target: <strong className="text-[#171717]">{categoryName}</strong>
-                          </span>
-                          <span>•</span>
-                          <span>Position: #{index + 1}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Right: Actions */}
-                    <div className="flex items-center gap-2 self-end sm:self-auto">
-                      {/* Active toggle */}
-                      <button
-                        type="button"
-                        onClick={() => handleToggleActive(col.id)}
-                        className={`p-2 rounded-xl text-xs font-medium border transition-colors cursor-pointer ${
-                          col.isActive !== false
-                            ? 'bg-[#EBF7D4] border-[#9FD842]/40 text-[#2D5A1E]'
-                            : 'bg-[#EEEEEC] border-black/10 text-[#777777]'
-                        }`}
-                        title={col.isActive !== false ? 'Card is Active' : 'Card is Hidden'}
-                      >
-                        {col.isActive !== false ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-                      </button>
-
-                      {/* Edit button */}
-                      <button
-                        type="button"
-                        onClick={() => handleOpenEdit(col)}
-                        className="p-2 rounded-xl text-xs font-semibold bg-white hover:bg-[#F5F5F3] text-[#171717] border border-black/10 transition-colors cursor-pointer"
-                        title="Edit Collection"
-                      >
-                        <Edit3 className="w-4 h-4" />
-                      </button>
-
-                      {/* Delete button */}
-                      <button
-                        type="button"
-                        onClick={() => setDeleteConfirmId(col.id)}
-                        className="p-2 rounded-xl text-xs font-semibold bg-white hover:bg-rose-50 text-rose-600 border border-black/10 hover:border-rose-200 transition-colors cursor-pointer"
-                        title="Delete Collection"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+          <ExploreCardList
+            collections={collections}
+            categories={categories}
+            handleOpenAdd={handleOpenAdd}
+            handleOpenEdit={handleOpenEdit}
+            handleMove={handleMove}
+            handleToggleActive={handleToggleActive}
+            setDeleteConfirmId={setDeleteConfirmId}
+          />
         </div>
       ) : (
         /* ── 3. LIVE STOREFRONT PREVIEW ── */
-        <div className="space-y-4">
-          <div className="p-4 bg-[#EBF7D4]/60 border border-[#9FD842]/30 rounded-2xl flex items-center justify-between text-xs text-[#2D5A1E]">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-[#4E8D1D]" />
-              <span>
-                <strong>Storefront Simulation</strong>: This is an exact 1:1 responsive preview of how the &quot;Explore Our Collections&quot; section renders to customers on the homepage.
-              </span>
-            </div>
-            <button
-              onClick={() => setActiveViewMode('editor')}
-              className="font-bold underline hover:opacity-80 cursor-pointer"
-            >
-              Back to Editor
-            </button>
-          </div>
-
-          {/* Render Storefront Mirror */}
-          <div className="bg-[#FBFBFD] border border-black/10 rounded-3xl p-6 sm:p-10 shadow-sm">
-            <div className="max-w-[1440px] mx-auto space-y-8">
-              {/* Header */}
-              <div className="space-y-2">
-                <h2 className="text-2xl sm:text-4xl font-bold tracking-tight text-[#1D1D1F] font-sans">
-                  {formData.title || 'Explore Our Collections'}
-                </h2>
-                {formData.subtitle && (
-                  <p className="text-xs sm:text-base text-[#6E6E73] max-w-xl font-normal">
-                    {formData.subtitle}
-                  </p>
-                )}
-              </div>
-
-              {/* React Bits InfiniteMenu 3D Interactive Sphere Preview */}
-              <div className="w-full h-[520px] rounded-3xl overflow-hidden shadow-2xl border border-black/10 relative">
-                <InfiniteMenu
-                  items={previewCollections.map((col) => ({
-                    image: col.image || '/assets/images/prod_backpack.jpg',
-                    link: '#',
-                    title: col.name,
-                    description: col.badge ? `${col.badge} Collection` : 'Explore curated collection',
-                    categoryId: col.categoryId || col.id,
-                  }))}
-                  scale={1.0}
-                  backgroundColor="#0B0A12"
-                  accentColor="#0071E3"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
+        <ExploreLivePreview
+          formData={formData}
+          previewCollections={previewCollections}
+          setActiveViewMode={setActiveViewMode}
+        />
       )}
 
       {/* ── MODAL: Add / Edit Collection Card ── */}
-      <AnimatePresence>
-        {isModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white w-full max-w-xl rounded-3xl shadow-2xl border border-black/10 overflow-hidden flex flex-col max-h-[90vh]"
-            >
-              {/* Modal Header */}
-              <div className="px-6 py-4 border-b border-black/10 flex items-center justify-between bg-[#FBFBFB]">
-                <div className="flex items-center gap-2">
-                  <span className="p-2 bg-[#9FD842]/20 rounded-xl text-[#171717]">
-                    <Sparkles className="w-4 h-4" />
-                  </span>
-                  <h3 className="font-bold text-[#171717]">
-                    {editingCard ? 'Edit Collection Card' : 'Add New Collection Card'}
-                  </h3>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="p-1.5 rounded-xl hover:bg-black/5 text-[#777777] cursor-pointer"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              {/* Modal Body */}
-              <form onSubmit={handleSaveModalCard} className="p-6 space-y-5 overflow-y-auto">
-                {modalError && (
-                  <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium flex items-center gap-2">
-                    <AlertCircle className="w-4 h-4 shrink-0" />
-                    <span>{modalError}</span>
-                  </div>
-                )}
-
-                {/* Collection Name */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-[#171717]">
-                    Collection Display Name <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={modalName}
-                    onChange={(e) => setModalName(e.target.value)}
-                    placeholder="e.g. Kundan Necklaces, Bags & Trolleys"
-                    className="w-full px-3.5 py-2.5 bg-[#FBFBFB] border border-black/10 rounded-xl text-sm text-[#171717] focus:outline-none focus:border-[#171717] transition-all"
-                  />
-                </div>
-
-                {/* Target Category */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-[#171717]">
-                    Target Category (Filters catalog when clicked) <span className="text-rose-500">*</span>
-                  </label>
-                  <select
-                    value={modalCategoryId}
-                    onChange={(e) => setModalCategoryId(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-[#FBFBFB] border border-black/10 rounded-xl text-sm text-[#171717] focus:outline-none focus:border-[#171717] transition-all"
-                  >
-                    {(categories || []).map((cat) => (
-                      <option key={cat.id} value={cat.id}>
-                        {cat.name} ({cat.id})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Promotional Badge */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-[#171717]">
-                    Corner Badge Pill (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    value={modalBadge}
-                    onChange={(e) => setModalBadge(e.target.value)}
-                    placeholder="e.g. Popular, Trending, Authentic, New"
-                    className="w-full px-3.5 py-2.5 bg-[#FBFBFB] border border-black/10 rounded-xl text-sm text-[#171717] focus:outline-none focus:border-[#171717] transition-all"
-                  />
-                </div>
-
-                {/* Image Selection & Upload */}
-                <div className="space-y-2.5">
-                  <label className="text-xs font-semibold text-[#171717] flex items-center justify-between">
-                    <span>Card Image</span>
-                    {isUploading && (
-                      <span className="text-xs text-[#4E8D1D] flex items-center gap-1 font-medium">
-                        <RefreshCw className="w-3 h-3 animate-spin" /> Uploading image...
-                      </span>
-                    )}
-                  </label>
-
-                  {/* Image Preview & Upload Button */}
-                  <div className="flex items-center gap-4">
-                    <div className="relative w-20 h-24 rounded-2xl overflow-hidden bg-black/5 border border-black/10 shrink-0">
-                      <Image
-                        src={modalImage || '/assets/images/prod_backpack.jpg'}
-                        alt="Preview"
-                        fill
-                        className="object-cover"
-                      />
-                    </div>
-
-                    <div className="space-y-2 flex-1">
-                      <input
-                        type="file"
-                        ref={fileInputRef}
-                        accept="image/*"
-                        onChange={handleFileUpload}
-                        className="hidden"
-                      />
-
-                      <button
-                        type="button"
-                        onClick={() => fileInputRef.current?.click()}
-                        disabled={isUploading}
-                        className="w-full py-2 px-3 rounded-xl border border-black/10 bg-[#F5F5F3] hover:bg-[#EEEEEC] text-xs font-semibold text-[#171717] transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                      >
-                        <Upload className="w-3.5 h-3.5" />
-                        Upload Custom Photo
-                      </button>
-
-                      <div className="flex items-center gap-1.5">
-                        <LinkIcon className="w-3.5 h-3.5 text-[#777777] shrink-0" />
-                        <input
-                          type="text"
-                          value={modalImage}
-                          onChange={(e) => setModalImage(e.target.value)}
-                          placeholder="Or paste image URL /assets/..."
-                          className="w-full px-2.5 py-1.5 bg-[#FBFBFB] border border-black/10 rounded-lg text-xs text-[#171717] focus:outline-none focus:border-[#171717]"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Preset Image Options */}
-                  <div className="space-y-1 pt-1">
-                    <span className="text-[11px] text-[#777777] font-medium">
-                      Or pick from store assets:
-                    </span>
-                    <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
-                      {PRESET_IMAGES.map((preset) => (
-                        <button
-                          key={preset.url}
-                          type="button"
-                          onClick={() => setModalImage(preset.url)}
-                          className={`relative aspect-square rounded-xl overflow-hidden border-2 transition-all cursor-pointer ${
-                            modalImage === preset.url
-                              ? 'border-[#9FD842] ring-2 ring-[#9FD842]/30 scale-95'
-                              : 'border-transparent opacity-70 hover:opacity-100'
-                          }`}
-                          title={preset.label}
-                        >
-                          <Image src={preset.url} alt={preset.label} fill className="object-cover" />
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Active Checkbox */}
-                <div className="pt-2">
-                  <label className="flex items-center gap-2.5 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={modalIsActive}
-                      onChange={(e) => setModalIsActive(e.target.checked)}
-                      className="checkbox checkbox-sm checkbox-success"
-                    />
-                    <span className="text-xs font-semibold text-[#171717]">
-                      Enable this card on storefront
-                    </span>
-                  </label>
-                </div>
-
-                {/* Modal Footer */}
-                <div className="pt-4 border-t border-black/10 flex items-center justify-end gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsModalOpen(false)}
-                    className="px-4 py-2 rounded-xl text-xs font-semibold text-[#777777] hover:text-[#171717] hover:bg-[#F5F5F3] transition-colors cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-5 py-2 rounded-xl text-xs font-bold bg-[#171717] text-white hover:bg-black transition-all shadow-xs cursor-pointer active:scale-95"
-                  >
-                    {editingCard ? 'Update Card' : 'Add to Collection'}
-                  </button>
-                </div>
-              </form>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+      <ExploreEditModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        editingCard={editingCard}
+        modalName={modalName}
+        setModalName={setModalName}
+        modalCategoryId={modalCategoryId}
+        setModalCategoryId={setModalCategoryId}
+        modalBadge={modalBadge}
+        setModalBadge={setModalBadge}
+        modalImage={modalImage}
+        setModalImage={setModalImage}
+        modalIsActive={modalIsActive}
+        setModalIsActive={setModalIsActive}
+        modalError={modalError}
+        isUploading={isUploading}
+        fileInputRef={fileInputRef}
+        handleFileUpload={handleFileUpload}
+        handleSaveModalCard={handleSaveModalCard}
+        presetImages={PRESET_IMAGES}
+        categories={categories}
+      />
 
       {/* ── CONFIRMATION MODAL: Delete Card ── */}
-      <AnimatePresence>
-        {deleteConfirmId && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl border border-black/10 space-y-4 text-center"
-            >
-              <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mx-auto">
-                <Trash2 className="w-6 h-6" />
-              </div>
-              <div className="space-y-1">
-                <h3 className="text-base font-bold text-[#171717]">Delete Collection Card?</h3>
-                <p className="text-xs text-[#777777]">
-                  Are you sure you want to remove this card from the storefront Explore section?
-                </p>
-              </div>
-              <div className="flex items-center justify-center gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setDeleteConfirmId(null)}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold text-[#777777] hover:bg-[#F5F5F3] transition-colors cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleDeleteCard(deleteConfirmId)}
-                  className="px-4 py-2 rounded-xl text-xs font-bold bg-rose-600 text-white hover:bg-rose-700 transition-colors shadow-xs cursor-pointer"
-                >
-                  Yes, Delete
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+      <ExploreDeleteModal
+        deleteConfirmId={deleteConfirmId}
+        onClose={() => setDeleteConfirmId(null)}
+        onConfirm={handleDeleteCard}
+      />
 
       {/* ── CONFIRMATION MODAL: Reset to Defaults ── */}
-      <AnimatePresence>
-        {resetConfirmOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl border border-black/10 space-y-4 text-center"
-            >
-              <div className="w-12 h-12 rounded-2xl bg-[#9FD842]/20 text-[#171717] flex items-center justify-center mx-auto">
-                <RotateCcw className="w-6 h-6" />
-              </div>
-              <div className="space-y-1">
-                <h3 className="text-base font-bold text-[#171717]">Reset to Default Collections?</h3>
-                <p className="text-xs text-[#777777]">
-                  This will restore the 8 default collections (Bags, Jewelry, Papad, Undergarments, Electronics, Fashion, Footwear, Home) and default headline.
-                </p>
-              </div>
-              <div className="flex items-center justify-center gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setResetConfirmOpen(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold text-[#777777] hover:bg-[#F5F5F3] transition-colors cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handleResetDefaults}
-                  className="px-4 py-2 rounded-xl text-xs font-bold bg-[#171717] text-white hover:bg-black transition-colors shadow-xs cursor-pointer"
-                >
-                  Yes, Restore Defaults
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+      <ExploreResetModal
+        isOpen={resetConfirmOpen}
+        onClose={() => setResetConfirmOpen(false)}
+        onConfirm={handleResetDefaults}
+      />
 
     </div>
   );

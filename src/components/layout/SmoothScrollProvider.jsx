@@ -23,14 +23,12 @@ export function SmoothScrollProvider({ children }) {
     }
 
     let lenis = null;
-    let tickerFn = null;
+    let rafId = null;
     let isMounted = true;
 
-    async function initScroll() {
-      if (!isMounted) return;
-
+    try {
       lenis = new Lenis({
-        duration: 0.9,
+        duration: 0.85,
         easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
         orientation: 'vertical',
         gestureOrientation: 'vertical',
@@ -46,41 +44,20 @@ export function SmoothScrollProvider({ children }) {
         window.__lenis = lenis;
       }
 
-      try {
-        const { default: gsap } = await import('gsap');
-        const { ScrollTrigger } = await import('gsap/ScrollTrigger');
-        if (!isMounted) return;
-
-        gsap.registerPlugin(ScrollTrigger);
-        lenis.on('scroll', ScrollTrigger.update);
-
-        tickerFn = (time) => {
-          lenis.raf(time * 1000);
-        };
-        gsap.ticker.add(tickerFn);
-        gsap.ticker.lagSmoothing(0);
-
-        setTimeout(() => {
-          ScrollTrigger.refresh();
-        }, 150);
-      } catch (e) {
-        let rafId;
-        function fallbackRaf(time) {
-          lenis?.raf(time);
-          rafId = requestAnimationFrame(fallbackRaf);
-        }
-        rafId = requestAnimationFrame(fallbackRaf);
+      function onRaf(time) {
+        if (!isMounted || !lenis) return;
+        lenis.raf(time);
+        rafId = requestAnimationFrame(onRaf);
       }
+      rafId = requestAnimationFrame(onRaf);
+    } catch (e) {
+      console.warn('Lenis smooth scroll failed to initialize', e);
     }
-
-    initScroll();
 
     return () => {
       isMounted = false;
-      if (tickerFn) {
-        import('gsap').then(({ default: gsap }) => {
-          gsap.ticker.remove(tickerFn);
-        }).catch(() => {});
+      if (rafId) {
+        cancelAnimationFrame(rafId);
       }
       if (lenis) {
         if (typeof window !== 'undefined' && window.__lenis === lenis) {
@@ -90,44 +67,33 @@ export function SmoothScrollProvider({ children }) {
         lenisRef.current = null;
       }
     };
-  }, []);
+  }, [isAdmin]);
 
-  // Scroll to top and refresh ScrollTrigger on route changes
+  // Clean, debounced scroll to top on route change
   useEffect(() => {
     if (lenisRef.current) {
       lenisRef.current.scrollTo(0, { immediate: true });
     }
-    const timer = setTimeout(() => {
-      import('gsap/ScrollTrigger').then(({ ScrollTrigger }) => {
-        ScrollTrigger.refresh();
-      }).catch(() => {});
-    }, 100);
-    return () => clearTimeout(timer);
   }, [pathname]);
 
-  // Instant scroll-to-top handler for navbar tab switches & popstate navigation
+  // Instant scroll-to-top handler for tab switches & popstate navigation
   useEffect(() => {
+    let resetTimer = null;
     const handleScrollToTop = () => {
-      if (lenisRef.current) {
-        lenisRef.current.scrollTo(0, { immediate: true });
-      }
-      if (typeof window !== 'undefined') {
-        window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-        document.documentElement.scrollTop = 0;
-        document.body.scrollTop = 0;
-      }
-      setTimeout(() => {
+      if (resetTimer) clearTimeout(resetTimer);
+      resetTimer = setTimeout(() => {
         if (lenisRef.current) {
           lenisRef.current.scrollTo(0, { immediate: true });
         }
-        import('gsap/ScrollTrigger').then(({ ScrollTrigger }) => {
-          ScrollTrigger.refresh();
-        }).catch(() => {});
-      }, 50);
+        if (typeof window !== 'undefined') {
+          window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+        }
+      }, 10);
     };
 
-    window.addEventListener('nakoda:scroll-to-top', handleScrollToTop);
+    window.addEventListener('nakoda:scroll-to-top', handleScrollToTop, { passive: true });
     return () => {
+      if (resetTimer) clearTimeout(resetTimer);
       window.removeEventListener('nakoda:scroll-to-top', handleScrollToTop);
     };
   }, []);

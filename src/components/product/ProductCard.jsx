@@ -27,7 +27,7 @@ export const ProductCardComponent = ({
   const colors = getProductColors(product);
   const [selectedSize, setSelectedSize] = useState(initialSelectedSize || null);
   const [selectedColor, setSelectedColor] = useState(
-    initialSelectedColor || product.selectedColor || (colors.length === 1 ? colors[0].name : null)
+    initialSelectedColor || product.selectedColor || (colors.length > 0 ? colors[0].name : null)
   );
   const [showSizeWarning, setShowSizeWarning] = useState(false);
   const [showColorWarning, setShowColorWarning] = useState(false);
@@ -406,5 +406,19 @@ export const ProductCardComponent = ({
   );
 };
 
-export const ProductCard = ProductCardComponent;
-export default ProductCardComponent;
+function areProductCardPropsEqual(prevProps, nextProps) {
+  if (prevProps.quantity !== nextProps.quantity) return false;
+  if (prevProps.isFavorite !== nextProps.isFavorite) return false;
+  if (prevProps.selectedSize !== nextProps.selectedSize) return false;
+  if (prevProps.selectedColor !== nextProps.selectedColor) return false;
+  if (prevProps.product?.id !== nextProps.product?.id) return false;
+  if (prevProps.product?.price !== nextProps.product?.price) return false;
+  if (prevProps.product?.stockCount !== nextProps.product?.stockCount) return false;
+  if (prevProps.product?.stockStatus !== nextProps.product?.stockStatus) return false;
+  if (prevProps.product?.name !== nextProps.product?.name) return false;
+  if (prevProps.product?.image !== nextProps.product?.image) return false;
+  return true;
+}
+
+export const ProductCard = React.memo(ProductCardComponent, areProductCardPropsEqual);
+export default ProductCard;

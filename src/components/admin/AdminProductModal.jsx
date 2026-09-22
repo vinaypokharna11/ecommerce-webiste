@@ -29,6 +29,7 @@ const DRAFT_STORAGE_KEY = 'nakoda_admin_product_draft';
 
 const DEFAULT_FORM_STATE = {
   name: '',
+  sku: '',
   category: 'clothing',
   categoryName: 'Clothing',
   price: 999,
@@ -452,6 +453,7 @@ export const AdminProductModal = ({ isOpen, onClose, product = null }) => {
         reviews: Number(formData.reviews) || 0,
         image: allImages[0] || '',
         images: allImages,
+        sku: formData.sku?.trim() || undefined,
         tags: typeof formData.tags === 'string'
           ? formData.tags.split(',').map((t) => t.trim()).filter(Boolean)
           : formData.tags,
@@ -629,16 +631,29 @@ export const AdminProductModal = ({ isOpen, onClose, product = null }) => {
 
                 <div>
                   <label className="block text-xs font-bold text-[#171717] mb-1.5 uppercase tracking-wider">
-                    Search Tags (comma separated)
+                    Product SKU (Unique Code)
                   </label>
                   <input
                     type="text"
-                    value={formData.tags}
-                    onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
-                    placeholder="e.g. necklace, bridal, kundan, choker"
-                    className="w-full px-4 py-3 rounded-2xl border border-black/10 bg-[#EEEEEC]/50 text-sm text-[#171717] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#9FD842] shadow-xs"
+                    value={formData.sku || ''}
+                    onChange={(e) => setFormData({ ...formData, sku: e.target.value.toUpperCase() })}
+                    placeholder="e.g. NAK-JW-001 (auto if empty)"
+                    className="w-full px-4 py-3 rounded-2xl border border-black/10 bg-[#EEEEEC]/50 text-sm font-mono text-[#171717] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#9FD842] shadow-xs"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-[#171717] mb-1.5 uppercase tracking-wider">
+                  Search Tags (comma separated)
+                </label>
+                <input
+                  type="text"
+                  value={formData.tags}
+                  onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
+                  placeholder="e.g. necklace, bridal, kundan, choker"
+                  className="w-full px-4 py-3 rounded-2xl border border-black/10 bg-[#EEEEEC]/50 text-sm text-[#171717] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#9FD842] shadow-xs"
+                />
               </div>
 
               <div>

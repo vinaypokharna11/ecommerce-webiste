@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getStoreConfig, updateStoreConfig, resetDatabase } from '@/lib/db';
+import { getStoreConfig, updateStoreConfig, restoreSeedCatalog } from '@/lib/db';
 import { verifyAdminAuth, unauthorizedResponse } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
@@ -22,8 +22,9 @@ export async function PUT(request) {
 
     const body = await request.json();
     if (body.action === 'reset_defaults') {
-      const reset = resetDatabase();
-      return NextResponse.json({ success: true, message: 'Database reset to factory defaults', storeConfig: reset.storeConfig });
+      await restoreSeedCatalog();
+      const config = await getStoreConfig();
+      return NextResponse.json({ success: true, message: 'Database reset to factory defaults', storeConfig: config });
     }
 
     const updated = await updateStoreConfig(body);

@@ -2,12 +2,14 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Mail, Phone, MapPin, ArrowRight } from 'lucide-react';
 import { STORE_CONFIG } from '@/data/mockData';
 import { useCatalog } from '@/context/CatalogContext';
 import { TextScatter, ScatterItem } from '@/components';
 
 export const Footer = ({ onLinkClick }) => {
+  const router = useRouter();
   const { storeConfig } = useCatalog();
 
   const shopDepartments = [
@@ -30,6 +32,9 @@ export const Footer = ({ onLinkClick }) => {
   const handleItemClick = (label, tabId, cat) => {
     if (onLinkClick) {
       onLinkClick(label, tabId, cat);
+    } else {
+      const url = cat ? `/?tab=${tabId}&category=${cat}` : (tabId === 'home' ? '/' : `/?tab=${tabId}`);
+      router.push(url);
     }
   };
 

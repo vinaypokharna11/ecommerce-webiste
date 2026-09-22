@@ -4,10 +4,24 @@ import { verifyAdminAuth, unauthorizedResponse } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(request) {
   try {
-    const exploreSection = await getExploreSection();
-    return NextResponse.json({ success: true, exploreSection });
+    const { searchParams } = new URL(request.url);
+    const wantsAdmin = searchParams.get('admin') === 'true';
+    const admin = wantsAdmin ? verifyAdminAuth(request) : null;
+    const isAdmin = Boolean(admin);
+
+    const exploreSection = await getExploreSection({ admin: isAdmin });
+    return NextResponse.json(
+      { success: true, exploreSection },
+      {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0',
+        },
+      }
+    );
   } catch (error) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
@@ -21,15 +35,6 @@ export async function PUT(request) {
     }
 
     const body = await request.json();
-    if (body.action === 'reset_defaults') {
-      const updated = await updateExploreSection(DEFAULT_EXPLORE_SECTION);
-      return NextResponse.json({
-        success: true,
-        message: 'Explore section reset to defaults',
-        exploreSection: updated,
-      });
-    }
-
     const updated = await updateExploreSection(body);
     return NextResponse.json({ success: true, exploreSection: updated });
   } catch (error) {

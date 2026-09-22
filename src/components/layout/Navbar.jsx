@@ -5,6 +5,7 @@
 // ============================================================
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import { useRouter, usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search,
@@ -20,6 +21,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { STORE_CONFIG, NAV_ITEMS } from '@/data/mockData';
+import { useAuth } from '@/context/AuthContext';
 
 /**
  * Navbar
@@ -28,14 +30,50 @@ import { STORE_CONFIG, NAV_ITEMS } from '@/data/mockData';
  * direct WhatsApp support link, and shopping bag counter.
  */
 export const Navbar = ({
-  cartCount = 0,
-  wishlistCount = 0,
+  cartCount: propCartCount = 0,
+  wishlistCount: propWishlistCount = 0,
   activeTab = 'home',
   onNavClick,
   onExploreClick,
-  user,
+  user: propUser,
   isLogoHidden = false,
 }) => {
+  const router = useRouter();
+  const pathname = usePathname();
+  const { user: authUser } = useAuth();
+  const currentUser = propUser !== undefined ? propUser : authUser;
+
+  // Fallback counters if rendered on standalone routes without props
+  const [localCartCount, setLocalCartCount] = useState(propCartCount);
+  const [localWishlistCount, setLocalWishlistCount] = useState(propWishlistCount);
+
+  useEffect(() => {
+    setLocalCartCount(propCartCount);
+  }, [propCartCount]);
+
+  useEffect(() => {
+    setLocalWishlistCount(propWishlistCount);
+  }, [propWishlistCount]);
+
+  // Read client-side storage for cart/wishlist count if not passed as prop
+  useEffect(() => {
+    if (propCartCount === 0 && typeof window !== 'undefined') {
+      try {
+        const userId = currentUser?.id || currentUser?._id || currentUser?.email;
+        const savedCart = userId
+          ? localStorage.getItem(`nakoda_cart_${userId}`) || localStorage.getItem('nakoda_cart_v2')
+          : localStorage.getItem('nakoda_cart_v2');
+        if (savedCart) {
+          const parsed = JSON.parse(savedCart);
+          const count = Object.values(parsed).reduce((sum, it) => sum + (Number(it.quantity) || 0), 0);
+          if (count > 0) setLocalCartCount(count);
+        }
+      } catch (e) {}
+    }
+  }, [propCartCount, currentUser]);
+
+  const cartCount = propCartCount || localCartCount;
+  const wishlistCount = propWishlistCount || localWishlistCount;
   // ============================================================
   // STATE
   // ============================================================
@@ -143,19 +181,30 @@ export const Navbar = ({
   // ============================================================
   // HANDLERS
   // ============================================================
+  const handlePrefetch = (id) => {
+    try {
+      const targetUrl = id === 'home' ? '/' : `/?tab=${id}`;
+      router.prefetch(targetUrl);
+    } catch (e) {}
+  };
+
   const handleLinkClick = (id, label) => {
     setIsVisible(true);
+    setIsMobileMenuOpen(false);
+
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new Event('nakoda:scroll-to-top'));
-      if (window.__lenis) {
-        window.__lenis.scrollTo(0, { immediate: true });
-      }
-      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-      document.documentElement.scrollTop = 0;
-      document.body.scrollTop = 0;
     }
-    if (onNavClick) onNavClick(id, label);
-    setIsMobileMenuOpen(false);
+
+    // If on homepage and onNavClick is provided, switch tabs in-place
+    if (pathname === '/' && onNavClick) {
+      onNavClick(id, label);
+      return;
+    }
+
+    // Universal navigation fallback for all pages and routes
+    const targetUrl = id === 'home' ? '/' : `/?tab=${id}`;
+    router.push(targetUrl);
   };
 
   const handleSearchSubmit = (e) => {
@@ -186,6 +235,7 @@ export const Navbar = ({
           <button
             id="navbar-brand-logo"
             onClick={() => handleLinkClick('home', 'Home')}
+            onMouseEnter={() => handlePrefetch('home')}
             className={`flex items-center gap-2 sm:gap-2.5 group text-left cursor-pointer focus:outline-none min-w-0 shrink transition-opacity duration-300 ${isLogoHidden ? 'opacity-0' : 'opacity-100'
               }`}
             aria-label="Go to Nakoda Store Home"
@@ -206,6 +256,7 @@ export const Navbar = ({
                 <button
                   key={item.id}
                   onClick={() => handleLinkClick(item.id, item.label)}
+                  onMouseEnter={() => handlePrefetch(item.id)}
                   className={`relative px-3.5 xl:px-5 py-2 rounded-full text-xs xl:text-sm font-medium transition-all duration-200 cursor-pointer whitespace-nowrap ${isActive
                     ? 'text-[#1D1D1F] font-semibold'
                     : 'text-[#6E6E73] hover:text-[#1D1D1F]'
@@ -230,12 +281,13 @@ export const Navbar = ({
             {/* Profile Button (Visible on extra-large desktop screens; accessible via nav pill or drawer) */}
             <button
               onClick={() => handleLinkClick('profile', 'Profile')}
+              onMouseEnter={() => handlePrefetch('profile')}
               className={`hidden xl:flex w-10 h-10 sm:w-11 sm:h-11 rounded-full items-center justify-center transition-colors cursor-pointer ${activeTab === 'profile'
                 ? 'bg-[#1D1D1F] text-white'
                 : 'bg-[#F5F5F7] text-[#1D1D1F] hover:bg-[#E8E8ED]'
                 }`}
               aria-label="User Account Profile"
-              title={user ? `Signed in as ${user.name}` : 'Sign In / Account'}
+              title={currentUser ? `Signed in as ${currentUser.name}` : 'Sign In / Account'}
             >
               <User className="w-4.5 h-4.5 sm:w-5 sm:h-5" />
             </button>
@@ -243,6 +295,7 @@ export const Navbar = ({
             {/* Wishlist Button */}
             <button
               onClick={() => handleLinkClick('wishlist', 'Wishlist')}
+              onMouseEnter={() => handlePrefetch('wishlist')}
               className={`flex w-8 h-8 xs:w-9 xs:h-9 sm:w-10 sm:h-10 lg:w-11 lg:h-11 rounded-full items-center justify-center transition-colors cursor-pointer relative ${
                 activeTab === 'wishlist'
                   ? 'bg-rose-500 text-white ring-2 ring-rose-300'
@@ -271,6 +324,7 @@ export const Navbar = ({
             {/* Shopping Bag Button with Pill */}
             <button
               onClick={() => handleLinkClick('cart', 'Cart')}
+              onMouseEnter={() => handlePrefetch('cart')}
               className="relative h-8 xs:h-9 sm:h-10 lg:h-11 px-2.5 xs:px-3.5 sm:px-4 lg:px-5 rounded-full bg-[#1D1D1F] hover:bg-[#000000] text-white flex items-center gap-1.5 sm:gap-2.5 transition-all cursor-pointer shadow-sm active:scale-95 shrink-0"
               aria-label="Shopping Cart"
             >
@@ -327,15 +381,15 @@ export const Navbar = ({
                   </div>
                   <div className="min-w-0">
                     <span className="text-xs sm:text-sm font-semibold text-[#1D1D1F] block truncate">
-                      {user ? user.name : 'Account Profile'}
+                      {currentUser ? currentUser.name : 'Account Profile'}
                     </span>
                     <span className="text-[10px] sm:text-xs text-[#86868B] block truncate">
-                      {user ? user.email : 'Sign in to track orders'}
+                      {currentUser ? currentUser.email : 'Sign in to track orders'}
                     </span>
                   </div>
                 </div>
                 <span className="text-xs font-semibold px-3 py-1.5 rounded-full bg-white text-[#1D1D1F] border border-black/5 shrink-0 shadow-xs">
-                  {user ? 'View' : 'Sign In'}
+                  {currentUser ? 'View' : 'Sign In'}
                 </span>
               </div>
 

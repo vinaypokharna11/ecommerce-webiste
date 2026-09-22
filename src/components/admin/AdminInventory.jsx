@@ -20,6 +20,19 @@ export const AdminInventory = () => {
   const { products, updateProductStock, bulkUpdateStockStatus } = useCatalog();
   const [filter, setFilter] = useState('all'); // 'all', 'out_of_stock', 'low_stock', 'in_stock'
   const [searchQuery, setSearchQuery] = useState('');
+  const [updatingMap, setUpdatingMap] = useState({});
+
+  const handleQuickAdjust = async (productId, delta) => {
+    setUpdatingMap((prev) => ({ ...prev, [productId]: true }));
+    try {
+      const res = await updateProductStock(productId, delta, true);
+      if (res && !res.success) {
+        alert(res.error || 'Failed to update stock');
+      }
+    } finally {
+      setUpdatingMap((prev) => ({ ...prev, [productId]: false }));
+    }
+  };
 
   const outOfStockProducts = products.filter((p) => p.stockCount === 0 || p.stockStatus === 'out_of_stock');
   const lowStockProducts = products.filter((p) => p.stockCount > 0 && p.stockCount < 5);
@@ -28,7 +41,7 @@ export const AdminInventory = () => {
   const filteredList = products.filter((p) => {
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      if (!p.name?.toLowerCase().includes(q) && !p.id?.toLowerCase().includes(q) && !p.categoryName?.toLowerCase().includes(q)) {
+      if (!p.name?.toLowerCase().includes(q) && !p.id?.toLowerCase().includes(q) && !p.sku?.toLowerCase().includes(q) && !p.categoryName?.toLowerCase().includes(q)) {
         return false;
       }
     }
@@ -201,8 +214,10 @@ export const AdminInventory = () => {
                 const isOut = count === 0 || product.stockStatus === 'out_of_stock';
                 const isLow = count > 0 && count < 5;
 
+                const isUpdating = !!updatingMap[product.id];
+
                 return (
-                  <tr key={product.id} className="hover:bg-[#EEEEEC]/30 transition-colors">
+                  <tr key={product.id} className={`hover:bg-[#EEEEEC]/30 transition-colors ${isUpdating ? 'opacity-70 pointer-events-none' : ''}`}>
                     <td className="py-3 px-5">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-xl bg-[#EEEEEC] p-1 flex items-center justify-center flex-shrink-0 border border-black/5">
@@ -210,7 +225,7 @@ export const AdminInventory = () => {
                         </div>
                         <div className="min-w-0">
                           <h4 className="font-bold text-[#171717] truncate max-w-xs">{product.name}</h4>
-                          <span className="text-[10px] text-[#777777] font-mono">SKU: {product.id}</span>
+                          <span className="text-[10px] text-[#777777] font-mono">SKU: {product.sku || product.id}</span>
                         </div>
                       </div>
                     </td>
@@ -224,7 +239,10 @@ export const AdminInventory = () => {
                     </td>
 
                     <td className="py-3 px-3">
-                      <span className="font-extrabold text-sm text-[#171717]">{count} units</span>
+                      <span className="font-extrabold text-sm text-[#171717]">
+                        {count} units
+                        {isUpdating && <span className="inline-block ml-2 text-[10px] text-[#777777] animate-pulse">updating...</span>}
+                      </span>
                     </td>
 
                     <td className="py-3 px-3 text-center">
@@ -246,23 +264,28 @@ export const AdminInventory = () => {
                     <td className="py-3 px-5 text-right">
                       <div className="flex items-center justify-end gap-1.5">
                         <button
-                          onClick={() => updateProductStock(product.id, -1, true)}
-                          disabled={count <= 0}
-                          className="w-7 h-7 rounded-lg bg-[#EEEEEC] hover:bg-[#E2E2DE] text-[#171717] font-bold disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center cursor-pointer"
+                          onClick={() => handleQuickAdjust(product.id, -1)}
+                          disabled={count <= 0 || isUpdating}
+                          title="Reduce stock by 1"
+                          className="w-7 h-7 rounded-lg bg-[#EEEEEC] hover:bg-[#E2E2DE] text-[#171717] font-bold disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center cursor-pointer transition-all active:scale-95"
                         >
                           -1
                         </button>
 
                         <button
-                          onClick={() => updateProductStock(product.id, 1, true)}
-                          className="w-7 h-7 rounded-lg bg-[#EEEEEC] hover:bg-[#E2E2DE] text-[#171717] font-bold flex items-center justify-center cursor-pointer"
+                          onClick={() => handleQuickAdjust(product.id, 1)}
+                          disabled={isUpdating}
+                          title="Increase stock by 1"
+                          className="w-7 h-7 rounded-lg bg-[#EEEEEC] hover:bg-[#E2E2DE] text-[#171717] font-bold disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center cursor-pointer transition-all active:scale-95"
                         >
                           +1
                         </button>
 
                         <button
-                          onClick={() => updateProductStock(product.id, 10, true)}
-                          className="px-2.5 py-1 rounded-lg bg-[#171717] text-white hover:bg-black text-[11px] font-bold flex items-center justify-center cursor-pointer"
+                          onClick={() => handleQuickAdjust(product.id, 10)}
+                          disabled={isUpdating}
+                          title="Restock 10 units"
+                          className="px-2.5 py-1 rounded-lg bg-[#171717] text-white hover:bg-black text-[11px] font-bold disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center cursor-pointer transition-all active:scale-95"
                         >
                           +10
                         </button>

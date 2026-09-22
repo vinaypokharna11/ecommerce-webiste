@@ -101,7 +101,7 @@ export const AdminLayout = ({
     { id: 'offers', label: 'Offers & Coupons', icon: Tag, badge: catalogStats.activeOffersCount },
     { id: 'featured', label: 'Featured & Badges', icon: Star, badge: catalogStats.featuredCount },
     { id: 'reviews', label: 'Customer Reviews', icon: MessageSquare },
-    { id: 'inventory', label: 'Inventory & Stock', icon: Boxes, alert: catalogStats.lowStockCount + catalogStats.outOfStockCount > 0 },
+    { id: 'inventory', label: 'Inventory & Stock', icon: Boxes, badge: catalogStats.totalProducts, alert: catalogStats.lowStockCount + catalogStats.outOfStockCount > 0 },
     { id: 'excel-import', label: 'Excel Import', icon: FileSpreadsheet },
     { id: 'settings', label: 'Store Settings', icon: Settings },
   ];

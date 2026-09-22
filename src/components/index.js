@@ -10,6 +10,7 @@ export { default as Footer } from './layout/Footer';
 export { default as FloatingCartBar } from './layout/FloatingCartBar';
 export { default as SmoothScrollProvider } from './layout/SmoothScrollProvider';
 export { default as GsapScrollAnimations } from './layout/GsapScrollAnimations';
+export { default as NavigationProgressBar } from './layout/NavigationProgressBar';
 
 // Common / Modals / Notifications / Animations
 export { default as Toast } from './common/Toast';

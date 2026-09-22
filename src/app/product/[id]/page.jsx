@@ -103,7 +103,7 @@ export default async function ProductDetailPage({ params }) {
         {/* Breadcrumb / Back Link */}
         <div className="mb-6">
           <Link
-            href="/catalog"
+            href="/?tab=catalog"
             className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-[#777777] hover:text-[#171717] transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />

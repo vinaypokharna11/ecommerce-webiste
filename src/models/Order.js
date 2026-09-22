@@ -57,6 +57,8 @@ const OrderSchema = new mongoose.Schema(
     sellerNotes: { type: String, default: '' },
     acceptedAt: { type: Date, default: null },
     rejectedAt: { type: Date, default: null },
+    inventoryDeducted: { type: Boolean, default: false },
+    inventoryRestored: { type: Boolean, default: false },
     chatMessages: [
       {
         id: { type: String, required: true },

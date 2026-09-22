@@ -36,9 +36,11 @@ export const AdminOffers = () => {
   const [title, setTitle] = useState('');
   const [subtitle, setSubtitle] = useState('');
   const [discountPercent, setDiscountPercent] = useState(25);
+  const [minOrderAmount, setMinOrderAmount] = useState(0);
   const [category, setCategory] = useState('all');
   const [description, setDescription] = useState('');
   const [expiry, setExpiry] = useState('Valid till Sep 30');
+  const [endDate, setEndDate] = useState('');
   const [gradientIndex, setGradientIndex] = useState(0);
   const [icon, setIcon] = useState('🎁');
   const [popular, setPopular] = useState(false);
@@ -50,9 +52,11 @@ export const AdminOffers = () => {
     setTitle('25% OFF');
     setSubtitle('on All Collections');
     setDiscountPercent(25);
+    setMinOrderAmount(0);
     setCategory('all');
     setDescription('Special discount on all jewelry items storewide.');
     setExpiry('Valid till Sep 30');
+    setEndDate('');
     setGradientIndex(0);
     setIcon('🎁');
     setPopular(false);
@@ -66,9 +70,11 @@ export const AdminOffers = () => {
     setTitle(offer.title);
     setSubtitle(offer.subtitle || '');
     setDiscountPercent(offer.discountPercent || 20);
+    setMinOrderAmount(offer.minOrderAmount || 0);
     setCategory(offer.category || 'all');
     setDescription(offer.description || '');
     setExpiry(offer.expiry || 'Valid till Sep 30');
+    setEndDate(offer.endDate ? new Date(offer.endDate).toISOString().split('T')[0] : '');
     const gIndex = GRADIENT_OPTIONS.findIndex((g) => g.value === offer.gradient);
     setGradientIndex(gIndex >= 0 ? gIndex : 0);
     setIcon(offer.icon || '🎁');
@@ -101,9 +107,11 @@ export const AdminOffers = () => {
       title: title.trim(),
       subtitle: subtitle.trim(),
       discountPercent: Number(discountPercent) || 0,
+      minOrderAmount: Number(minOrderAmount) || 0,
       category,
       description: description.trim(),
       expiry: expiry.trim(),
+      endDate: endDate ? new Date(endDate) : null,
       gradient: selectedGrad.value,
       bgLight: selectedGrad.bg,
       textColor: 'text-[#171717]',
@@ -112,6 +120,7 @@ export const AdminOffers = () => {
       icon,
       popular,
       isActive: editingOffer ? editingOffer.isActive !== false : true,
+      status: editingOffer ? (editingOffer.isActive !== false ? 'ACTIVE' : 'PAUSED') : 'ACTIVE',
     };
 
     if (editingOffer) {
@@ -155,9 +164,11 @@ export const AdminOffers = () => {
 
       {/* ── Offers Grid ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-        {offers.map((offer) => {
+        {offers.filter((o) => !o.isDeleted && o.status !== 'DELETED').map((offer) => {
           const isCopied = copiedCode === offer.code;
-          const isActive = offer.isActive !== false;
+          const isExpired = offer.status === 'EXPIRED' || (offer.endDate && new Date(offer.endDate).getTime() < Date.now());
+          const isPaused = !isExpired && (offer.status === 'PAUSED' || offer.isActive === false);
+          const isActive = !isExpired && !isPaused;
 
           return (
             <motion.div
@@ -165,7 +176,7 @@ export const AdminOffers = () => {
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               className={`relative bg-white rounded-[28px] border border-black/10 overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.02)] hover:shadow-[0_12px_30px_rgba(0,0,0,0.06)] transition-all group flex flex-col justify-between ${
-                !isActive ? 'opacity-60 grayscale-[40%]' : ''
+                !isActive ? 'opacity-70 grayscale-[30%]' : ''
               }`}
             >
               {/* Top gradient band */}
@@ -182,19 +193,28 @@ export const AdminOffers = () => {
                           Featured Deal
                         </span>
                       )}
-                      <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full ${
-                        isActive ? 'bg-[#F3FCDA] text-[#709E1E] border border-[#9FD842]/40' : 'bg-[#EEEEEC] text-[#777777]'
-                      }`}>
-                        {isActive ? '● Active' : '○ Paused'}
-                      </span>
+                      {isExpired ? (
+                        <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-600 border border-rose-200">
+                          ✕ Expired
+                        </span>
+                      ) : isPaused ? (
+                        <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-600 border border-amber-200">
+                          ⏸ Paused
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-[#F3FCDA] text-[#709E1E] border border-[#9FD842]/40">
+                          ● Active
+                        </span>
+                      )}
                     </div>
 
                     {/* Actions */}
                     <div className="flex items-center gap-1">
                       <button
                         onClick={() => toggleOfferActive(offer.id)}
-                        className="p-1.5 rounded-full text-[#777777] hover:bg-[#EEEEEC] transition-colors cursor-pointer"
-                        title={isActive ? 'Pause Offer' : 'Activate Offer'}
+                        disabled={isExpired}
+                        className="p-1.5 rounded-full text-[#777777] hover:bg-[#EEEEEC] transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                        title={isExpired ? 'Coupon is expired' : isActive ? 'Pause Offer' : 'Activate Offer'}
                       >
                         {isActive ? <PauseCircle className="w-4 h-4 text-amber-500" /> : <PlayCircle className="w-4 h-4 text-emerald-600" />}
                       </button>
@@ -230,9 +250,16 @@ export const AdminOffers = () => {
                     </div>
                   </div>
 
-                  <p className="text-xs text-[#666666] line-clamp-2 mb-4 leading-relaxed">
+                  <p className="text-xs text-[#666666] line-clamp-2 mb-2 leading-relaxed">
                     {offer.description || 'Special storewide discount available for all customers.'}
                   </p>
+
+                  {/* Usage Counter Badge */}
+                  <div className="mb-4">
+                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#666666] bg-[#EEEEEC]/70 px-2 py-0.5 rounded-md">
+                      Redeemed: <strong className="text-[#171717] font-bold">{offer.usageCount || 0} times</strong>
+                    </span>
+                  </div>
                 </div>
 
                 {/* Footer: Promo Code Box + Expiry */}
@@ -398,6 +425,22 @@ export const AdminOffers = () => {
 
                   <div>
                     <label className="block text-xs font-bold text-[#171717] mb-1.5 uppercase tracking-wider">
+                      Min Order Amount (₹)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={minOrderAmount}
+                      onChange={(e) => setMinOrderAmount(e.target.value)}
+                      placeholder="0 for no minimum"
+                      className="w-full px-4 py-3 rounded-2xl border border-black/10 text-sm text-[#171717] bg-[#EEEEEC]/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#9FD842]"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-[#171717] mb-1.5 uppercase tracking-wider">
                       Expiry Text
                     </label>
                     <input
@@ -405,6 +448,18 @@ export const AdminOffers = () => {
                       value={expiry}
                       onChange={(e) => setExpiry(e.target.value)}
                       placeholder="e.g. Valid till Oct 31"
+                      className="w-full px-4 py-3 rounded-2xl border border-black/10 text-sm text-[#171717] bg-[#EEEEEC]/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#9FD842]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-[#171717] mb-1.5 uppercase tracking-wider">
+                      Calendar End Date
+                    </label>
+                    <input
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
                       className="w-full px-4 py-3 rounded-2xl border border-black/10 text-sm text-[#171717] bg-[#EEEEEC]/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#9FD842]"
                     />
                   </div>

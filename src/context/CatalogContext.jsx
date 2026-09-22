@@ -164,14 +164,13 @@ export const CatalogProvider = ({ children }) => {
   // Load user settings and transient metadata on mount
   useEffect(() => {
     try {
-      // Clean up legacy localStorage products to prevent zombie product resurrection
+      // Clean up legacy localStorage products, offers, and explore to prevent zombie resurrection
       localStorage.removeItem(STORAGE_KEYS.PRODUCTS);
+      localStorage.removeItem(STORAGE_KEYS.OFFERS);
+      localStorage.removeItem(STORAGE_KEYS.EXPLORE);
 
       const savedCats = localStorage.getItem(STORAGE_KEYS.CATEGORIES);
       if (savedCats) setCategories(JSON.parse(savedCats));
-
-      const savedOffers = localStorage.getItem(STORAGE_KEYS.OFFERS);
-      if (savedOffers) setOffers(JSON.parse(savedOffers));
 
       const savedConfig = localStorage.getItem(STORAGE_KEYS.CONFIG);
       if (savedConfig) {
@@ -182,16 +181,6 @@ export const CatalogProvider = ({ children }) => {
             parsed.tagline = 'Premium Imitation Jewelry & Lifestyle Collection';
           }
           setStoreConfig(parsed);
-        } catch (e) {}
-      }
-
-      const savedExplore = localStorage.getItem(STORAGE_KEYS.EXPLORE);
-      if (savedExplore) {
-        try {
-          const parsed = JSON.parse(savedExplore);
-          if (parsed && Array.isArray(parsed.collections)) {
-            setExploreSection(parsed);
-          }
         } catch (e) {}
       }
 
@@ -226,29 +215,12 @@ export const CatalogProvider = ({ children }) => {
   useEffect(() => {
     if (!isHydratedRef.current) return;
     try {
-      localStorage.setItem(STORAGE_KEYS.OFFERS, JSON.stringify(offers));
-    } catch (e) {
-      console.warn('Failed to save offers to localStorage', e);
-    }
-  }, [offers]);
-
-  useEffect(() => {
-    if (!isHydratedRef.current) return;
-    try {
       localStorage.setItem(STORAGE_KEYS.CONFIG, JSON.stringify(storeConfig));
     } catch (e) {
       console.warn('Failed to save config to localStorage', e);
     }
   }, [storeConfig]);
 
-  useEffect(() => {
-    if (!isHydratedRef.current || !exploreSection) return;
-    try {
-      localStorage.setItem(STORAGE_KEYS.EXPLORE, JSON.stringify(exploreSection));
-    } catch (e) {
-      console.warn('Failed to save exploreSection to localStorage', e);
-    }
-  }, [exploreSection]);
 
   const [isLiveConnected, setIsLiveConnected] = useState(false);
   const broadcastChannelRef = useRef(null);
@@ -762,31 +734,84 @@ export const CatalogProvider = ({ children }) => {
   }, [logActivity]);
 
   const updateProductStock = useCallback(async (id, countOrDelta, isDelta = false) => {
-    let newCount = 0;
+    const cleanId = String(id || '').trim();
+    if (!cleanId) return { success: false, error: 'Product ID required' };
+
+    let originalProduct = null;
+    let optimisticProduct = null;
+
     setProducts((prev) =>
       prev.map((p) => {
-        if (p.id === id) {
-          const current = p.stockCount || 0;
-          newCount = Math.max(0, isDelta ? current + countOrDelta : countOrDelta);
+        if (String(p.id).trim() === cleanId) {
+          originalProduct = p;
+          const current = Number(p.stockCount) || 0;
+          const newCount = Math.max(0, isDelta ? current + Number(countOrDelta) : Number(countOrDelta));
           let status = 'in_stock';
           if (newCount === 0) status = 'out_of_stock';
           else if (newCount < 5) status = 'low_stock';
-          return { ...p, stockCount: newCount, stockStatus: status };
+          optimisticProduct = { ...p, stockCount: newCount, stockStatus: status };
+          return optimisticProduct;
         }
         return p;
       })
     );
-    logActivity(`Adjusted stock for product #${id}`, 'inventory', 'Package');
+
+    if (optimisticProduct) {
+      broadcastLocal('PRODUCT_UPDATED', { product: optimisticProduct });
+      logActivity(`Adjusted stock for product #${cleanId}`, 'inventory', 'Package');
+    }
 
     try {
-      await fetch(`/api/products/${id}`, {
-        method: 'PUT',
+      const payload = isDelta ? { delta: Number(countOrDelta) } : { stockCount: Number(countOrDelta) };
+      const res = await fetch(`/api/products/${cleanId}/stock`, {
+        method: 'PATCH',
         headers: getAuthHeaders(),
         credentials: 'include',
-        body: JSON.stringify({ stockCount: newCount }),
+        body: JSON.stringify(payload),
       });
-    } catch (e) {}
-  }, [getAuthHeaders, logActivity]);
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success && data.product) {
+        setProducts((prev) => prev.map((p) => (String(p.id).trim() === cleanId ? data.product : p)));
+        broadcastLocal('PRODUCT_UPDATED', { product: data.product });
+        return { success: true, product: data.product };
+      } else {
+        // Roll back optimistic state on failure
+        if (originalProduct) {
+          setProducts((prev) => prev.map((p) => (String(p.id).trim() === cleanId ? originalProduct : p)));
+          broadcastLocal('PRODUCT_UPDATED', { product: originalProduct });
+        }
+        return { success: false, error: data.error || `Stock update failed (HTTP ${res.status})` };
+      }
+    } catch (e) {
+      if (originalProduct) {
+        setProducts((prev) => prev.map((p) => (String(p.id).trim() === cleanId ? originalProduct : p)));
+        broadcastLocal('PRODUCT_UPDATED', { product: originalProduct });
+      }
+      return { success: false, error: e.message || 'Network error updating stock' };
+    }
+  }, [getAuthHeaders, broadcastLocal, logActivity]);
+
+  const restoreProduct = useCallback(async (id) => {
+    const cleanId = String(id || '').trim();
+    if (!cleanId) return { success: false, error: 'Product ID required' };
+    try {
+      const res = await fetch(`/api/products/${cleanId}/restore`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success && data.product) {
+        setProducts((prev) => [data.product, ...prev.filter((p) => String(p.id).trim() !== cleanId)]);
+        broadcastLocal('PRODUCT_CREATED', { product: data.product });
+        logActivity(`Restored product "${data.product.name}"`, 'product', 'RotateCcw');
+        return { success: true, product: data.product };
+      }
+      return { success: false, error: data.error || 'Failed to restore product' };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  }, [getAuthHeaders, broadcastLocal, logActivity]);
 
   // Bulk Product Actions (Single Atomic API Call)
   const bulkUpdateCategory = useCallback(async (productIds, newCategory, newCategoryName) => {
@@ -1103,25 +1128,40 @@ export const CatalogProvider = ({ children }) => {
 
   const toggleOfferActive = useCallback(async (id) => {
     let nextVal = false;
+    let targetOffer = null;
     setOffers((prev) =>
       prev.map((o) => {
         if (o.id === id) {
           nextVal = !o.isActive;
           logActivity(`${nextVal ? 'Activated' : 'Paused'} offer "${o.code}"`, 'offer', 'ToggleRight');
-          return { ...o, isActive: nextVal };
+          targetOffer = {
+            ...o,
+            isActive: nextVal,
+            status: nextVal ? 'ACTIVE' : 'PAUSED',
+          };
+          return targetOffer;
         }
         return o;
       })
     );
 
+    if (targetOffer) {
+      broadcastLocal('OFFER_UPDATED', { offer: targetOffer });
+    }
+
     try {
-      await fetch(`/api/offers/${id}`, {
+      const res = await fetch(`/api/offers/${id}`, {
         method: 'PUT',
         headers: getAuthHeaders(),
-        body: JSON.stringify({ isActive: nextVal }),
+        body: JSON.stringify({ isActive: nextVal, status: nextVal ? 'ACTIVE' : 'PAUSED' }),
       });
+      const data = await res.json();
+      if (data.success && data.offer) {
+        setOffers((prev) => prev.map((o) => (o.id === id ? { ...o, ...data.offer } : o)));
+        broadcastLocal('OFFER_UPDATED', { offer: data.offer });
+      }
     } catch (e) {}
-  }, [getAuthHeaders, logActivity]);
+  }, [getAuthHeaders, broadcastLocal, logActivity]);
 
   // ─────────────────── Store Settings & Master Seed Actions ───────────────────
   const updateStoreConfig = useCallback(async (newConfig) => {
@@ -1137,6 +1177,24 @@ export const CatalogProvider = ({ children }) => {
       });
     } catch (e) {}
   }, [getAuthHeaders, broadcastLocal, logActivity]);
+
+  const fetchExploreSection = useCallback(async ({ admin = false } = {}) => {
+    try {
+      const url = admin ? '/api/explore?admin=true' : '/api/explore';
+      const res = await fetch(url, {
+        headers: admin ? getAuthHeaders() : {},
+        credentials: 'include',
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success && data.exploreSection) {
+        setExploreSection(data.exploreSection);
+        return { success: true, exploreSection: data.exploreSection };
+      }
+      return { success: false, error: data.error };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  }, [getAuthHeaders]);
 
   const updateExploreSection = useCallback(async (updatedExplore) => {
     setExploreSection((prev) => ({ ...prev, ...updatedExplore }));
@@ -1155,15 +1213,211 @@ export const CatalogProvider = ({ children }) => {
         setExploreSection(data.exploreSection);
         setStoreConfig((prev) => ({ ...prev, exploreSection: data.exploreSection }));
         broadcastLocal('EXPLORE_UPDATED', { exploreSection: data.exploreSection });
-        try {
-          localStorage.setItem(STORAGE_KEYS.EXPLORE, JSON.stringify(data.exploreSection));
-        } catch (e) {}
         return { success: true, exploreSection: data.exploreSection };
       }
       return { success: false, error: data.error || `Failed to update explore section (HTTP ${res.status})` };
     } catch (err) {
       console.error('Failed to save explore section', err);
       return { success: false, error: err.message || 'Network error updating explore section' };
+    }
+  }, [getAuthHeaders, broadcastLocal, logActivity]);
+
+  const createCollection = useCallback(async (collectionData) => {
+    logActivity(`Created collection "${collectionData.name}"`, 'settings', 'Plus');
+    try {
+      const res = await fetch('/api/explore/collections', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+        body: JSON.stringify(collectionData),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success && data.collection) {
+        setExploreSection((prev) => {
+          const currentCols = Array.isArray(prev?.collections) ? prev.collections : [];
+          const updatedCols = [...currentCols, data.collection];
+          const newSection = { ...(prev || {}), collections: updatedCols };
+          broadcastLocal('EXPLORE_UPDATED', { exploreSection: newSection });
+          return newSection;
+        });
+        return { success: true, collection: data.collection };
+      }
+      return { success: false, error: data.error || 'Failed to create collection' };
+    } catch (err) {
+      return { success: false, error: err.message || 'Network error creating collection' };
+    }
+  }, [getAuthHeaders, broadcastLocal, logActivity]);
+
+  const updateCollection = useCallback(async (id, updateData) => {
+    let rollbackCollections = null;
+    setExploreSection((prev) => {
+      if (!prev || !Array.isArray(prev.collections)) return prev;
+      rollbackCollections = [...prev.collections];
+      const updatedCols = prev.collections.map((col) =>
+        col.id === id ? { ...col, ...updateData } : col
+      );
+      return { ...prev, collections: updatedCols };
+    });
+
+    logActivity(`Updated collection "${updateData.name || id}"`, 'settings', 'Edit3');
+    try {
+      const res = await fetch(`/api/explore/collections/${encodeURIComponent(id)}`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+      body: JSON.stringify(updateData),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success && data.collection) {
+        setExploreSection((prev) => {
+          const currentCols = Array.isArray(prev?.collections) ? prev.collections : [];
+          const updatedCols = currentCols.map((col) =>
+            col.id === id ? data.collection : col
+          );
+          const newSection = { ...(prev || {}), collections: updatedCols };
+          broadcastLocal('EXPLORE_UPDATED', { exploreSection: newSection });
+          return newSection;
+        });
+        return { success: true, collection: data.collection };
+      }
+      if (rollbackCollections) {
+        setExploreSection((prev) => ({ ...(prev || {}), collections: rollbackCollections }));
+      }
+      return { success: false, error: data.error || 'Failed to update collection' };
+    } catch (err) {
+      if (rollbackCollections) {
+        setExploreSection((prev) => ({ ...(prev || {}), collections: rollbackCollections }));
+      }
+      return { success: false, error: err.message || 'Network error updating collection' };
+    }
+  }, [getAuthHeaders, broadcastLocal, logActivity]);
+
+  const deleteCollection = useCallback(async (id) => {
+    let rollbackCollections = null;
+    setExploreSection((prev) => {
+      if (!prev || !Array.isArray(prev.collections)) return prev;
+      rollbackCollections = [...prev.collections];
+      const filtered = prev.collections.filter((col) => col.id !== id);
+      const normalized = filtered.map((col, idx) => ({ ...col, order: idx + 1 }));
+      return { ...prev, collections: normalized };
+    });
+
+    logActivity(`Deleted collection "${id}"`, 'settings', 'Trash2');
+    try {
+      const res = await fetch(`/api/explore/collections/${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success) {
+        const fresh = await fetch('/api/explore?admin=true', {
+          headers: getAuthHeaders(),
+          credentials: 'include',
+        }).then((r) => r.json()).catch(() => null);
+
+        if (fresh && fresh.success && fresh.exploreSection) {
+          setExploreSection(fresh.exploreSection);
+          broadcastLocal('EXPLORE_UPDATED', { exploreSection: fresh.exploreSection });
+        }
+        return { success: true };
+      }
+      if (rollbackCollections) {
+        setExploreSection((prev) => ({ ...(prev || {}), collections: rollbackCollections }));
+      }
+      return { success: false, error: data.error || 'Failed to delete collection' };
+    } catch (err) {
+      if (rollbackCollections) {
+        setExploreSection((prev) => ({ ...(prev || {}), collections: rollbackCollections }));
+      }
+      return { success: false, error: err.message || 'Network error deleting collection' };
+    }
+  }, [getAuthHeaders, broadcastLocal, logActivity]);
+
+  const toggleCollectionVisibility = useCallback(async (id) => {
+    let rollbackCollections = null;
+    setExploreSection((prev) => {
+      if (!prev || !Array.isArray(prev.collections)) return prev;
+      rollbackCollections = [...prev.collections];
+      const updatedCols = prev.collections.map((col) =>
+        col.id === id ? { ...col, isActive: !col.isActive } : col
+      );
+      return { ...prev, collections: updatedCols };
+    });
+
+    logActivity(`Toggled visibility for collection "${id}"`, 'settings', 'Eye');
+    try {
+      const res = await fetch(`/api/explore/collections/${encodeURIComponent(id)}/visibility`, {
+        method: 'PATCH',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success && data.collection) {
+        setExploreSection((prev) => {
+          const currentCols = Array.isArray(prev?.collections) ? prev.collections : [];
+          const updatedCols = currentCols.map((col) =>
+            col.id === id ? data.collection : col
+          );
+          const newSection = { ...(prev || {}), collections: updatedCols };
+          broadcastLocal('EXPLORE_UPDATED', { exploreSection: newSection });
+          return newSection;
+        });
+        return { success: true, collection: data.collection };
+      }
+      if (rollbackCollections) {
+        setExploreSection((prev) => ({ ...(prev || {}), collections: rollbackCollections }));
+      }
+      return { success: false, error: data.error || 'Failed to toggle visibility' };
+    } catch (err) {
+      if (rollbackCollections) {
+        setExploreSection((prev) => ({ ...(prev || {}), collections: rollbackCollections }));
+      }
+      return { success: false, error: err.message || 'Network error toggling visibility' };
+    }
+  }, [getAuthHeaders, broadcastLocal, logActivity]);
+
+  const reorderCollections = useCallback(async (orderedIds) => {
+    let rollbackCollections = null;
+    setExploreSection((prev) => {
+      if (!prev || !Array.isArray(prev.collections)) return prev;
+      rollbackCollections = [...prev.collections];
+      const map = new Map(prev.collections.map((c) => [c.id, c]));
+      const reordered = orderedIds
+        .map((id, idx) => {
+          const item = map.get(id);
+          return item ? { ...item, order: idx + 1 } : null;
+        })
+        .filter(Boolean);
+      return { ...prev, collections: reordered };
+    });
+
+    logActivity('Reordered explore collections', 'settings', 'ArrowUp');
+    try {
+      const res = await fetch('/api/explore/collections/reorder', {
+        method: 'PATCH',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+        body: JSON.stringify({ orderedIds }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success && Array.isArray(data.collections)) {
+        setExploreSection((prev) => {
+          const newSection = { ...(prev || {}), collections: data.collections };
+          broadcastLocal('EXPLORE_UPDATED', { exploreSection: newSection });
+          return newSection;
+        });
+        return { success: true, collections: data.collections };
+      }
+      if (rollbackCollections) {
+        setExploreSection((prev) => ({ ...(prev || {}), collections: rollbackCollections }));
+      }
+      return { success: false, error: data.error || 'Failed to reorder collections' };
+    } catch (err) {
+      if (rollbackCollections) {
+        setExploreSection((prev) => ({ ...(prev || {}), collections: rollbackCollections }));
+      }
+      return { success: false, error: err.message || 'Network error reordering collections' };
     }
   }, [getAuthHeaders, broadcastLocal, logActivity]);
 
@@ -1308,7 +1562,7 @@ export const CatalogProvider = ({ children }) => {
     const inStock = products.filter((p) => p.stockStatus === 'in_stock' && p.stockCount >= 5);
     const featured = products.filter((p) => p.isPopular || p.isFeatured);
     const totalInventoryValue = products.reduce((sum, p) => sum + (p.price * (p.stockCount || 1)), 0);
-    const activeOffers = offers.filter((o) => o.isActive !== false);
+    const activeOffers = offers.filter((o) => o.isActive !== false && !o.isDeleted && o.status !== 'PAUSED' && o.status !== 'DELETED');
 
     // Products per category count
     const countByCat = {};
@@ -1351,7 +1605,7 @@ export const CatalogProvider = ({ children }) => {
     return flagged.length > 0 ? flagged.slice(0, 8) : products.slice(0, 4);
   }, [products]);
 
-  const value = {
+  const value = useMemo(() => ({
     products,
     categories,
     offers,
@@ -1365,6 +1619,7 @@ export const CatalogProvider = ({ children }) => {
     addProduct,
     updateProduct,
     deleteProduct,
+    restoreProduct,
     duplicateProduct,
     togglePopular,
     toggleFeatured,
@@ -1383,6 +1638,12 @@ export const CatalogProvider = ({ children }) => {
     updateStoreConfig,
     exploreSection,
     updateExploreSection,
+    fetchExploreSection,
+    createCollection,
+    updateCollection,
+    deleteCollection,
+    reorderCollections,
+    toggleCollectionVisibility,
     setExploreSection,
     heroShowcase,
     updateHeroShowcase,
@@ -1397,7 +1658,58 @@ export const CatalogProvider = ({ children }) => {
     importCatalogJson,
     logActivity,
     getAuthHeaders,
-  };
+  }), [
+    products,
+    categories,
+    offers,
+    storeConfig,
+    activities,
+    catalogStats,
+    storefrontCategories,
+    homePopularProducts,
+    isLiveConnected,
+    addProduct,
+    updateProduct,
+    deleteProduct,
+    restoreProduct,
+    duplicateProduct,
+    togglePopular,
+    toggleFeatured,
+    updateProductStock,
+    bulkUpdateCategory,
+    bulkApplyDiscount,
+    bulkDeleteProducts,
+    bulkUpdateStockStatus,
+    addCategory,
+    updateCategory,
+    deleteCategory,
+    addOffer,
+    updateOffer,
+    deleteOffer,
+    toggleOfferActive,
+    updateStoreConfig,
+    exploreSection,
+    updateExploreSection,
+    fetchExploreSection,
+    createCollection,
+    updateCollection,
+    deleteCollection,
+    reorderCollections,
+    toggleCollectionVisibility,
+    setExploreSection,
+    heroShowcase,
+    updateHeroShowcase,
+    setHeroShowcase,
+    restoreMasterSeed,
+    saveCurrentAsMasterSeed,
+    clearAllCatalog,
+    resetToDefaults,
+    fetchCatalogData,
+    exportCatalogJson,
+    importCatalogJson,
+    logActivity,
+    getAuthHeaders,
+  ]);
 
   return (
     <CatalogContext.Provider value={value}>

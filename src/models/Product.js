@@ -30,13 +30,18 @@ const ProductSchema = new mongoose.Schema(
     isPopular: { type: Boolean, default: false, index: true },
     isFeatured: { type: Boolean, default: false, index: true },
     sellerId: { type: String, default: 'nakoda_seller', index: true },
+    sku: { type: String, trim: true },
+    status: { type: String, enum: ['active', 'inactive', 'archived'], default: 'active', index: true },
+    isDeleted: { type: Boolean, default: false, index: true },
+    deletedAt: { type: Date, default: null },
   },
   { timestamps: true }
 );
 
 // Indexes for query performance
-ProductSchema.index({ category: 1, stockStatus: 1 });
-ProductSchema.index({ createdAt: -1 });
+ProductSchema.index({ isDeleted: 1, category: 1, stockStatus: 1 });
+ProductSchema.index({ isDeleted: 1, createdAt: -1 });
+ProductSchema.index({ sku: 1 }, { sparse: true });
 ProductSchema.index({ name: 'text', categoryName: 'text', tags: 'text' });
 
 export default mongoose.models.Product || mongoose.model('Product', ProductSchema);
