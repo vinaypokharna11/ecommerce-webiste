@@ -48,10 +48,7 @@ const DEFAULT_FORM_STATE = {
   tags: '',
   isPopular: false,
   isFeatured: false,
-  colors: [
-    { name: 'Gold Polish', hex: '#D4AF37' },
-    { name: 'Silver Tone', hex: '#C0C0C0' },
-  ],
+  colors: [],
   sizes: '',
 };
 
@@ -130,15 +127,25 @@ export const AdminProductModal = ({ isOpen, onClose, product = null }) => {
 
         if (hasSavedContent) {
           const { id: _oldId, _id: _oldMongoId, ...cleanRestored } = restored;
+          let restoredColors = Array.isArray(cleanRestored.colors) ? cleanRestored.colors : [];
+          if (
+            restoredColors.length === 2 &&
+            restoredColors[0]?.name === 'Gold Polish' &&
+            restoredColors[1]?.name === 'Silver Tone'
+          ) {
+            restoredColors = [];
+          }
           setFormData({
             ...DEFAULT_FORM_STATE,
             ...cleanRestored,
+            colors: restoredColors,
             images: Array.isArray(cleanRestored.images) ? cleanRestored.images : (cleanRestored.image ? [cleanRestored.image] : []),
           });
           setHasDraftSaved(true);
         } else {
           setFormData({
             ...DEFAULT_FORM_STATE,
+            colors: [],
             category: categories[0]?.id || 'clothing',
             categoryName: categories[0]?.name || 'Clothing',
             image: '',

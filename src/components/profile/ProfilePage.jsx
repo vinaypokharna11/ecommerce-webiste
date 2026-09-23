@@ -22,6 +22,7 @@ import {
   Bell,
   ChevronDown,
   ArrowRight,
+  ArrowLeft,
   Plus,
   Trash2,
   Lock,
@@ -32,7 +33,6 @@ import {
   ShieldCheck,
   AlertCircle,
   Heart,
-  MessageSquare,
 } from 'lucide-react';
 import { STORE_CONFIG } from '@/data/mockData';
 import { useAuth } from '@/context/AuthContext';
@@ -41,7 +41,10 @@ import { formatPrice } from '@/utils/formatPrice';
 import { authService } from '@/services/authService';
 import { orderService } from '@/services/orderService';
 import { inquiryService } from '@/services/inquiryService';
+import { chatService } from '@/services/chatService';
 import { OrderChatModal } from '@/components/orders/OrderChatModal';
+import { ProfileMessages } from '@/components/profile/ProfileMessages';
+import { UnifiedChatWindow } from '@/components/chat/UnifiedChatWindow';
 
 // ─── Default fallback mock orders ─────────────────────────────────────────────
 export const INITIAL_ORDERS = [];
@@ -602,6 +605,8 @@ export const ProfilePage = ({ orders = [], onExploreCatalog, onNavigate }) => {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [chatOrder, setChatOrder] = useState(null);
   const [userOrders, setUserOrders] = useState(orders);
+  const [activeView, setActiveView] = useState('profile'); // 'profile' | 'messages'
+  const [unreadChatCount, setUnreadChatCount] = useState(0);
 
   const handleDeleteAccount = async () => {
     setIsDeleting(true);
@@ -624,19 +629,66 @@ export const ProfilePage = ({ orders = [], onExploreCatalog, onNavigate }) => {
     async function loadCustomerOrders() {
       if (isAuthenticated && user?.email) {
         try {
-          const data = await orderService.getOrders();
-          if (data.orders && data.orders.length > 0) {
+          const data = await orderService.getOrders({ scope: 'customer' });
+          if (Array.isArray(data?.orders)) {
             setUserOrders(data.orders);
+          } else {
+            setUserOrders([]);
           }
         } catch (e) {
           console.warn('Failed to load orders from API', e);
+          setUserOrders([]);
         }
+      } else if (!isAuthenticated) {
+        setUserOrders([]);
       }
     }
     loadCustomerOrders();
   }, [isAuthenticated, user]);
 
-  const allOrdersList = userOrders.length > 0 ? userOrders : (orders.length > 0 ? orders : []);
+  useEffect(() => {
+    async function loadUnreadCount() {
+      if (isAuthenticated) {
+        try {
+          const res = await chatService.getConversations({ scope: 'customer' });
+          if (res?.success) {
+            setUnreadChatCount(res.totalUnread || 0);
+          }
+        } catch (e) {}
+      } else {
+        setUnreadChatCount(0);
+      }
+    }
+    loadUnreadCount();
+  }, [isAuthenticated, activeView]);
+
+  // Realtime unread badge synchronization
+  useEffect(() => {
+    let eventSource = null;
+    try {
+      eventSource = new EventSource('/api/realtime');
+      eventSource.onmessage = (event) => {
+        try {
+          if (!event.data || event.data.startsWith(':')) return;
+          const parsed = JSON.parse(event.data);
+          if (
+            parsed.type === 'CHAT_MESSAGE_CREATED' ||
+            parsed.type === 'CHAT_MESSAGES_READ' ||
+            parsed.type === 'ORDER_CHAT_MESSAGE'
+          ) {
+            chatService.getConversations({ scope: 'customer' }).then((res) => {
+              if (res?.success) setUnreadChatCount(res.totalUnread || 0);
+            }).catch(() => {});
+          }
+        } catch (e) {}
+      };
+    } catch (e) {}
+    return () => {
+      if (eventSource) eventSource.close();
+    };
+  }, []);
+
+  const allOrdersList = isAuthenticated ? userOrders : (orders || []);
   const displayedOrders = showAllOrders ? allOrdersList : allOrdersList.slice(0, 3);
 
   const profile = {
@@ -676,7 +728,34 @@ export const ProfilePage = ({ orders = [], onExploreCatalog, onNavigate }) => {
     <section className="relative pt-4 sm:pt-6 pb-24 sm:pb-28 overflow-hidden min-h-[85vh] bg-[#F6F5F0]">
       <div className="max-w-3xl mx-auto px-3.5 sm:px-6">
 
-        {/* ── Sign-In Notification Banner (if guest) ── */}
+        {activeView === 'messages' ? (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between pb-1">
+              <button
+                onClick={() => setActiveView('profile')}
+                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white border border-black/10 text-xs font-bold text-[#1D1D1F] hover:bg-[#F5F5F7] transition shadow-sm cursor-pointer"
+              >
+                <ChevronRight className="w-4 h-4 rotate-180" />
+                <span>Back to Profile</span>
+              </button>
+              <h2 className="text-base sm:text-lg font-bold text-[#1D1D1F]">Inbox & Support</h2>
+              <div className="w-20" />
+            </div>
+
+            <ProfileMessages
+              user={user}
+              onNavigateToOrder={(orderId) => {
+                const found = allOrdersList.find((o) => String(o.id) === String(orderId));
+                if (found) {
+                  setSelectedOrder(found);
+                  setActiveView('profile');
+                }
+              }}
+            />
+          </div>
+        ) : (
+          <>
+            {/* ── Sign-In Notification Banner (if guest) ── */}
         {!isAuthenticated && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
@@ -1084,6 +1163,8 @@ export const ProfilePage = ({ orders = [], onExploreCatalog, onNavigate }) => {
             Nakoda Imitation v1.0.0 · Retail Store in Vapi, Gujarat
           </p>
         </motion.div>
+          </>
+        )}
 
       </div>
 

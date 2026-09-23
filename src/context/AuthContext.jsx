@@ -74,6 +74,10 @@ export const AuthProvider = ({ children }) => {
       const data = await authService.login(email.trim(), password.trim());
 
       if (data.success) {
+        try {
+          localStorage.removeItem('nakoda_orders_v2');
+          localStorage.removeItem('nakoda_orders');
+        } catch (e) {}
         if (data.isAdmin || data.role === 'admin' || data.role === 'superadmin') {
           // Session is preserved securely via HttpOnly admin_token cookie
           try {
@@ -110,6 +114,10 @@ export const AuthProvider = ({ children }) => {
       const data = await authService.signup(formData);
 
       if (data.success) {
+        try {
+          localStorage.removeItem('nakoda_orders_v2');
+          localStorage.removeItem('nakoda_orders');
+        } catch (e) {}
         setUser(data.user);
         setIsAuthenticated(true);
         setAuthCancelCallback(null);
@@ -133,6 +141,8 @@ export const AuthProvider = ({ children }) => {
   const logout = async () => {
     try {
       await authService.logout();
+      localStorage.removeItem('nakoda_orders_v2');
+      localStorage.removeItem('nakoda_orders');
     } catch (e) {}
     setUser(null);
     setIsAuthenticated(false);

@@ -64,7 +64,7 @@ export const AdminOrders = ({ adminUser }) => {
     if (!isSilent) setLoading(true);
     setError(null);
     try {
-      const data = await orderService.getOrders();
+      const data = await orderService.getOrders({ scope: 'admin' });
       if (data && data.orders) {
         setOrders(data.orders);
       } else if (Array.isArray(data)) {

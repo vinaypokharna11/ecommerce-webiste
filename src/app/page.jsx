@@ -174,6 +174,8 @@ function StorefrontContent() {
         'wishlist',
         'nakoda_recent_v2',
         'nakoda_recent',
+        'nakoda_orders_v2',
+        'nakoda_orders',
       ];
       keysToPurge.forEach((k) => localStorage.removeItem(k));
 
@@ -183,9 +185,6 @@ function StorefrontContent() {
           setRecentlyViewedIds(JSON.parse(savedRecent));
         } catch (e) {}
       }
-
-      const savedOrders = localStorage.getItem('nakoda_orders_v2');
-      if (savedOrders) setOrders(JSON.parse(savedOrders));
     } catch (e) {
       console.warn('Failed to load user activity storage', e);
     } finally {
@@ -201,33 +200,28 @@ function StorefrontContent() {
     } catch (e) {}
   }, [recentlyViewedIds, isClientStorageLoaded]);
 
-  // Save orders on user activity
-  useEffect(() => {
-    if (!isClientStorageLoaded) return;
-    try {
-      localStorage.setItem('nakoda_orders_v2', JSON.stringify(orders));
-    } catch (e) {}
-  }, [orders, isClientStorageLoaded]);
-
   // ─── USER TRANSITION & LOGOUT CLEANUP ──────────────────────────────────────────
   useEffect(() => {
     const prevUserId = prevUserRef.current ? (prevUserRef.current.id || prevUserRef.current._id || prevUserRef.current.email) : null;
     const currentUserId = user ? (user.id || user._id || user.email) : null;
 
     if (prevUserId && !currentUserId) {
-      // ─── LOGOUT BEHAVIOR: Wipe in-memory cart and wishlist state completely ───
+      // ─── LOGOUT BEHAVIOR: Wipe in-memory cart, wishlist, and orders completely ───
       setCartItems({});
       setWishlist({});
+      setOrders([]);
       isCartSyncedWithBackendRef.current = false;
       try {
         localStorage.removeItem('nakoda_cart_v2');
         localStorage.removeItem('nakoda_wishlist_v2');
+        localStorage.removeItem('nakoda_orders_v2');
         localStorage.removeItem(`nakoda_cart_${prevUserId}`);
         localStorage.removeItem(`nakoda_wishlist_${prevUserId}`);
       } catch (e) {}
     } else if (prevUserId !== currentUserId && currentUserId) {
       // ─── USER SWITCH / LOGIN: Reset in-memory states before fetching new user data ───
       setCartItems({});
+      setOrders([]);
       if (prevUserId) {
         setWishlist({});
       }
@@ -374,9 +368,10 @@ function StorefrontContent() {
     const id = now + Math.random();
     setToasts((prev) => [...prev, { id, type, title, message }]);
 
+    // Failsafe auto-dismiss (SwipeToast fires its own precise fuse onClose callback)
     setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, 3000);
+    }, 6000);
   }, []);
 
   // Clear recently viewed history

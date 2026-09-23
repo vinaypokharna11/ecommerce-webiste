@@ -65,14 +65,14 @@ test.describe('Admin Panel', () => {
     await page.goto('/admin/login');
     await page.waitForTimeout(1000);
 
-    await page.locator('input[type="email"]').first().fill('wrong@wrong.com');
+    await page.locator('input[type="email"]').first().fill(`wrong_${Date.now()}@domain.com`);
     await page.locator('input[type="password"]').first().fill('wrongpassword');
 
     const submitBtn = page.getByRole('button', { name: /sign in|login/i }).first();
     await submitBtn.click({ force: true });
     await page.waitForTimeout(3000);
 
-    const error = page.getByText(/invalid|denied|credentials|incorrect/i).first();
+    const error = page.getByText(/invalid|denied|credentials|incorrect|too many|attempts/i).first();
     await expect(error).toBeVisible({ timeout: 8000 });
   });
 

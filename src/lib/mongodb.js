@@ -98,7 +98,8 @@ export async function connectToDatabase() {
     MONGODB_URI = MONGODB_URI.replace('.mongodb.net/?', '.mongodb.net/nakodaimitation?');
   }
 
-  if (cached.conn && mongoose.connection.readyState === 1) {
+  if (mongoose.connection.readyState === 1) {
+    cached.conn = cached.conn || mongoose;
     return cached.conn;
   }
 

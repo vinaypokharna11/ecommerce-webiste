@@ -13,15 +13,23 @@ export async function GET(request) {
     const search = searchParams.get('search');
     const limit = searchParams.get('limit');
     const sellerId = searchParams.get('sellerId');
+    const scope = searchParams.get('scope'); // 'admin' or 'customer'
 
+    const customer = verifyCustomerAuth(request);
     const admin = verifyAdminAuth(request);
+
+    // If caller is authenticated as customer and did not explicitly request admin scope:
+    if (customer && scope !== 'admin') {
+      const orders = await getOrders(customer.email || customer.id, { status, search, limit });
+      return NextResponse.json({ success: true, count: orders.length, orders });
+    }
+
     if (admin) {
       const filterSeller = (admin.role === 'seller' && admin.sellerId) ? admin.sellerId : sellerId;
       const orders = await getOrders(null, { status, sellerId: filterSeller, search, limit });
       return NextResponse.json({ success: true, count: orders.length, orders });
     }
 
-    const customer = verifyCustomerAuth(request);
     if (customer) {
       const orders = await getOrders(customer.email || customer.id, { status, search, limit });
       return NextResponse.json({ success: true, count: orders.length, orders });

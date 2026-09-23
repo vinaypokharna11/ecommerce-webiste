@@ -79,16 +79,17 @@ export const PopularProducts = ({
 
         {/* Product Cards Grid: responsive 4 columns */}
         {displayProducts.length === 0 ? (
-          <div className="text-center py-16 px-4 bg-[#F5F5F7] rounded-3xl border border-black/[0.05] max-w-md mx-auto">
+          <div className="text-center py-16 px-4 bg-[#F5F5F7] rounded-2xl border border-black/[0.05] max-w-md mx-auto">
             <p className="text-sm font-bold text-[#1D1D1F]">New products arriving shortly</p>
             <p className="text-xs text-[#6E6E73] mt-1">Our catalog is being updated with fresh arrivals across all categories.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 xs:gap-3.5 sm:gap-5 lg:gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5 lg:gap-6">
             {displayProducts.slice(0, 8).map((product) => {
               const currentCartItem = cartItems[product.id];
               const quantity = currentCartItem?.quantity || 0;
               const currentSize = currentCartItem?.selectedSize || null;
+              const currentColor = currentCartItem?.selectedColor || null;
               const isFav = !!wishlist[product.id];
 
               return (
@@ -97,6 +98,7 @@ export const PopularProducts = ({
                   product={product}
                   quantity={quantity}
                   selectedSize={currentSize}
+                  selectedColor={currentColor}
                   isFavorite={isFav}
                   onAddToCart={onAddToCart}
                   onUpdateQuantity={onUpdateQuantity}

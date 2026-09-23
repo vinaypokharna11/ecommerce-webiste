@@ -20,14 +20,14 @@ export function ProductGallery({ image, images = [], name, badge }) {
   return (
     <div className="space-y-4">
       {/* Main Active Image Showcase */}
-      <div className="relative aspect-square w-full rounded-3xl overflow-hidden bg-[#F5F5F7] border border-black/5 shadow-inner group">
+      <div className="relative aspect-[3/4] sm:aspect-[4/5] w-full rounded-3xl overflow-hidden bg-[#F5F5F7] border border-black/5 shadow-inner group flex items-center justify-center">
         <Image
           src={activeImage || '/assets/images/prod_backpack.jpg'}
           alt={name || 'Product Image'}
           fill
           priority
-          className="object-cover group-hover:scale-105 transition-transform duration-500"
-          sizes="(max-width: 768px) 100vw, 500px"
+          className="object-contain p-2 group-hover:scale-105 transition-transform duration-500"
+          sizes="(max-width: 768px) 100vw, 600px"
         />
         {badge && (
           <div className="absolute top-4 left-4 px-3.5 py-1.5 bg-[#171717] text-white text-xs font-bold uppercase tracking-wider rounded-full shadow-md z-10">

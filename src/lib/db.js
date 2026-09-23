@@ -18,6 +18,8 @@ import Review from '../models/Review.js';
 import CouponUsage from '../models/CouponUsage.js';
 import ExploreCollection from '../models/ExploreCollection.js';
 import Migration from '../models/Migration.js';
+import Conversation from '../models/Conversation.js';
+import Message from '../models/Message.js';
 import { validateCoupon, isCouponExpired } from './couponValidation.js';
 import { getStockStatus, isProductPurchasable } from './stockRules.js';
 import { broadcastCatalogEvent, CATALOG_EVENTS } from './events.js';
@@ -2956,8 +2958,9 @@ export async function updateOrderStatus(id, status, sellerNotes = '') {
   return order;
 }
 
-// ─── ORDER CHAT SYSTEM ───────────────────────────────────────────────────────
-export async function getOrderChatMessages(orderId, authUser) {
+// ─── UNIFIED CHAT & MESSAGING SYSTEM (ORDER & GENERAL CONVERSATIONS) ───────────
+
+export async function findOrCreateOrderConversation(orderId, authUser) {
   if (!orderId) throw new Error('Order ID is required');
   if (!authUser) throw new Error('Authentication required to access order chat');
 
@@ -2986,114 +2989,591 @@ export async function getOrderChatMessages(orderId, authUser) {
     const orderEmail = String(order.customerEmail || '').toLowerCase();
 
     if (authId !== orderUserId && authEmail !== orderEmail) {
-      throw new Error('Unauthorized: You can only view chat messages for your own orders');
+      throw new Error('Unauthorized: You can only access chat for your own orders');
     }
   } else if (isAdmin) {
     if (authUser.role === 'seller' && authUser.sellerId && order.sellerId && order.sellerId !== authUser.sellerId) {
-      throw new Error('Unauthorized: You can only view chat messages for orders assigned to your seller account');
+      throw new Error('Unauthorized: You can only access orders assigned to your seller account');
     }
   } else {
     throw new Error('Unauthorized: Invalid role for chat access');
   }
 
-  return {
+  const orderSummary = {
+    id: order.id,
+    amount: Number(order.amount) || 0,
+    status: order.status || 'pending',
+    statusLabel: order.statusLabel || 'Pending',
+    itemSummary: order.itemSummary || (Array.isArray(order.items) && order.items[0]?.name ? `${order.items[0].name}${order.items.length > 1 ? ` (+${order.items.length - 1} more)` : ''}` : 'Order items'),
+    date: order.date || (order.createdAt ? new Date(order.createdAt).toLocaleDateString() : ''),
+    createdAt: order.createdAt || new Date(),
+  };
+
+  const convId = `conv_ord_${orderId.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+
+  if (db) {
+    let conv = await Conversation.findOne({ type: 'ORDER', orderId }).lean();
+    if (conv) {
+      // Sync fresh order summary
+      await Conversation.updateOne({ id: conv.id }, { $set: { orderSummary } }).catch(() => {});
+      return { ...conv, orderSummary };
+    }
+
+    const created = await Conversation.create({
+      id: convId,
+      type: 'ORDER',
+      orderId,
+      customerId: String(order.userId || order.customerId || authUser.id || 'guest'),
+      customerName: order.customerName || authUser.name || 'Customer',
+      customerEmail: (order.customerEmail || authUser.email || '').toLowerCase(),
+      customerPhone: order.customerPhone || '',
+      sellerId: order.sellerId || 'nakoda_seller',
+      orderSummary,
+      lastMessage: '',
+      lastMessageAt: new Date(),
+      unreadCountCustomer: 0,
+      unreadCountAdmin: 0,
+    });
+    return created.toObject();
+  }
+
+  // Fallback JSON DB
+  const jdb = readJSONDB();
+  jdb.conversations = jdb.conversations || [];
+  let conv = jdb.conversations.find((c) => c.type === 'ORDER' && c.orderId === orderId);
+
+  if (conv) {
+    conv.orderSummary = orderSummary;
+    writeJSONDB(jdb);
+    return conv;
+  }
+
+  conv = {
+    id: convId,
+    type: 'ORDER',
     orderId,
-    orderStatus: order.status,
-    customerName: order.customerName,
-    chatMessages: (order.chatMessages || []).map((m) => {
-      const { _id, ...clean } = m;
-      return clean;
-    }),
+    customerId: String(order.userId || order.customerId || authUser.id || 'guest'),
+    customerName: order.customerName || authUser.name || 'Customer',
+    customerEmail: (order.customerEmail || authUser.email || '').toLowerCase(),
+    customerPhone: order.customerPhone || '',
+    sellerId: order.sellerId || 'nakoda_seller',
+    orderSummary,
+    lastMessage: '',
+    lastMessageAt: new Date().toISOString(),
+    unreadCountCustomer: 0,
+    unreadCountAdmin: 0,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  jdb.conversations.push(conv);
+  writeJSONDB(jdb);
+  return conv;
+}
+
+export async function findOrCreateGeneralConversation(authUser) {
+  if (!authUser) throw new Error('Authentication required to access support messages');
+
+  const customerId = String(authUser.id || authUser._id || authUser.email || 'customer');
+  const convId = `conv_gen_${customerId.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+
+  const db = await connectToDatabase();
+  if (db) {
+    let conv = await Conversation.findOne({ type: 'GENERAL', customerId }).lean();
+    if (conv) return conv;
+
+    const created = await Conversation.create({
+      id: convId,
+      type: 'GENERAL',
+      orderId: null,
+      customerId,
+      customerName: authUser.name || 'Customer',
+      customerEmail: (authUser.email || '').toLowerCase(),
+      customerPhone: authUser.phone || '',
+      sellerId: 'nakoda_seller',
+      orderSummary: null,
+      lastMessage: '',
+      lastMessageAt: new Date(),
+      unreadCountCustomer: 0,
+      unreadCountAdmin: 0,
+    });
+    return created.toObject();
+  }
+
+  // Fallback JSON DB
+  const jdb = readJSONDB();
+  jdb.conversations = jdb.conversations || [];
+  let conv = jdb.conversations.find((c) => c.type === 'GENERAL' && c.customerId === customerId);
+
+  if (conv) return conv;
+
+  conv = {
+    id: convId,
+    type: 'GENERAL',
+    orderId: null,
+    customerId,
+    customerName: authUser.name || 'Customer',
+    customerEmail: (authUser.email || '').toLowerCase(),
+    customerPhone: authUser.phone || '',
+    sellerId: 'nakoda_seller',
+    orderSummary: null,
+    lastMessage: '',
+    lastMessageAt: new Date().toISOString(),
+    unreadCountCustomer: 0,
+    unreadCountAdmin: 0,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  jdb.conversations.push(conv);
+  writeJSONDB(jdb);
+  return conv;
+}
+
+export async function getConversations(authUser, options = {}) {
+  if (!authUser) throw new Error('Authentication required to view conversations');
+
+  const { search = '', type = null, limit = 50 } = options;
+  const isCustomer = authUser.role === 'customer';
+  const isAdmin = authUser.role === 'admin' || authUser.role === 'superadmin' || authUser.role === 'seller';
+
+  const db = await connectToDatabase();
+
+  if (db) {
+    const query = { isArchived: { $ne: true } };
+
+    if (isCustomer) {
+      const customerId = String(authUser.id || authUser._id || '');
+      const customerEmail = String(authUser.email || '').toLowerCase();
+      query.$or = [{ customerId }, { customerEmail }];
+    } else if (isAdmin) {
+      if (authUser.role === 'seller' && authUser.sellerId) {
+        query.sellerId = authUser.sellerId;
+      }
+      if (type && ['ORDER', 'GENERAL'].includes(type.toUpperCase())) {
+        query.type = type.toUpperCase();
+      }
+      if (search && search.trim()) {
+        const sRegex = new RegExp(search.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+        query.$or = [
+          { customerName: sRegex },
+          { customerEmail: sRegex },
+          { orderId: sRegex },
+          { id: sRegex },
+          { lastMessage: sRegex },
+        ];
+      }
+    }
+
+    const conversations = await Conversation.find(query)
+      .sort({ lastMessageAt: -1 })
+      .limit(Number(limit) || 50)
+      .lean();
+
+    const cleanList = conversations.map(({ _id, __v, ...c }) => c);
+    const totalUnread = cleanList.reduce(
+      (acc, c) => acc + (isCustomer ? (c.unreadCountCustomer || 0) : (c.unreadCountAdmin || 0)),
+      0
+    );
+
+    return {
+      conversations: cleanList,
+      totalUnread,
+      count: cleanList.length,
+    };
+  }
+
+  // Fallback JSON DB
+  const jdb = readJSONDB();
+  let list = jdb.conversations || [];
+
+  if (isCustomer) {
+    const customerId = String(authUser.id || authUser._id || '');
+    const customerEmail = String(authUser.email || '').toLowerCase();
+    list = list.filter(
+      (c) =>
+        (c.customerId === customerId || (c.customerEmail && c.customerEmail.toLowerCase() === customerEmail)) &&
+        !c.isArchived
+    );
+  } else if (isAdmin) {
+    if (type) list = list.filter((c) => c.type === type.toUpperCase());
+    if (search && search.trim()) {
+      const q = search.trim().toLowerCase();
+      list = list.filter(
+        (c) =>
+          c.customerName?.toLowerCase().includes(q) ||
+          c.customerEmail?.toLowerCase().includes(q) ||
+          c.orderId?.toLowerCase().includes(q) ||
+          c.id?.toLowerCase().includes(q) ||
+          c.lastMessage?.toLowerCase().includes(q)
+      );
+    }
+  }
+
+  list.sort((a, b) => new Date(b.lastMessageAt || 0) - new Date(a.lastMessageAt || 0));
+
+  const totalUnread = list.reduce(
+    (acc, c) => acc + (isCustomer ? (c.unreadCountCustomer || 0) : (c.unreadCountAdmin || 0)),
+    0
+  );
+
+  return {
+    conversations: list.slice(0, Number(limit) || 50),
+    totalUnread,
+    count: list.length,
   };
 }
 
-export async function addOrderChatMessage(orderId, messageText, authUser) {
-  if (!orderId) throw new Error('Order ID is required');
-  if (!authUser) throw new Error('Authentication required to send chat message');
-
-  const cleanMessage = String(messageText || '').trim();
-  if (!cleanMessage) {
-    throw new Error('Message text cannot be empty');
-  }
-  if (cleanMessage.length > 2000) {
-    throw new Error('Message exceeds 2000 character limit');
-  }
+export async function getConversationById(conversationId, authUser) {
+  if (!conversationId) throw new Error('Conversation ID is required');
+  if (!authUser) throw new Error('Authentication required');
 
   const db = await connectToDatabase();
-  let order = null;
+  let conv = null;
 
   if (db) {
-    order = await Order.findOne({ id: orderId }).lean();
+    conv = await Conversation.findOne({ id: conversationId }).lean();
   } else {
     const jdb = readJSONDB();
-    order = (jdb.orders || []).find((o) => o.id === orderId);
+    conv = (jdb.conversations || []).find((c) => c.id === conversationId);
   }
 
-  if (!order) {
-    throw new Error(`Order "${orderId}" not found`);
+  if (!conv) {
+    throw new Error(`Conversation "${conversationId}" not found`);
   }
 
-  // Authorization check
+  // Authorization check (IDOR Protection)
   const isCustomer = authUser.role === 'customer';
   const isAdmin = authUser.role === 'admin' || authUser.role === 'superadmin' || authUser.role === 'seller';
 
   if (isCustomer) {
-    const authId = String(authUser.id || authUser._id || '').toLowerCase();
-    const authEmail = String(authUser.email || '').toLowerCase();
-    const orderUserId = String(order.userId || order.customerId || '').toLowerCase();
-    const orderEmail = String(order.customerEmail || '').toLowerCase();
+    const customerId = String(authUser.id || authUser._id || '');
+    const customerEmail = String(authUser.email || '').toLowerCase();
+    const convCustomerId = String(conv.customerId || '');
+    const convCustomerEmail = String(conv.customerEmail || '').toLowerCase();
 
-    if (authId !== orderUserId && authEmail !== orderEmail) {
-      throw new Error('Unauthorized: You can only send messages for your own orders');
+    if (customerId !== convCustomerId && customerEmail !== convCustomerEmail) {
+      throw new Error('Unauthorized: You do not have permission to view this conversation');
     }
   } else if (isAdmin) {
-    if (authUser.role === 'seller' && authUser.sellerId && order.sellerId && order.sellerId !== authUser.sellerId) {
-      throw new Error('Unauthorized: You can only message orders assigned to your seller account');
+    if (authUser.role === 'seller' && authUser.sellerId && conv.sellerId && conv.sellerId !== authUser.sellerId) {
+      throw new Error('Unauthorized: Conversation is assigned to a different seller');
     }
   } else {
-    throw new Error('Unauthorized: Invalid role for chat');
+    throw new Error('Unauthorized: Invalid role');
   }
 
-  const newMsg = {
-    id: `msg_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-    senderRole: isCustomer ? 'customer' : 'seller',
-    senderName: authUser.name || (isCustomer ? order.customerName : 'Nakoda Seller Support'),
-    message: cleanMessage,
-    createdAt: new Date().toISOString(),
-  };
+  const { _id, __v, ...clean } = conv;
+  return clean;
+}
 
-  let updatedMessages = [];
+export async function getConversationMessages(conversationId, authUser, options = {}) {
+  // Verifies caller authorization against the conversation
+  const conv = await getConversationById(conversationId, authUser);
+  const limit = Math.min(Number(options.limit) || 50, 100);
+
+  const db = await connectToDatabase();
 
   if (db) {
-    const updated = await Order.findOneAndUpdate(
-      { id: orderId },
-      { $push: { chatMessages: newMsg } },
-      { returnDocument: 'after' }
-    ).lean();
-    updatedMessages = updated?.chatMessages || [];
-  }
-
-  const jdb = readJSONDB();
-  const localOrder = (jdb.orders || []).find((o) => o.id === orderId);
-  if (localOrder) {
-    localOrder.chatMessages = localOrder.chatMessages || [];
-    localOrder.chatMessages.push(newMsg);
-    writeJSONDB(jdb);
-    if (!updatedMessages.length) {
-      updatedMessages = localOrder.chatMessages;
+    const query = { conversationId };
+    if (options.before) {
+      query.createdAt = { $lt: new Date(options.before) };
     }
+
+    const messages = await Message.find(query)
+      .sort({ createdAt: 1 })
+      .limit(limit)
+      .lean();
+
+    return {
+      conversation: conv,
+      messages: messages.map(({ _id, __v, ...m }) => m),
+      count: messages.length,
+    };
   }
 
-  // Broadcast realtime event
-  broadcastCatalogEvent(CATALOG_EVENTS.ORDER_CHAT_MESSAGE, {
-    orderId,
+  // Fallback JSON DB
+  const jdb = readJSONDB();
+  let list = (jdb.messages || []).filter((m) => m.conversationId === conversationId);
+  if (options.before) {
+    const bDate = new Date(options.before).getTime();
+    list = list.filter((m) => new Date(m.createdAt).getTime() < bDate);
+  }
+  list.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+
+  return {
+    conversation: conv,
+    messages: list.slice(-limit),
+    count: list.length,
+  };
+}
+
+export async function sendConversationMessage(conversationId, messageContent, authUser) {
+  let content = messageContent;
+  let caller = authUser;
+
+  // Handle swapped args or object content gracefully
+  if (messageContent && typeof messageContent === 'object' && messageContent.role && (!authUser || !authUser.role)) {
+    caller = messageContent;
+    content = typeof authUser === 'object' ? authUser?.content : authUser;
+  } else if (typeof messageContent === 'object' && messageContent !== null && 'content' in messageContent) {
+    content = messageContent.content;
+  }
+
+  if (!caller) throw new Error('Authentication required to send message');
+
+  // Authorize against conversation
+  const conv = await getConversationById(conversationId, caller);
+
+  const cleanText = String(content || '').trim();
+  if (!cleanText) {
+    throw new Error('Message content cannot be empty');
+  }
+  if (cleanText.length > 4000) {
+    throw new Error('Message exceeds 4000 character limit');
+  }
+
+  const isCustomer = caller.role === 'customer';
+  const senderRole = isCustomer ? 'customer' : (caller.role === 'seller' ? 'seller' : 'admin');
+  const senderName = caller.name || (isCustomer ? conv.customerName : 'Nakoda Support');
+  const senderId = String(caller.id || caller._id || (isCustomer ? conv.customerId : 'admin'));
+  const receiverId = isCustomer ? conv.sellerId : conv.customerId;
+
+  const msgId = `msg_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+  const now = new Date();
+
+  const newMsg = {
+    id: msgId,
+    conversationId,
+    orderId: conv.orderId || null,
+    senderId,
+    senderRole,
+    senderName,
+    receiverId,
+    content: cleanText,
+    status: 'sent',
+    readAt: null,
+    createdAt: now.toISOString(),
+  };
+
+  const db = await connectToDatabase();
+
+  if (db) {
+    await Message.create({
+      ...newMsg,
+      createdAt: now,
+    });
+
+    const updateQuery = {
+      $set: {
+        lastMessage: cleanText,
+        lastMessageAt: now,
+        lastMessageSenderRole: senderRole,
+      },
+      $inc: isCustomer ? { unreadCountAdmin: 1 } : { unreadCountCustomer: 1 },
+    };
+
+    await Conversation.updateOne({ id: conversationId }, updateQuery);
+
+    // If order chat, also push to order's embedded chatMessages for full backward compatibility
+    if (conv.orderId) {
+      await Order.updateOne(
+        { id: conv.orderId },
+        {
+          $push: {
+            chatMessages: {
+              id: msgId,
+              senderRole,
+              senderName,
+              message: cleanText,
+              createdAt: now,
+            },
+          },
+        }
+      ).catch(() => {});
+    }
+  } else {
+    // Fallback JSON DB
+    const jdb = readJSONDB();
+    jdb.messages = jdb.messages || [];
+    jdb.messages.push(newMsg);
+
+    const localConv = (jdb.conversations || []).find((c) => c.id === conversationId);
+    if (localConv) {
+      localConv.lastMessage = cleanText;
+      localConv.lastMessageAt = now.toISOString();
+      localConv.lastMessageSenderRole = senderRole;
+      if (isCustomer) {
+        localConv.unreadCountAdmin = (localConv.unreadCountAdmin || 0) + 1;
+      } else {
+        localConv.unreadCountCustomer = (localConv.unreadCountCustomer || 0) + 1;
+      }
+    }
+
+    if (conv.orderId) {
+      const localOrder = (jdb.orders || []).find((o) => o.id === conv.orderId);
+      if (localOrder) {
+        localOrder.chatMessages = localOrder.chatMessages || [];
+        localOrder.chatMessages.push({
+          id: msgId,
+          senderRole,
+          senderName,
+          message: cleanText,
+          createdAt: now.toISOString(),
+        });
+      }
+    }
+
+    writeJSONDB(jdb);
+  }
+
+  // Realtime Broadcast
+  broadcastCatalogEvent(CATALOG_EVENTS.CHAT_MESSAGE_CREATED, {
+    conversationId,
+    orderId: conv.orderId,
+    customerId: conv.customerId,
+    customerEmail: conv.customerEmail,
+    participantIds: [conv.customerId, conv.sellerId],
     message: newMsg,
+    senderRole,
   });
+
+  if (conv.orderId) {
+    broadcastCatalogEvent(CATALOG_EVENTS.ORDER_CHAT_MESSAGE, {
+      orderId: conv.orderId,
+      message: {
+        id: newMsg.id,
+        senderRole: newMsg.senderRole,
+        senderName: newMsg.senderName,
+        message: newMsg.content,
+        createdAt: newMsg.createdAt,
+      },
+    });
+  }
 
   return {
     success: true,
     message: newMsg,
-    chatMessages: updatedMessages.map(({ _id, ...clean }) => clean),
+  };
+}
+
+export async function markConversationAsRead(conversationId, authUser) {
+  const conv = await getConversationById(conversationId, authUser);
+  const isCustomer = authUser.role === 'customer';
+  const now = new Date();
+
+  const db = await connectToDatabase();
+
+  if (db) {
+    // If customer, mark messages from staff as read. If staff, mark messages from customer as read.
+    const messageFilter = {
+      conversationId,
+      senderRole: isCustomer ? { $ne: 'customer' } : 'customer',
+      status: { $ne: 'read' },
+    };
+
+    const updateRes = await Message.updateMany(messageFilter, {
+      $set: { status: 'read', readAt: now },
+    });
+
+    const convReset = isCustomer ? { unreadCountCustomer: 0 } : { unreadCountAdmin: 0 };
+    await Conversation.updateOne({ id: conversationId }, { $set: convReset });
+
+    broadcastCatalogEvent(CATALOG_EVENTS.CHAT_MESSAGES_READ, {
+      conversationId,
+      customerId: conv.customerId,
+      orderId: conv.orderId,
+      readBy: isCustomer ? 'customer' : 'admin',
+      readAt: now.toISOString(),
+    });
+
+    return {
+      success: true,
+      readCount: updateRes.modifiedCount || 0,
+    };
+  }
+
+  // Fallback JSON DB
+  const jdb = readJSONDB();
+  let readCount = 0;
+  (jdb.messages || []).forEach((m) => {
+    if (m.conversationId === conversationId) {
+      const shouldRead = isCustomer ? m.senderRole !== 'customer' : m.senderRole === 'customer';
+      if (shouldRead && m.status !== 'read') {
+        m.status = 'read';
+        m.readAt = now.toISOString();
+        readCount++;
+      }
+    }
+  });
+
+  const localConv = (jdb.conversations || []).find((c) => c.id === conversationId);
+  if (localConv) {
+    if (isCustomer) localConv.unreadCountCustomer = 0;
+    else localConv.unreadCountAdmin = 0;
+  }
+
+  writeJSONDB(jdb);
+
+  broadcastCatalogEvent(CATALOG_EVENTS.CHAT_MESSAGES_READ, {
+    conversationId,
+    customerId: conv.customerId,
+    orderId: conv.orderId,
+    readBy: isCustomer ? 'customer' : 'admin',
+    readAt: now.toISOString(),
+  });
+
+  return {
+    success: true,
+    readCount,
+  };
+}
+
+// Backward-compatible wrappers for existing /api/orders/[id]/chat route
+export async function getOrderChatMessages(orderId, authUser) {
+  const conv = await findOrCreateOrderConversation(orderId, authUser);
+  const { messages } = await getConversationMessages(conv.id, authUser, { limit: 100 });
+
+  return {
+    orderId,
+    orderStatus: conv.orderSummary?.status || 'pending',
+    customerName: conv.customerName,
+    conversationId: conv.id,
+    chatMessages: messages.map((m) => ({
+      id: m.id,
+      senderRole: m.senderRole,
+      senderName: m.senderName,
+      message: m.content,
+      createdAt: m.createdAt,
+      status: m.status,
+    })),
+  };
+}
+
+export async function addOrderChatMessage(orderId, messageText, authUser) {
+  const conv = await findOrCreateOrderConversation(orderId, authUser);
+  const result = await sendConversationMessage(conv.id, messageText, authUser);
+
+  const { messages } = await getConversationMessages(conv.id, authUser, { limit: 100 });
+
+  return {
+    success: true,
+    message: {
+      id: result.message.id,
+      senderRole: result.message.senderRole,
+      senderName: result.message.senderName,
+      message: result.message.content,
+      createdAt: result.message.createdAt,
+    },
+    conversationId: conv.id,
+    chatMessages: messages.map((m) => ({
+      id: m.id,
+      senderRole: m.senderRole,
+      senderName: m.senderName,
+      message: m.content,
+      createdAt: m.createdAt,
+      status: m.status,
+    })),
   };
 }
 

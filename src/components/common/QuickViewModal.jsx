@@ -305,7 +305,7 @@ export const QuickViewModal = ({
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ type: 'spring', damping: 26, stiffness: 320 }}
             onClick={(e) => e.stopPropagation()}
-            className="product-quickview-modal relative w-full max-w-3xl max-h-[92vh] sm:max-h-[88vh] flex flex-col bg-white border border-black/[0.08] shadow-[0_25px_60px_rgba(0,0,0,0.18)] rounded-2xl sm:rounded-[2rem] z-10 my-auto overflow-hidden"
+            className="product-quickview-modal relative w-full max-w-4xl max-h-[92vh] sm:max-h-[88vh] flex flex-col bg-white border border-black/[0.08] shadow-[0_25px_60px_rgba(0,0,0,0.18)] rounded-2xl sm:rounded-[2rem] z-10 my-auto overflow-hidden"
           >
             {/* Top Navigation Bar: Back & Close Buttons (Completely outside the image) */}
             <div className="flex items-center justify-between px-3.5 xs:px-4 sm:px-6 py-2.5 sm:py-3 border-b border-black/[0.06] bg-white z-30 shrink-0">
@@ -342,13 +342,13 @@ export const QuickViewModal = ({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 xs:gap-5 sm:gap-8 items-start">
                 {/* Image Showcase */}
                 <div className="space-y-3 w-full">
-                  <div className="relative aspect-4/3 xs:aspect-square md:aspect-square w-full rounded-xl sm:rounded-2xl overflow-hidden bg-[#F5F5F7] border border-black/[0.04] max-h-[260px] xs:max-h-[320px] md:max-h-none">
+                  <div className="relative aspect-[3/4] w-full rounded-xl sm:rounded-2xl overflow-hidden bg-[#F7F7F8] border border-black/[0.04] min-h-[320px] sm:min-h-[440px] max-h-[580px] flex items-center justify-center">
                     <Image
                       src={activeImage || product.image || '/assets/images/prod_backpack.jpg'}
                       alt={product.name}
                       fill
-                      className="object-cover"
-                      sizes="(max-width: 768px) 100vw, 400px"
+                      className="object-contain w-full h-full p-1.5 sm:p-2.5 transition-transform duration-300"
+                      sizes="(max-width: 768px) 100vw, 500px"
                     />
                     {product.badge && (
                       <div className="absolute top-3.5 left-3.5 sm:top-4 sm:left-4 px-3.5 py-1.5 sm:px-4 sm:py-1.5 bg-[#1D1D1F] text-white text-xs sm:text-sm font-sans font-bold tracking-wider uppercase rounded-full shadow-md z-20">

@@ -6,9 +6,9 @@
     {
       "step": 1,
       "action": "Admin setups product in database catalog",
-      "expected": "Product \"prod-master-1790105110013\" created with stock = 25 and price = ₹1499",
+      "expected": "Product \"prod-master-1790153559054\" created with stock = 25 and price = ₹1499",
       "apiResult": "N/A (Seeded via Mongoose direct connection)",
-      "dbResult": "Atlas Document ID: prod-master-1790105110013, stockCount: 25, price: ₹1499",
+      "dbResult": "Atlas Document ID: prod-master-1790153559054, stockCount: 25, price: ₹1499",
       "frontendResult": "Product rendered in Storefront Catalog and Search Index",
       "status": "PASS",
       "error": null
@@ -17,8 +17,8 @@
       "step": 2,
       "action": "New Customer registers account on website",
       "expected": "HTTP 201 Created, JWT token issued, user record created in MongoDB Atlas with hashed password",
-      "apiResult": "HTTP 201 | Success: true | User: qa_customer_1790105110013@example.com",
-      "dbResult": "Atlas User found: 6ab2d6161886fb6f12287fc9 | Password is bcrypt hash: undefined",
+      "apiResult": "HTTP 201 | Success: true | User: qa_customer_1790153559054@example.com",
+      "dbResult": "Atlas User found: 6ab39358efcf5b379eae1be0 | Password is bcrypt hash: undefined",
       "frontendResult": "AuthModal completes, customer profile initialized",
       "status": "PASS",
       "error": null
@@ -38,7 +38,7 @@
       "action": "Customer adds 2 units of product to cart",
       "expected": "HTTP 200 OK, cart persisted in Atlas under verified customer ID",
       "apiResult": "HTTP 200 | Cart items: 1",
-      "dbResult": "Atlas Cart items: 1 | Item 0 productId: prod-master-1790105110013 | qty: 2",
+      "dbResult": "Atlas Cart items: 1 | Item 0 productId: prod-master-1790153559054 | qty: 2",
       "frontendResult": "Floating Cart Bar updates count badge to 2",
       "status": "PASS",
       "error": null
@@ -47,7 +47,7 @@
       "step": 5,
       "action": "Customer initiates Checkout with Anti-Tampering Test (Client price ₹1 ignored)",
       "expected": "HTTP 201 Created, Total strictly computed from Atlas DB (₹1499 * 2 = ₹2998)",
-      "apiResult": "HTTP 201 | Order ID: #SE1123193121 | Amount: ₹2998",
+      "apiResult": "HTTP 201 | Order ID: #SE5616751303 | Amount: ₹2998",
       "dbResult": "DB Price enforced: ₹2998 === ₹2998 (Spoofed ₹1 rejected)",
       "frontendResult": "Order confirmation modal triggers with summary and order number",
       "status": "PASS",
@@ -58,7 +58,7 @@
       "action": "Database Inspection: Order initial status & Inventory Reservation Verification",
       "expected": "Order in status 'pending', inventory reserved/deducted at 23 to prevent overselling",
       "apiResult": "Order status: pending | paymentStatus: pending",
-      "dbResult": "Atlas Order: #SE1123193121 | status: 'pending' | inventoryDeducted: true | Product stockCount: 23",
+      "dbResult": "Atlas Order: #SE5616751303 | status: 'pending' | inventoryDeducted: true | Product stockCount: 23",
       "frontendResult": "Customer cart emptied, order placed in Pending Orders queue",
       "status": "PASS",
       "error": null
@@ -68,7 +68,7 @@
       "action": "Customer navigates to Profile / \"My Orders\" tab",
       "expected": "HTTP 200 OK, customer order history contains the newly placed order with status \"Pending\"",
       "apiResult": "HTTP 200 | Total Customer Orders: 1",
-      "dbResult": "Retrieved order matches Atlas record (ID: #SE1123193121)",
+      "dbResult": "Retrieved order matches Atlas record (ID: #SE5616751303)",
       "frontendResult": "Profile page renders Order Card with status badge 'Pending' and amount ₹2998",
       "status": "PASS",
       "error": null
@@ -87,8 +87,8 @@
       "step": 9,
       "action": "Admin reviews incoming orders in Order Management table",
       "expected": "HTTP 200 OK, newly placed customer order is visible with customer details and pending status",
-      "apiResult": "HTTP 200 | Orders count: 10",
-      "dbResult": "Admin retrieves same Atlas record: #SE1123193121 | Customer: Master QA Customer",
+      "apiResult": "HTTP 200 | Orders count: 2",
+      "dbResult": "Admin retrieves same Atlas record: #SE5616751303 | Customer: Master QA Customer",
       "frontendResult": "Order table renders new row with badge \"Pending\", Customer Name, Phone, and Action buttons",
       "status": "PASS",
       "error": null
@@ -107,7 +107,7 @@
       "step": 11,
       "action": "Security Guard: Attempt duplicate order acceptance",
       "expected": "HTTP 400 Bad Request, duplicate acceptance rejected, inventory remains unchanged at 23",
-      "apiResult": "HTTP 400 | Error: \"Order \"#SE1123193121\" is not in pending status (current status: \"accepted\") and cannot be accepted\"",
+      "apiResult": "HTTP 400 | Error: \"Order \"#SE5616751303\" is not in pending status (current status: \"accepted\") and cannot be accepted\"",
       "dbResult": "Atlas Product stock untouched: 23 === 23",
       "frontendResult": "UI handles duplicate safely without double deduction",
       "status": "PASS",
@@ -118,7 +118,7 @@
       "action": "Admin advances order through fulfillment pipeline to \"delivered\"",
       "expected": "HTTP 200 OK, Order status advances to \"delivered\", sellerNotes saved in database",
       "apiResult": "HTTP 200 | Status: delivered",
-      "dbResult": "Atlas Order: #SE1123193121 | status: 'delivered' | sellerNotes: \"Dispatched via BlueDart AWB#88776655. Delivered successfully.\"",
+      "dbResult": "Atlas Order: #SE5616751303 | status: 'delivered' | sellerNotes: \"Dispatched via BlueDart AWB#88776655. Delivered successfully.\"",
       "frontendResult": "Admin order table updates status to \"Delivered\"",
       "status": "PASS",
       "error": null

@@ -4,7 +4,6 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Mail,
-  Phone,
   MapPin,
   Clock,
   MessageCircle,
@@ -494,43 +493,6 @@ export const ContactInquirePage = ({
                       </a>
                     </div>
                   </div>
-
-                  {/* WhatsApp Direct Chat */}
-                  <div className="p-3 sm:p-3.5 rounded-xl sm:rounded-2xl bg-[#E8F8EE] border border-[#25D366]/30 flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-                      <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-[#25D366] text-white flex items-center justify-center shrink-0 shadow-xs">
-                        <MessageCircle className="w-4 h-4 fill-current" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-[10px] font-bold text-[#15803D] uppercase tracking-wider">Instant WhatsApp</p>
-                        <p className="text-xs sm:text-sm font-extrabold text-[#171717] truncate">
-                          {storeConfig.whatsappDisplay || '+91 98794 51341'}
-                        </p>
-                      </div>
-                    </div>
-                    <a
-                      href={`https://wa.me/${(storeConfig.whatsappNumber || '919879451341').replace(/[^0-9]/g, '')}?text=${encodeURIComponent('Hi Nakoda Imitation, I would like to inquire about your products.')}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-3 py-1.5 rounded-full bg-[#25D366] hover:bg-[#1EBE5D] text-white text-xs font-bold shrink-0 flex items-center gap-1 transition-transform active:scale-95 shadow-xs"
-                    >
-                      Chat Now
-                    </a>
-                  </div>
-
-                  {/* Direct Phone Call */}
-                  <div className="p-3 sm:p-3.5 rounded-xl sm:rounded-2xl bg-[#F5F5F7]/60 border border-black/5 flex items-center gap-2.5 sm:gap-3">
-                    <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-[#0071E3]/20 text-[#0071E3] flex items-center justify-center shrink-0">
-                      <Phone className="w-4 h-4" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-[10px] font-bold text-[#777777] uppercase tracking-wider">Store Call Desk</p>
-                      <a href={`tel:${storeConfig.whatsappNumber || '9879451341'}`} className="text-xs sm:text-sm font-extrabold text-[#1D1D1F] hover:text-[#0071E3] truncate block">
-                        {storeConfig.whatsappDisplay || '+91 98794 51341'}
-                      </a>
-                    </div>
-                  </div>
-
 
                   {/* Retail Store Address */}
                   <div className="p-3 sm:p-3.5 rounded-xl sm:rounded-2xl bg-[#F5F5F7]/60 border border-black/5">

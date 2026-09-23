@@ -23,10 +23,11 @@ export function getAdminToken() {
  */
 export async function apiRequest(endpoint, options = {}) {
   const adminToken = getAdminToken();
+  const isAdminRoute = typeof endpoint === 'string' && endpoint.startsWith('/api/admin');
 
   const headers = {
     'Content-Type': 'application/json',
-    ...(adminToken ? { Authorization: `Bearer ${adminToken}` } : {}),
+    ...((isAdminRoute && adminToken) ? { Authorization: `Bearer ${adminToken}` } : {}),
     ...(options.headers || {}),
   };
 

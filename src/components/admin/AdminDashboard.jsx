@@ -13,7 +13,6 @@ import {
   ArrowRight,
   TrendingUp,
   Sparkles,
-  ShoppingBag,
   Clock,
   CheckCircle2,
   ExternalLink,
@@ -40,15 +39,6 @@ export const AdminDashboard = ({ onNavigate, onOpenAddProduct }) => {
   } = useCatalog();
 
   const metrics = [
-    {
-      title: 'Customer Orders',
-      value: 'Orders',
-      subtitle: 'Review incoming orders & bills',
-      icon: ShoppingBag,
-      bgLight: 'bg-[#F8FDF0]',
-      textColor: 'text-[#709E1E]',
-      action: () => onNavigate('orders'),
-    },
     {
       title: 'Total Products',
       value: catalogStats.totalProducts,

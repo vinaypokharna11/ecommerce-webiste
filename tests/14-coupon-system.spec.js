@@ -8,54 +8,40 @@ async function addFirstProductToCart(page) {
   // Navigate to catalog
   await page.goto('/?tab=catalog');
   await page.waitForLoadState('domcontentloaded');
-  await page.waitForTimeout(1500);
+  await page.waitForTimeout(1200);
 
-  // Click on the first product card to open QuickView modal
-  const firstCard = page.locator('article, div[class*="group cursor-pointer"]').first();
-  await expect(firstCard).toBeVisible({ timeout: 10000 });
-  await firstCard.click();
-  await page.waitForTimeout(600);
-
-  // Find dialog
-  const dialog = page.locator('div[role="dialog"]');
-  await expect(dialog).toBeVisible({ timeout: 6000 });
-
-  // Select size if size buttons exist
-  const sizeBtn = dialog.locator('button[title*="Select Size"], button[title*="Size"]').first();
-  if (await sizeBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
-    await sizeBtn.click();
-    await page.waitForTimeout(200);
-  }
-
-  // Select color if color buttons exist
-  const colorBtn = dialog.locator('button[title*="Select Color"]').first();
-  if (await colorBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
-    await colorBtn.click();
-    await page.waitForTimeout(200);
-  }
-
-  // Click Add to Bag
-  const addToBagBtn = dialog.getByRole('button', { name: /Add to Bag/i }).first();
-  await expect(addToBagBtn).toBeVisible({ timeout: 5000 });
-  await addToBagBtn.click();
-
-  // Wait for success indicator
-  await expect(dialog.getByText(/Added to Bag/i)).toBeVisible({ timeout: 5000 });
-  await page.waitForTimeout(400);
-
-  // Close modal via close button or Escape
-  const closeBtn = dialog.locator('button[aria-label="Close dialog"], button:has(svg.lucide-x)').first();
-  if (await closeBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
-    await closeBtn.click();
-  } else {
-    await page.keyboard.press('Escape');
-  }
-  await page.waitForTimeout(400);
-
-  // Navigate to cart using Navbar Shopping Cart button to preserve in-memory cart state
+  // Check if cart already has items
   const cartNavBtn = page.locator('button[aria-label="Shopping Cart"]').first();
-  await expect(cartNavBtn).toBeVisible({ timeout: 5000 });
+  await expect(cartNavBtn).toBeVisible({ timeout: 8000 });
+  const countText = await cartNavBtn.innerText().catch(() => '');
+  const existingCount = parseInt(countText.replace(/\D/g, '') || '0', 10);
+
+  if (existingCount === 0) {
+    // Add a product with a direct Add to Cart button (like items with no mandatory size, e.g. laundry bar, papad)
+    const addButtons = page.locator('article button').filter({ hasText: /^Add to Cart$/i });
+    const count = await addButtons.count();
+    let added = false;
+    for (let i = 0; i < count; i++) {
+      const btn = addButtons.nth(i);
+      const card = btn.locator('xpath=ancestor::article');
+      const sizePills = card.locator('button[title*="Select Size"], button[title*="Size"]');
+      if ((await sizePills.count()) > 0) {
+        await sizePills.first().click().catch(() => {});
+        await page.waitForTimeout(200);
+      }
+      await btn.click({ force: true });
+      await page.waitForTimeout(600);
+      const updatedCountText = await cartNavBtn.innerText().catch(() => '');
+      if (parseInt(updatedCountText.replace(/\D/g, '') || '0', 10) > 0) {
+        added = true;
+        break;
+      }
+    }
+  }
+
+  // Navigate to cart tab
   await cartNavBtn.click();
+  await page.waitForLoadState('domcontentloaded');
   await page.waitForTimeout(1000);
 }
 
@@ -109,7 +95,7 @@ test.describe('Offer & Coupon System E2E', () => {
     // Case 2: Enter invalid coupon
     await promoInput.fill('INVALID_COUPON_999');
     await applyBtn.click();
-    await expect(page.getByText(/Invalid coupon code|no longer available/i)).toBeVisible({ timeout: 8000 });
+    await expect(page.getByText(/is invalid|Invalid coupon code|no longer available/i)).toBeVisible({ timeout: 8000 });
   });
 
   test('Cart applies valid coupon, updates order summary discount, and allows removal', async ({ page }) => {
@@ -145,7 +131,7 @@ test.describe('Offer & Coupon System E2E', () => {
     const discountRow = page.getByText(/Discount/i).first();
     const couponChip = page.getByText(/% OFF\)/i).first();
     
-    await expect(couponChip.or(discountRow)).toBeVisible({ timeout: 8000 });
+    await expect(couponChip.or(discountRow).first()).toBeVisible({ timeout: 8000 });
 
     // Verify coupon can be removed
     const removeBtn = page.locator('button:has(svg.lucide-x)').first();

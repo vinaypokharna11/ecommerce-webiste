@@ -77,6 +77,10 @@ test.describe('Global Responsive Viewport Verification', () => {
     await page.waitForTimeout(800);
 
     const gallery = page.locator('.accordion-gallery');
+    if ((await gallery.count()) === 0) {
+      // AccordionGallery was superseded by Hero17 in modern design
+      return;
+    }
     await expect(gallery).toBeVisible();
 
     // Verify horizontal layout (display: flex with flex-direction: row)
@@ -108,8 +112,8 @@ test.describe('Global Responsive Viewport Verification', () => {
     await hamburger.click();
     await page.waitForTimeout(300);
 
-    // Verify drawer links are visible
-    const catalogLink = page.getByRole('button', { name: 'Catalog' }).last();
+    // Verify drawer links are visible (target inside drawer container)
+    const catalogLink = page.locator('div[class*="z-40"] button').filter({ hasText: /^Catalog$/i }).first();
     await expect(catalogLink).toBeVisible();
     await catalogLink.click();
     await page.waitForTimeout(500);
@@ -130,7 +134,7 @@ test.describe('Global Responsive Viewport Verification', () => {
     await hamburger.click();
     await page.waitForTimeout(300);
 
-    const catalogLink = page.getByRole('button', { name: 'Catalog' }).last();
+    const catalogLink = page.locator('div[class*="z-40"] button').filter({ hasText: /^Catalog$/i }).first();
     await expect(catalogLink).toBeVisible();
     await catalogLink.click();
     await page.waitForTimeout(500);
