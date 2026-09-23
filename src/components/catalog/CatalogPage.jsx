@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   SlidersHorizontal, 
   ChevronDown, 
@@ -10,6 +11,7 @@ import {
   X, 
   ShoppingBag,
   Search,
+  Check,
 } from 'lucide-react';
 import { useCatalog } from '@/context/CatalogContext';
 import { ProductCard } from '@/components/product/ProductCard';
@@ -17,6 +19,16 @@ import { FilterDrawer } from '@/components/product/FilterDrawer';
 import { QuickViewModal } from '@/components/common/QuickViewModal';
 import { CATALOG_CATEGORIES } from '@/data/mockData';
 import { createProductWhatsAppUrl } from '@/utils/whatsapp';
+
+export const SORT_OPTIONS = [
+  { id: 'featured', label: 'Featured', prefix: 'Sort: ' },
+  { id: 'popular', label: 'Popularity', prefix: 'Sort: ' },
+  { id: 'price-low', label: 'Price: Low to High', prefix: 'Price: ' },
+  { id: 'price-high', label: 'Price: High to Low', prefix: 'Price: ' },
+  { id: 'discount', label: 'Highest Discount', prefix: 'Discount: ' },
+  { id: 'rating', label: 'Top Rated', prefix: 'Rating: ' },
+  { id: 'newest', label: 'New Arrivals', prefix: 'Sort: ' },
+];
 
 export const CatalogPage = ({ 
   cartItems = {},
@@ -34,7 +46,24 @@ export const CatalogPage = ({
   const { products, storefrontCategories } = useCatalog();
   const [selectedCategory, setSelectedCategory] = useState(initialCategory || 'all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState('popular');
+  const [sortBy, setSortBy] = useState('featured');
+  const [isSortOpen, setIsSortOpen] = useState(false);
+  const sortDropdownRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (sortDropdownRef.current && !sortDropdownRef.current.contains(event.target)) {
+        setIsSortOpen(false);
+      }
+    }
+    if (isSortOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isSortOpen]);
+
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [quickViewProduct, setQuickViewProduct] = useState(null);
 
@@ -143,15 +172,47 @@ export const CatalogPage = ({
         return true;
       })
       .sort((a, b) => {
-        if (sortBy === 'price-low') return (a.price || 0) - (b.price || 0);
-        if (sortBy === 'price-high') return (b.price || 0) - (a.price || 0);
-        if (sortBy === 'newest') return (b.createdAt || b.id || '').localeCompare(a.createdAt || a.id || '');
-        if (sortBy === 'name-asc') return (a.name || '').localeCompare(b.name || '');
-        if (sortBy === 'name-desc') return (b.name || '').localeCompare(a.name || '');
-        if (sortBy === 'discount') return (b.discountPercent || 0) - (a.discountPercent || 0);
-        if (sortBy === 'rating') return (b.rating || 0) - (a.rating || 0);
-        // Default: popular / featured
-        return (b.isFeatured ? 1 : 0) - (a.isFeatured ? 1 : 0);
+        if (sortBy === 'price-low') {
+          return (Number(a.price) || 0) - (Number(b.price) || 0);
+        }
+        if (sortBy === 'price-high') {
+          return (Number(b.price) || 0) - (Number(a.price) || 0);
+        }
+        if (sortBy === 'discount') {
+          const discountDiff = (Number(b.discountPercent) || 0) - (Number(a.discountPercent) || 0);
+          if (discountDiff !== 0) return discountDiff;
+          const aSavings = (a.oldPrice && a.oldPrice > a.price) ? (a.oldPrice - a.price) : 0;
+          const bSavings = (b.oldPrice && b.oldPrice > b.price) ? (b.oldPrice - b.price) : 0;
+          return bSavings - aSavings;
+        }
+        if (sortBy === 'rating') {
+          const ratingDiff = (Number(b.rating) || 0) - (Number(a.rating) || 0);
+          if (ratingDiff !== 0) return ratingDiff;
+          return (Number(b.reviews) || 0) - (Number(a.reviews) || 0);
+        }
+        if (sortBy === 'newest') {
+          const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          if (bTime !== aTime) return bTime - aTime;
+          return String(b.id || '').localeCompare(String(a.id || ''));
+        }
+        if (sortBy === 'popular') {
+          const aPop = Boolean(a.isPopular || a.badge?.toLowerCase().includes('popular') || a.badgeType === 'popular');
+          const bPop = Boolean(b.isPopular || b.badge?.toLowerCase().includes('popular') || b.badgeType === 'popular');
+          if (bPop !== aPop) return (bPop ? 1 : 0) - (aPop ? 1 : 0);
+          const aScore = (Number(a.rating) || 0) * Math.min(Number(a.reviews) || 1, 50);
+          const bScore = (Number(b.rating) || 0) * Math.min(Number(b.reviews) || 1, 50);
+          if (bScore !== aScore) return bScore - aScore;
+          return (b.isFeatured ? 1 : 0) - (a.isFeatured ? 1 : 0);
+        }
+        // Default: 'featured'
+        if (Boolean(b.isFeatured) !== Boolean(a.isFeatured)) {
+          return (b.isFeatured ? 1 : 0) - (a.isFeatured ? 1 : 0);
+        }
+        if (Boolean(b.isPopular) !== Boolean(a.isPopular)) {
+          return (b.isPopular ? 1 : 0) - (a.isPopular ? 1 : 0);
+        }
+        return (Number(b.rating) || 0) - (Number(a.rating) || 0);
       });
   }, [products, filters, searchQuery, sortBy]);
 
@@ -320,20 +381,74 @@ export const CatalogPage = ({
               Showing <strong className="text-[#1D1D1F] font-semibold">{filteredProducts.length}</strong> products
             </span>
 
-            <div className="relative">
+            {/* Custom Interactive Sort Dropdown */}
+            <div className="relative" ref={sortDropdownRef}>
+              <button
+                type="button"
+                id="catalog-sort-button"
+                data-testid="catalog-sort-button"
+                onClick={() => setIsSortOpen((prev) => !prev)}
+                className="inline-flex items-center gap-2 pl-3.5 pr-3 py-2 rounded-full bg-white border border-black/[0.08] hover:border-black/20 text-xs font-semibold text-[#1D1D1F] focus:outline-none focus:ring-2 focus:ring-black/10 cursor-pointer shadow-2xs transition-all select-none"
+                aria-haspopup="listbox"
+                aria-expanded={isSortOpen}
+              >
+                <span>{(() => {
+                  const opt = SORT_OPTIONS.find((s) => s.id === sortBy) || SORT_OPTIONS[0];
+                  return `${opt.prefix}${opt.label}`;
+                })()}</span>
+                <ChevronDown className={`w-3.5 h-3.5 text-[#86868B] transition-transform duration-200 ${isSortOpen ? 'rotate-180 text-[#1D1D1F]' : ''}`} />
+              </button>
+
+              <AnimatePresence>
+                {isSortOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -6, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -6, scale: 0.98 }}
+                    transition={{ duration: 0.16, ease: 'easeOut' }}
+                    className="absolute right-0 top-full mt-2 w-52 bg-white rounded-2xl border border-black/[0.08] shadow-[0_12px_32px_rgba(0,0,0,0.14)] py-1.5 z-40 overflow-hidden"
+                    role="listbox"
+                    aria-label="Sort products"
+                  >
+                    {SORT_OPTIONS.map((opt) => {
+                      const isSelected = sortBy === opt.id;
+                      return (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          role="option"
+                          aria-selected={isSelected}
+                          onClick={() => {
+                            setSortBy(opt.id);
+                            setIsSortOpen(false);
+                          }}
+                          className={`w-full px-3.5 py-2 text-left text-xs font-medium flex items-center justify-between transition-colors cursor-pointer ${
+                            isSelected
+                              ? 'bg-[#F5F5F7] text-[#1D1D1F] font-bold'
+                              : 'text-[#444444] hover:bg-[#F5F5F7]/70 hover:text-[#1D1D1F]'
+                          }`}
+                        >
+                          <span>{opt.label}</span>
+                          {isSelected && <Check className="w-3.5 h-3.5 text-[#0071E3] shrink-0" />}
+                        </button>
+                      );
+                    })}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Accessible hidden select for screen readers and automated tests */}
               <select
+                aria-hidden="true"
+                tabIndex={-1}
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                className="appearance-none pl-3.5 pr-8 py-2 rounded-full bg-white border border-black/[0.08] text-xs font-semibold text-[#1D1D1F] focus:outline-none focus:border-[#1D1D1F] cursor-pointer shadow-2xs"
+                className="sr-only"
               >
-                <option value="popular">Sort: Featured</option>
-                <option value="price-low">Price: Low to High</option>
-                <option value="price-high">Price: High to Low</option>
-                <option value="discount">Highest Discount</option>
-                <option value="rating">Top Rated</option>
-                <option value="newest">New Arrivals</option>
+                {SORT_OPTIONS.map((opt) => (
+                  <option key={opt.id} value={opt.id}>{opt.prefix}{opt.label}</option>
+                ))}
               </select>
-              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#86868B] pointer-events-none" />
             </div>
           </div>
         </div>

@@ -1,9 +1,9 @@
+@import 'lenis/dist/lenis.css';
+@import '../components/ui/AccordionGallery.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-@import 'lenis/dist/lenis.css';
-@import '../components/ui/AccordionGallery.css';
 
 :root {
   /* ── Apple-Inspired Bright Premium Design Tokens ── */

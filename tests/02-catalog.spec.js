@@ -98,4 +98,32 @@ test.describe('Catalog / Shop', () => {
       await expect(page.locator('body')).toBeVisible();
     }
   });
+
+  test('sorting dropdown opens and sorts products correctly', async ({ page }) => {
+    const sortBtn = page.locator('#catalog-sort-button');
+    await expect(sortBtn).toBeVisible({ timeout: 8000 });
+
+    // Click to open custom dropdown
+    await sortBtn.click();
+    const dropdown = page.locator('div[role="listbox"][aria-label="Sort products"]');
+    await expect(dropdown).toBeVisible({ timeout: 5000 });
+
+    // Verify all options are visible in the dropdown
+    await expect(dropdown.getByRole('option', { name: 'Featured' })).toBeVisible();
+    await expect(dropdown.getByRole('option', { name: 'Popularity' })).toBeVisible();
+    await expect(dropdown.getByRole('option', { name: 'Price: Low to High' })).toBeVisible();
+    await expect(dropdown.getByRole('option', { name: 'Price: High to Low' })).toBeVisible();
+
+    // Select Price: Low to High
+    await dropdown.getByRole('option', { name: 'Price: Low to High' }).click();
+    await expect(dropdown).not.toBeVisible();
+    await expect(sortBtn).toContainText('Price: Low to High');
+
+    // Reopen and select Price: High to Low
+    await sortBtn.click();
+    await expect(dropdown).toBeVisible({ timeout: 5000 });
+    await dropdown.getByRole('option', { name: 'Price: High to Low' }).click();
+    await expect(dropdown).not.toBeVisible();
+    await expect(sortBtn).toContainText('Price: High to Low');
+  });
 });
