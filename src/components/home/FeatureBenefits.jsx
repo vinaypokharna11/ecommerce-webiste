@@ -2,14 +2,14 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { ShoppingBag, ShieldCheck, Clock, Sparkles } from 'lucide-react';
-import { FEATURE_BENEFITS } from '@/data/mockData';
+import { Truck, ShieldCheck, Headphones, ShoppingBag } from 'lucide-react';
+import { FEATURE_BENEFITS } from '@/data/constants';
 
 const iconMap = {
-  ShoppingBag,
+  Truck,
   ShieldCheck,
-  Clock,
-  Sparkles,
+  Headphones,
+  ShoppingBag,
 };
 
 export const FeatureBenefits = () => {
@@ -22,7 +22,7 @@ export const FeatureBenefits = () => {
 
             return (
               <motion.div
-                key={feature.id}
+                key={feature.title || idx}
                 initial={{ opacity: 0, y: 15 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
@@ -38,7 +38,7 @@ export const FeatureBenefits = () => {
                     {feature.title}
                   </h3>
                   <p className="text-[11px] sm:text-xs text-[#6E6E73] leading-relaxed font-normal">
-                    {feature.description}
+                    {feature.desc || feature.description}
                   </p>
                 </div>
               </motion.div>

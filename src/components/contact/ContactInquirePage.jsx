@@ -22,7 +22,7 @@ import {
   FAQS_DATA, 
   STORE_LOCATION_DETAILS, 
   STORE_CONFIG 
-} from '@/data/mockData';
+} from '@/data/constants';
 import { 
   createHelpWhatsAppUrl, 
   createInquiryWhatsAppUrl, 
@@ -864,7 +864,7 @@ export const ContactInquirePage = ({
                     className="w-full p-3.5 sm:p-5 flex items-center justify-between text-left gap-3 sm:gap-4 cursor-pointer"
                   >
                     <span className="text-xs sm:text-sm font-extrabold text-[#1D1D1F] leading-snug">
-                      {faq.question}
+                      {faq.question || faq.q}
                     </span>
                     <ChevronDown
                       className={`w-4 h-4 text-[#5F8C1D] transition-transform duration-300 shrink-0 ${
@@ -882,7 +882,7 @@ export const ContactInquirePage = ({
                         transition={{ duration: 0.25 }}
                       >
                         <div className="px-3.5 sm:px-5 pb-3.5 sm:pb-5 pt-0 text-xs sm:text-sm text-[#555555] leading-relaxed border-t border-[#0071E3]/30 mt-1">
-                          {faq.answer}
+                          {faq.answer || faq.a}
                         </div>
                       </motion.div>
                     )}

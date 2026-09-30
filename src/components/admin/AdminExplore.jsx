@@ -27,7 +27,7 @@ import {
   Image as ImageIcon
 } from 'lucide-react';
 import { useCatalog } from '../../context/CatalogContext';
-import { DEFAULT_EXPLORE_SECTION } from '../../data/mockData';
+import { DEFAULT_EXPLORE_SECTION } from '@/data/constants';
 import { uploadToCloudinary } from '../../lib/uploadClient';
 import { InfiniteMenu } from '@/components/ui/InfiniteMenu';
 import { ExploreSectionSettings } from './explore/ExploreSectionSettings';

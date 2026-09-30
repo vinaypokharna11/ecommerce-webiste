@@ -24,7 +24,7 @@ import {
   FileSpreadsheet,
 } from 'lucide-react';
 import { useCatalog } from '../../context/CatalogContext';
-import { STORE_CONFIG } from '../../data/mockData';
+import { STORE_CONFIG } from '@/data/constants';
 
 export const AdminDashboard = ({ onNavigate, onOpenAddProduct }) => {
   const {

@@ -34,7 +34,7 @@ import {
   AlertCircle,
   Heart,
 } from 'lucide-react';
-import { STORE_CONFIG } from '@/data/mockData';
+import { STORE_CONFIG } from '@/data/constants';
 import { useAuth } from '@/context/AuthContext';
 import { firePartyPopper } from '@/utils/confetti';
 import { formatPrice } from '@/utils/formatPrice';

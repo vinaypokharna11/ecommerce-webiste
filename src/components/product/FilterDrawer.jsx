@@ -4,7 +4,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SlidersHorizontal, X, Check, Search, RotateCcw } from 'lucide-react';
 import { useCatalog } from '@/context/CatalogContext';
-import { CATALOG_CATEGORIES, STORE_CONFIG } from '@/data/mockData';
+import { CATALOG_CATEGORIES, STORE_CONFIG } from '@/data/constants';
 import { formatPrice } from '@/utils/formatPrice';
 
 export const FilterDrawer = ({

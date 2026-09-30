@@ -2,14 +2,13 @@
 
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { 
-  CATALOG_PRODUCTS as DEFAULT_PRODUCTS, 
   CATALOG_CATEGORIES as DEFAULT_CATALOG_CATEGORIES, 
   CATEGORIES as DEFAULT_HOME_CATEGORIES,
   STORE_CONFIG as DEFAULT_STORE_CONFIG,
   DEFAULT_EXPLORE_SECTION,
   DEFAULT_HERO_SHOWCASE,
   HERO_ASSETS
-} from '../data/mockData';
+} from '../data/constants';
 
 // Initial default offers
 export const DEFAULT_OFFERS = [
@@ -145,14 +144,14 @@ const STORAGE_KEYS = {
 
 const CatalogContext = createContext(null);
 
-export const CatalogProvider = ({ children }) => {
+export const CatalogProvider = ({ children, initialData = null }) => {
   // 1. Deterministic Initial States (Guarantees matching Server HTML and initial Client DOM)
-  const [products, setProducts] = useState(DEFAULT_PRODUCTS);
-  const [categories, setCategories] = useState(INITIAL_CATEGORIES);
-  const [offers, setOffers] = useState(DEFAULT_OFFERS);
-  const [storeConfig, setStoreConfig] = useState(DEFAULT_STORE_CONFIG);
-  const [exploreSection, setExploreSection] = useState(DEFAULT_EXPLORE_SECTION);
-  const [heroShowcase, setHeroShowcase] = useState(DEFAULT_HERO_SHOWCASE);
+  const [products, setProducts] = useState(() => initialData?.products || []);
+  const [categories, setCategories] = useState(() => initialData?.categories || INITIAL_CATEGORIES);
+  const [offers, setOffers] = useState(() => initialData?.offers || DEFAULT_OFFERS);
+  const [storeConfig, setStoreConfig] = useState(() => initialData?.storeConfig || DEFAULT_STORE_CONFIG);
+  const [exploreSection, setExploreSection] = useState(() => initialData?.exploreSection || DEFAULT_EXPLORE_SECTION);
+  const [heroShowcase, setHeroShowcase] = useState(() => initialData?.heroShowcase || DEFAULT_HERO_SHOWCASE);
   const [activities, setActivities] = useState(() => [
     { id: 1, title: 'Store Catalog Initialized', time: 'Just now', type: 'system', icon: 'Sparkles' },
     { id: 2, title: '16 default products loaded', time: 'Just now', type: 'product', icon: 'Package' },
@@ -160,6 +159,22 @@ export const CatalogProvider = ({ children }) => {
   ]);
 
   const isHydratedRef = useRef(false);
+
+  // Synchronize states if initialData updates from server
+  useEffect(() => {
+    if (initialData?.products && Array.isArray(initialData.products) && initialData.products.length > 0) {
+      setProducts(initialData.products);
+    }
+    if (initialData?.categories && Array.isArray(initialData.categories)) {
+      setCategories(initialData.categories);
+    }
+    if (initialData?.offers && Array.isArray(initialData.offers)) {
+      setOffers(initialData.offers);
+    }
+    if (initialData?.storeConfig) {
+      setStoreConfig(initialData.storeConfig);
+    }
+  }, [initialData]);
 
   // Load user settings and transient metadata on mount
   useEffect(() => {

@@ -3,7 +3,7 @@
 import React from 'react';
 import { Hero17 } from '@/components/ui/hero-17';
 import { useCatalog } from '@/context/CatalogContext';
-import { DEFAULT_HERO_SHOWCASE } from '@/data/mockData';
+import { DEFAULT_HERO_SHOWCASE } from '@/data/constants';
 
 /**
  * HeroSection

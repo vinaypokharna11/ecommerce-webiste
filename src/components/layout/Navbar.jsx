@@ -20,7 +20,7 @@ import {
   Home,
   ArrowRight
 } from 'lucide-react';
-import { STORE_CONFIG, NAV_ITEMS } from '@/data/mockData';
+import { STORE_CONFIG, NAV_ITEMS } from '@/data/constants';
 import { useAuth } from '@/context/AuthContext';
 
 /**
@@ -37,6 +37,7 @@ export const Navbar = ({
   onExploreClick,
   user: propUser,
   isLogoHidden = false,
+  isHidden = false,
 }) => {
   const router = useRouter();
   const pathname = usePathname();
@@ -223,11 +224,14 @@ export const Navbar = ({
       <header
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-        className={`fixed top-0 left-0 right-0 z-50 w-full transition-transform duration-300 ease-in-out ${isVisible ? 'translate-y-0' : '-translate-y-full pointer-events-none'
-          } ${scrolled
+        className={`fixed top-0 left-0 right-0 z-50 w-full transition-all duration-500 ease-out ${
+          isHidden
+            ? 'opacity-0 pointer-events-none translate-y-0'
+            : (isVisible ? 'opacity-100 translate-y-0' : '-translate-y-full pointer-events-none')
+        } ${scrolled
             ? 'bg-white/85 backdrop-blur-xl border-b border-black/[0.06] shadow-sm py-2.5 sm:py-3.5'
             : 'bg-[#FBFBFD]/90 backdrop-blur-md border-b border-black/[0.04] py-2.5 xs:py-3 sm:py-5'
-          }`}
+        }`}
       >
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-10 flex items-center justify-between gap-2 sm:gap-5">
 

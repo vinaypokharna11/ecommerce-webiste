@@ -6,7 +6,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShoppingBag, ArrowRight } from 'lucide-react';
-import { STORE_CONFIG } from '@/data/mockData';
+import { STORE_CONFIG } from '@/data/constants';
 import { formatPrice } from '@/utils/formatPrice';
 
 /**

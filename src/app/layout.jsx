@@ -4,6 +4,9 @@ import { DM_Sans } from 'next/font/google';
 import { CatalogProvider } from '@/context/CatalogContext';
 import { AuthProvider } from '@/context/AuthContext';
 import { AuthModal, SmoothScrollProvider, GsapScrollAnimations, NavigationProgressBar } from '@/components';
+import { getCatalogBundle } from '@/lib/db';
+
+export const dynamic = 'force-dynamic';
 
 const dmSans = DM_Sans({
   subsets: ['latin'],
@@ -40,7 +43,15 @@ export const viewport = {
   themeColor: '#FFFFFF',
 };
 
-export default function RootLayout({ children }) {
+export default async function RootLayout({ children }) {
+  let initialCatalog = null;
+  try {
+    const rawBundle = await getCatalogBundle();
+    initialCatalog = rawBundle ? JSON.parse(JSON.stringify(rawBundle)) : null;
+  } catch (error) {
+    console.error('Failed to pre-fetch catalog in RootLayout:', error);
+  }
+
   return (
     <html lang="en" className={dmSans.variable} suppressHydrationWarning>
       <head>
@@ -52,7 +63,7 @@ export default function RootLayout({ children }) {
       >
         <SmoothScrollProvider>
           <AuthProvider>
-            <CatalogProvider>
+            <CatalogProvider initialData={initialCatalog}>
               <GsapScrollAnimations>
                 <Suspense fallback={null}>
                   <NavigationProgressBar />

@@ -17,7 +17,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import Image from 'next/image';
-import { STORE_CONFIG } from '@/data/mockData';
+import { STORE_CONFIG } from '@/data/constants';
 import { createProductWhatsAppUrl } from '@/utils/whatsapp';
 import { formatPrice } from '@/utils/formatPrice';
 import { 

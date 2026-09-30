@@ -17,13 +17,15 @@ export async function GET(request) {
     const includeDeleted = Boolean(admin && searchParams.get('includeDeleted') === 'true');
 
     const products = await getProducts({ category, search, stockStatus, isPopular, isFeatured, includeDeleted });
+    const cacheHeader = includeDeleted
+      ? 'no-store, no-cache, must-revalidate, proxy-revalidate'
+      : 'public, s-maxage=15, stale-while-revalidate=59';
+
     return NextResponse.json(
       { success: true, count: products.length, products },
       {
         headers: {
-          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0',
+          'Cache-Control': cacheHeader,
         },
       }
     );

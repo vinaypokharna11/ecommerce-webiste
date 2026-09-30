@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Mail, Phone, MapPin, ArrowRight } from 'lucide-react';
-import { STORE_CONFIG } from '@/data/mockData';
+import { STORE_CONFIG } from '@/data/constants';
 import { useCatalog } from '@/context/CatalogContext';
 import { TextScatter, ScatterItem } from '@/components';
 

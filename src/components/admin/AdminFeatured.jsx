@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { useCatalog } from '../../context/CatalogContext';
 import { BADGE_PRESETS } from './adminConstants';
-import { STORE_CONFIG } from '../../data/mockData';
+import { STORE_CONFIG } from '@/data/constants';
 
 export const AdminFeatured = () => {
   const { products, togglePopular, toggleFeatured, updateProduct } = useCatalog();

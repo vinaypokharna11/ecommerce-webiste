@@ -26,7 +26,7 @@ import {
   LayoutGrid
 } from 'lucide-react';
 import { useCatalog } from '../../context/CatalogContext';
-import { DEFAULT_HERO_SHOWCASE } from '../../data/mockData';
+import { DEFAULT_HERO_SHOWCASE } from '@/data/constants';
 import { uploadToCloudinary } from '../../lib/uploadClient';
 
 // Quick image presets available in the app

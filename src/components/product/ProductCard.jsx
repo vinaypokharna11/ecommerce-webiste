@@ -7,7 +7,7 @@ import { motion } from 'framer-motion';
 import { Heart, ShoppingBag, Eye, Plus, Minus } from 'lucide-react';
 import { formatPrice } from '@/utils/formatPrice';
 import { getProductColors, getProductSizes } from '@/utils/productOptions';
-import { STORE_CONFIG } from '@/data/mockData';
+import { STORE_CONFIG } from '@/data/constants';
 
 export const ProductCardComponent = ({
   product,
@@ -223,6 +223,7 @@ export const ProductCardComponent = ({
                 ? 'opacity-100'
                 : 'opacity-0 pointer-events-none'
                 }`}
+              loading="lazy"
               priority={false}
             />
           )}

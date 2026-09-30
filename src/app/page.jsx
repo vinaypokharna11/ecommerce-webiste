@@ -79,22 +79,19 @@ function StorefrontContent() {
   const [isClientStorageLoaded, setIsClientStorageLoaded] = useState(false);
 
   // Brand Loading Screen & Navbar Morph Animation state (session-aware)
-  const [isBrandLoading, setIsBrandLoading] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    try {
-      return sessionStorage.getItem('nakoda_brand_loaded') !== 'true';
-    } catch (e) {
-      return false;
-    }
-  });
-  const [isLogoHidden, setIsLogoHidden] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    try {
-      return sessionStorage.getItem('nakoda_brand_loaded') !== 'true';
-    } catch (e) {
-      return false;
-    }
-  });
+  const [isBrandLoading, setIsBrandLoading] = useState(true);
+  const [isWebsiteReady, setIsWebsiteReady] = useState(false);
+  const [isLogoHidden, setIsLogoHidden] = useState(true);
+
+  // Safety fallback: ensure website is always revealed after 2.5s maximum
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsWebsiteReady(true);
+      setIsLogoHidden(false);
+      setIsBrandLoading(false);
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Synchronize activeTab whenever searchParams changes (e.g. Back/Forward navigation, direct links)
   useEffect(() => {
@@ -771,12 +768,18 @@ function StorefrontContent() {
       {/* Brand Loading Screen with Navbar Morph Animation */}
       {isBrandLoading && (
         <BrandLoadingScreen
-          onLanded={() => setIsLogoHidden(false)}
-          onComplete={() => setIsBrandLoading(false)}
+          onLanded={() => {
+            setIsLogoHidden(false);
+            setIsWebsiteReady(true);
+          }}
+          onComplete={() => {
+            setIsWebsiteReady(true);
+            setIsBrandLoading(false);
+          }}
         />
       )}
 
-      {/* Primary Navigation Header */}
+      {/* Primary Navigation Header (Hidden until website is ready) */}
       <Navbar
         cartCount={totalCartCount}
         wishlistCount={Object.keys(wishlist).length}
@@ -785,10 +788,12 @@ function StorefrontContent() {
         onExploreClick={handleExploreCatalog}
         user={user}
         isLogoHidden={isLogoHidden}
+        isHidden={!isWebsiteReady}
       />
 
-      {/* Main Content Area: Home, Catalog, Offers, Contact, Cart, Profile */}
-      <main className="flex-1 w-full">
+      {/* Main Content Area & Footer: Revealed ONLY after website is loaded properly */}
+      <div className={`flex-1 flex flex-col transition-opacity duration-600 ease-out ${isWebsiteReady ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+        <main className="flex-1 w-full">
         {activeTab === 'home' && (
           <>
             <HeroSection 
@@ -887,7 +892,8 @@ function StorefrontContent() {
 
 
       {/* Footer */}
-      <Footer onLinkClick={handleFooterLinkClick} />
+        <Footer onLinkClick={handleFooterLinkClick} />
+      </div>
 
       {/* Interactive Micro-Toasts */}
       <Toast toasts={toasts} onDismiss={handleDismissToast} />

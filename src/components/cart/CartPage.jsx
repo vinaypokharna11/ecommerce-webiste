@@ -24,7 +24,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import Image from 'next/image';
-import { STORE_CONFIG } from '@/data/mockData';
+import { STORE_CONFIG } from '@/data/constants';
 import { useAuth } from '@/context/AuthContext';
 import { useCatalog } from '@/context/CatalogContext';
 import { firePartyPopper } from '@/utils/confetti';

@@ -34,7 +34,7 @@ import { useCatalog } from '../../context/CatalogContext';
 import { AdminProductModal } from './AdminProductModal';
 import { AdminBulkImportModal } from './AdminBulkImportModal';
 import { generateProductImportTemplate } from '../../utils/excelTemplate';
-import { STORE_CONFIG } from '../../data/mockData';
+import { STORE_CONFIG } from '@/data/constants';
 import { createProductWhatsAppUrl } from '../../utils/whatsapp';
 
 export const AdminProducts = ({ onPreviewStore, initialCategory = 'all', onCategoryChange }) => {

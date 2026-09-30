@@ -17,7 +17,7 @@ import { useCatalog } from '@/context/CatalogContext';
 import { ProductCard } from '@/components/product/ProductCard';
 import { FilterDrawer } from '@/components/product/FilterDrawer';
 import { QuickViewModal } from '@/components/common/QuickViewModal';
-import { CATALOG_CATEGORIES } from '@/data/mockData';
+import { CATALOG_CATEGORIES } from '@/data/constants';
 import { createProductWhatsAppUrl } from '@/utils/whatsapp';
 
 export const SORT_OPTIONS = [

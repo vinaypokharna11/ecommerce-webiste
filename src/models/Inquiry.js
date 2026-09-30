@@ -25,4 +25,7 @@ const InquirySchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+InquirySchema.index({ createdAt: -1 });
+InquirySchema.index({ status: 1, createdAt: -1 });
+
 export default mongoose.models.Inquiry || mongoose.model('Inquiry', InquirySchema);

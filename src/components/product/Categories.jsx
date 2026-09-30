@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useCatalog } from '@/context/CatalogContext';
-import { CATALOG_CATEGORIES } from '@/data/mockData';
+import { CATALOG_CATEGORIES, DEFAULT_EXPLORE_SECTION } from '@/data/constants';
 import { InfiniteMenu } from '@/components/ui/InfiniteMenu';
 
 /**
@@ -29,9 +29,9 @@ export const Categories = ({
     : rawTitle;
   const sectionSubtitle = exploreSection?.subtitle || 'Find exactly what you’re looking for across our curated lifestyle, grocery, apparel, and travel categories.';
 
-  const rawCollections = Array.isArray(exploreSection?.collections)
+  const rawCollections = (Array.isArray(exploreSection?.collections) && exploreSection.collections.length > 0)
     ? exploreSection.collections
-    : [];
+    : (Array.isArray(DEFAULT_EXPLORE_SECTION?.collections) ? DEFAULT_EXPLORE_SECTION.collections : []);
 
   // Filter active and non-deleted collections and sort by order
   const displayCollections = rawCollections

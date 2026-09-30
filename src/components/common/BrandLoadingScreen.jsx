@@ -24,18 +24,19 @@ export const BrandLoadingScreen = ({ onLanded, onComplete }) => {
   const brandText = 'Nakoda Imitation';
   const letters = Array.from(brandText);
 
+  // Master safety timeout: ensure loading finishes even on network slowdown
+  useEffect(() => {
+    const safety = setTimeout(() => {
+      if (onLanded) onLanded();
+      if (onComplete) onComplete();
+      setPhase('completed');
+    }, 3800);
+    return () => clearTimeout(safety);
+  }, [onLanded, onComplete]);
+
   // Check reduced-motion preference and session state on mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      try {
-        if (sessionStorage.getItem('nakoda_brand_loaded') === 'true') {
-          if (onLanded) onLanded();
-          if (onComplete) onComplete();
-          setPhase('completed');
-          return;
-        }
-      } catch (e) {}
-
       const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
       setReducedMotion(mediaQuery.matches);
       const listener = (e) => setReducedMotion(e.matches);
@@ -44,10 +45,10 @@ export const BrandLoadingScreen = ({ onLanded, onComplete }) => {
     }
   }, [onLanded, onComplete]);
 
-  // Ready State Trigger: Snappy minimum display floor combined with asset readiness
+  // Ready State Trigger: Smooth 1.4s display floor matching progress bar and letters
   useEffect(() => {
     let isCancelled = false;
-    const minDelay = new Promise((resolve) => setTimeout(resolve, 350));
+    const minDelay = new Promise((resolve) => setTimeout(resolve, 1400));
 
     const checkReady = new Promise((resolve) => {
       if (typeof document !== 'undefined') {
@@ -59,11 +60,10 @@ export const BrandLoadingScreen = ({ onLanded, onComplete }) => {
             resolve();
           };
           window.addEventListener('load', onLoad);
-          // Fallback safety: don't hang if external assets/images are slow
           const fallbackTimer = setTimeout(() => {
             window.removeEventListener('load', onLoad);
             resolve();
-          }, 800);
+          }, 1200);
         }
       } else {
         resolve();
@@ -91,7 +91,6 @@ export const BrandLoadingScreen = ({ onLanded, onComplete }) => {
     };
 
     if (reducedMotion) {
-      // For reduced motion users, skip physical fly and cross-fade directly
       if (onLanded) onLanded();
       const fadeTimer = setTimeout(() => {
         setPhase('landed');
@@ -105,20 +104,19 @@ export const BrandLoadingScreen = ({ onLanded, onComplete }) => {
       return () => clearTimeout(fadeTimer);
     }
 
-    // 1. Give sub-elements 80ms to fade out cleanly
+    // 1. Give sub-elements 160ms to fade out smoothly before flight
     const prepTimer = setTimeout(() => {
       const sourceEl = sourceRef.current;
       const targetEl = document.getElementById('navbar-brand-logo');
 
       if (!sourceEl || !targetEl) {
-        // Fallback if target element isn't in DOM
         if (onLanded) onLanded();
         setPhase('landed');
         setTimeout(() => {
           setPhase('completed');
           markSessionLoaded();
           if (onComplete) onComplete();
-        }, 180);
+        }, 200);
         return;
       }
 
@@ -126,7 +124,6 @@ export const BrandLoadingScreen = ({ onLanded, onComplete }) => {
       const sourceRect = sourceEl.getBoundingClientRect();
       const targetRect = targetEl.getBoundingClientRect();
 
-      // Measure target N icon or target logo bounds
       const sourceCenterX = sourceRect.left + sourceRect.width / 2;
       const sourceCenterY = sourceRect.top + sourceRect.height / 2;
 
@@ -137,32 +134,32 @@ export const BrandLoadingScreen = ({ onLanded, onComplete }) => {
       const deltaY = targetCenterY - sourceCenterY;
       const scale = targetRect.height / sourceRect.height;
 
-      // 3. Initiate the Fly Phase
+      // 3. Initiate the Smooth Fly Phase with graceful Apple-spring curve
       setPhase('flying');
       setTransformStyle({
         transform: `translate3d(${deltaX}px, ${deltaY}px, 0) scale(${scale})`,
-        transition: 'transform 420ms cubic-bezier(0.25, 1, 0.5, 1)',
+        transition: 'transform 650ms cubic-bezier(0.16, 1, 0.3, 1)',
         transformOrigin: 'center center',
         willChange: 'transform',
       });
 
-      // 4. Landed event when fly animation completes
+      // 4. Landed event when fly animation completes seamlessly
       const flightTimer = setTimeout(() => {
         setPhase('landed');
         if (onLanded) onLanded();
 
-        // 5. Fade out background overlay and unmount
+        // 5. Fade out background overlay gracefully and unmount
         const completionTimer = setTimeout(() => {
           setPhase('completed');
           markSessionLoaded();
           if (onComplete) onComplete();
-        }, 200);
+        }, 350);
 
         return () => clearTimeout(completionTimer);
-      }, 420);
+      }, 650);
 
       return () => clearTimeout(flightTimer);
-    }, 80);
+    }, 160);
 
     return () => clearTimeout(prepTimer);
   }, [phase, reducedMotion, onLanded, onComplete]);
@@ -177,8 +174,8 @@ export const BrandLoadingScreen = ({ onLanded, onComplete }) => {
       role="status"
       aria-live="polite"
       aria-busy={phase !== 'landed'}
-      className={`fixed inset-0 z-[9999] flex flex-col items-center justify-center select-none pointer-events-none transition-opacity duration-350 ease-out ${
-        phase === 'landed' ? 'opacity-0' : 'opacity-100'
+      className={`fixed inset-0 z-[99999] flex flex-col items-center justify-center select-none transition-opacity duration-400 ease-out ${
+        phase === 'landed' ? 'opacity-0 pointer-events-none' : 'opacity-100 pointer-events-auto'
       } bg-[#FBFBFD]`}
       style={{
         background: 'radial-gradient(ellipse at 50% 45%, #FFFFFF 0%, #F5F5F7 100%)',

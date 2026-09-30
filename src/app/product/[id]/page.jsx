@@ -7,7 +7,7 @@ import { getProductByIdDB } from '@/lib/db';
 import { ProductReviews } from '@/components/product/ProductReviews';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
-import { STORE_CONFIG } from '@/data/mockData';
+import { STORE_CONFIG } from '@/data/constants';
 import { formatPrice } from '@/utils/formatPrice';
 import { TrackProductView } from '@/components/product/TrackProductView';
 import { ProductGallery } from '@/components/product/ProductGallery';

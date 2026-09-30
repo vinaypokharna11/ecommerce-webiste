@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { chatService } from '@/services/chatService';
 import { formatPrice } from '@/utils/formatPrice';
-import { STORE_CONFIG } from '@/data/mockData';
+import { STORE_CONFIG } from '@/data/constants';
 
 export function UnifiedChatWindow({
   conversationId: propConversationId,

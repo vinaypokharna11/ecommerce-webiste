@@ -1,4 +1,4 @@
-import { STORE_CONFIG } from '../data/mockData';
+import { STORE_CONFIG } from '@/data/constants';
 import { formatPrice } from './formatPrice';
 
 /**

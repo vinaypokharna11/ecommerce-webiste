@@ -35,4 +35,7 @@ const OfferSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+OfferSchema.index({ code: 1, isDeleted: 1, status: 1 });
+OfferSchema.index({ createdAt: -1 });
+
 export default mongoose.models.Offer || mongoose.model('Offer', OfferSchema);

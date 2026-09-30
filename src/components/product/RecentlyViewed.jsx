@@ -4,7 +4,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { ShoppingBag, Eye, Star, Heart, ArrowRight } from 'lucide-react';
 import Image from 'next/image';
-import { STORE_CONFIG } from '@/data/mockData';
+import { STORE_CONFIG } from '@/data/constants';
 import { formatPrice } from '@/utils/formatPrice';
 import { getProductSizes } from '@/utils/productOptions';
 
