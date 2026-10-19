@@ -56,7 +56,7 @@ const QuickViewModal = dynamic(() => import('@/components/common/QuickViewModal'
 import { useCatalog } from '@/context/CatalogContext';
 import { useAuth } from '@/context/AuthContext';
 import { createHelpWhatsAppUrl } from '@/utils/whatsapp';
-import { getProductSizes } from '@/utils/productOptions';
+import { getProductSizes, getProductAvailableSizes } from '@/utils/productOptions';
 import { motion } from 'framer-motion';
 
 function StorefrontContent() {
@@ -459,7 +459,7 @@ function StorefrontContent() {
     }
 
     // Require explicit size selection if product has sizes (clothing & shoes)
-    const availableSizes = getProductSizes(product);
+    const availableSizes = getProductAvailableSizes(product);
     if (availableSizes.length > 0 && !product.selectedSize && !product.selectedVariant) {
       addToast('error', 'Select Size First ⚠️', `Please select a size for "${product.name}" before adding to your bag.`);
       return;

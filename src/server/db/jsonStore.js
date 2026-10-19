@@ -19,15 +19,12 @@ const IS_SERVERLESS = Boolean(
 );
 
 export const LOCAL_DB_PATH = path.join(process.cwd(), 'src', 'data', 'db.json');
-export const LOCAL_SEED_TEMPLATE_PATH = path.join(process.cwd(), 'src', 'data', 'seedTemplate.json');
 
 export const DB_FILE_PATH = IS_SERVERLESS
   ? path.join(os.tmpdir(), 'nakoda_db.json')
   : LOCAL_DB_PATH;
 
-export const SEED_TEMPLATE_PATH = IS_SERVERLESS
-  ? path.join(os.tmpdir(), 'nakoda_seedTemplate.json')
-  : LOCAL_SEED_TEMPLATE_PATH;
+
 
 export const INITIAL_DB_STATE = {
   isInitialized: false,

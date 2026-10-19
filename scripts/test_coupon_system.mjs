@@ -1,3 +1,18 @@
+import fs from 'fs';
+
+// Pre-load MONGODB_URI if executing outside Next.js runtime
+if (!process.env.MONGODB_URI) {
+  for (const envFile of ['.env.local', '.env']) {
+    if (fs.existsSync(envFile)) {
+      const match = fs.readFileSync(envFile, 'utf8').match(/MONGODB_URI=(.+)/);
+      if (match) {
+        process.env.MONGODB_URI = match[1].trim();
+        break;
+      }
+    }
+  }
+}
+
 import connectToDatabase from '../src/lib/mongodb.js';
 import Offer from '../src/models/Offer.js';
 import CouponUsage from '../src/models/CouponUsage.js';
@@ -13,7 +28,6 @@ import {
   updateOrderStatus,
 } from '../src/lib/db.js';
 
-import fs from 'fs';
 
 let passed = 0;
 let failed = 0;

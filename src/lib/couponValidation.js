@@ -184,7 +184,18 @@ export async function validateCoupon({ couponCode, userId = null, items = [], ca
   if (offerCategory !== 'all') {
     const eligibleItems = safeItems.filter((item) => {
       const itemCat = String(item.category || item.categoryId || '').toLowerCase().trim();
-      return itemCat === offerCategory || itemCat.includes(offerCategory) || offerCategory.includes(itemCat);
+      const isClothingMatch =
+        (offerCategory === 'clothing' || offerCategory === 'fashion') &&
+        (itemCat === 'clothing' ||
+          itemCat === 'fashion' ||
+          itemCat.includes('dress') ||
+          itemCat.includes('shirt') ||
+          itemCat.includes('kurti') ||
+          itemCat.includes('apparel') ||
+          itemCat.includes('undergarment') ||
+          itemCat.includes('pant') ||
+          itemCat.includes('denim'));
+      return isClothingMatch || itemCat === offerCategory || itemCat.includes(offerCategory) || offerCategory.includes(itemCat);
     });
 
     if (safeItems.length > 0 && eligibleItems.length === 0) {

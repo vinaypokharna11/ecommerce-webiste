@@ -44,8 +44,14 @@ export const isFootwearProduct = (product) => {
   );
 };
 
+/** Helper to normalize size strings like 'size : XL' -> 'XL' */
+export const normalizeSize = (sz) => {
+  if (!sz) return '';
+  return String(sz).replace(/^size\s*:\s*/i, '').trim();
+};
+
 /** Default size sets for each category type */
-const CLOTHING_SIZES = ['S', 'M', 'L', 'XL', 'XXL'];
+const CLOTHING_SIZES = ['S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
 const FOOTWEAR_SIZES = ['UK 7', 'UK 8', 'UK 9', 'UK 10', 'UK 11'];
 
 /**
@@ -70,12 +76,13 @@ export const getAllProductSizes = (product) => {
   if (Array.isArray(product.sizes) && product.sizes.length > 0) {
     // Merge: default set + any extra product-specific sizes not in defaults
     const merged = [...defaultSizes];
-    for (const sz of product.sizes) {
-      if (!merged.includes(sz)) {
+    for (const rawSz of product.sizes) {
+      const sz = normalizeSize(rawSz);
+      if (sz && !merged.includes(sz)) {
         merged.push(sz);
       }
     }
-    return merged.length > 0 ? merged : product.sizes;
+    return merged.length > 0 ? merged : product.sizes.map(normalizeSize).filter(Boolean);
   }
 
   return defaultSizes;
@@ -92,20 +99,27 @@ export const getAllProductSizes = (product) => {
 export const isProductSizeAvailable = (product, size) => {
   if (!product || !size) return false;
 
-  // If entire product is marked out of stock and no explicit availableSizes are declared
-  if (product.stockStatus === 'out_of_stock' && (!Array.isArray(product.availableSizes) || product.availableSizes.length === 0)) {
+  // If entire product is marked out of stock or stockCount is 0
+  const isOutOfStock =
+    product.stockStatus === 'out_of_stock' ||
+    (typeof product.stockCount === 'number' && product.stockCount <= 0);
+
+  if (isOutOfStock && (!Array.isArray(product.availableSizes) || product.availableSizes.length === 0)) {
     return false;
   }
 
+  const normTargetSize = normalizeSize(size);
+
   // If explicit availableSizes array is provided
   if (Array.isArray(product.availableSizes)) {
-    return product.availableSizes.includes(size);
+    return product.availableSizes.map(normalizeSize).includes(normTargetSize);
   }
 
   // If product has explicit sizes array from the database,
   // only sizes IN that array are available — others get a cross
   if (Array.isArray(product.sizes) && product.sizes.length > 0) {
-    if (!product.sizes.includes(size)) {
+    const normDbSizes = product.sizes.map(normalizeSize);
+    if (!normDbSizes.includes(normTargetSize)) {
       return false;
     }
   }

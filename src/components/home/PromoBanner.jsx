@@ -42,9 +42,9 @@ export const PromoBanner = ({ onCheckOffers }) => {
               {/* Subtitle with Campaign Quote */}
               <p
                 style={{ color: '#FFFFFF' }}
-                className="!text-white text-white text-xs sm:text-sm lg:text-base max-w-xl font-normal leading-relaxed"
+                className="!text-white text-white text-white/90 text-xs sm:text-sm lg:text-base max-w-xl font-normal leading-relaxed"
               >
-                &ldquo;Don&apos;t just carry memories, carry better!&rdquo; Bring in any old luggage bag and take home a brand-new, durable 360&deg; spinner trolley with guaranteed best exchange value.
+                Enjoy festival discounts on cabin spinner trolleys. &ldquo;Don&apos;t just carry memories, carry better!&rdquo; Bring in any old luggage bag and take home a brand-new, durable 360&deg; spinner trolley with guaranteed best exchange value.
               </p>
 
               {/* Compact Benefits Strip */}
@@ -70,7 +70,7 @@ export const PromoBanner = ({ onCheckOffers }) => {
                   <ArrowRight className="w-4 h-4" />
                 </button>
                 <span className="text-xs sm:text-sm text-white/80 font-medium flex items-center gap-1.5">
-                  <span className="text-[#FF9500]">⏰</span> Hurry! Limited time offer
+                  <span className="text-[#FF9500]">⏰</span> Free shipping on orders above ₹999 &bull; Limited time offer
                 </span>
               </div>
             </div>

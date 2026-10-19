@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { Heart, ShoppingBag, Eye, Plus, Minus } from 'lucide-react';
 import { formatPrice } from '@/utils/formatPrice';
-import { getProductColors, getProductSizes } from '@/utils/productOptions';
+import { getProductColors, getProductSizes, getProductAvailableSizes, isProductSizeAvailable } from '@/utils/productOptions';
 import { STORE_CONFIG } from '@/data/constants';
 
 export const ProductCardComponent = ({
@@ -26,9 +26,23 @@ export const ProductCardComponent = ({
   const router = useRouter();
   const [isHovered, setIsHovered] = useState(false);
   const [imageError, setImageError] = useState(false);
+  // Extract colors and sizes
+  const colors = getProductColors(product);
+  const sizes = getProductSizes(product);
+  const availableSizes = getProductAvailableSizes(product);
+
+  const initialSize = externalSize || (availableSizes.length === 1 ? availableSizes[0] : null);
   const [selectedColor, setSelectedColor] = useState(externalColor || null);
-  const [selectedSize, setSelectedSize] = useState(externalSize || null);
+  const [selectedSize, setSelectedSize] = useState(initialSize);
   const [activeColorIdx, setActiveColorIdx] = useState(0);
+
+  useEffect(() => {
+    if (externalSize) {
+      setSelectedSize(externalSize);
+    } else if (availableSizes.length === 1) {
+      setSelectedSize(availableSizes[0]);
+    }
+  }, [externalSize, product?.id]);
 
   if (!product) return null;
 
@@ -39,10 +53,6 @@ export const ProductCardComponent = ({
 
   const primaryImage = allImages[0] || product.image || '/assets/images/prod_backpack.jpg';
   const secondaryImage = allImages.length > 1 ? allImages[1] : null;
-
-  // Extract colors and sizes
-  const colors = getProductColors(product);
-  const sizes = getProductSizes(product);
 
   const isOutOfStock =
     product.stockStatus === 'out_of_stock' ||
@@ -78,6 +88,12 @@ export const ProductCardComponent = ({
 
   const handleSizeClick = (e, size) => {
     e.stopPropagation();
+    if (!isProductSizeAvailable(product, size)) {
+      if (onNotify) {
+        onNotify('info', 'Size Out of Stock ⚠️', `Size ${size} for ${product.name} is currently out of stock.`);
+      }
+      return;
+    }
     const newSize = selectedSize === size ? null : size;
     setSelectedSize(newSize);
     if (onUpdateSize) {
@@ -92,15 +108,22 @@ export const ProductCardComponent = ({
       return;
     }
 
-    if (sizes.length > 0 && !selectedSize) {
+    if (availableSizes.length > 0 && !selectedSize) {
       if (onNotify) {
         onNotify('error', 'Select Size First ⚠️', `Please select a size for ${product.name} before adding to cart.`);
       }
       return;
     }
 
+    if (selectedSize && !isProductSizeAvailable(product, selectedSize)) {
+      if (onNotify) {
+        onNotify('error', 'Size Unavailable ⚠️', `Size ${selectedSize} for ${product.name} is currently out of stock.`);
+      }
+      return;
+    }
+
     const effectiveColor = selectedColor || (colors.length > 0 ? colors[0].name : '');
-    const effectiveSize = selectedSize || (sizes.length === 1 ? sizes[0] : null);
+    const effectiveSize = selectedSize || (availableSizes.length === 1 ? availableSizes[0] : null);
 
     if (onAddToCart) {
       onAddToCart({
@@ -129,9 +152,16 @@ export const ProductCardComponent = ({
       return;
     }
 
-    if (sizes.length > 0 && !selectedSize) {
+    if (availableSizes.length > 0 && !selectedSize) {
       if (onNotify) {
         onNotify('error', 'Select Size First ⚠️', `Please select a size for ${product.name} before updating quantity.`);
+      }
+      return;
+    }
+
+    if (selectedSize && !isProductSizeAvailable(product, selectedSize)) {
+      if (onNotify) {
+        onNotify('error', 'Size Unavailable ⚠️', `Size ${selectedSize} for ${product.name} is currently out of stock.`);
       }
       return;
     }
@@ -285,24 +315,62 @@ export const ProductCardComponent = ({
             </div>
           )}
 
-          {/* Size Pills */}
-          {sizes && sizes.length > 0 && (
+          {/* Size Pills: Only display if product has sizes AND at least one size is available */}
+          {sizes && sizes.length > 0 && availableSizes.length > 0 && (
             <div className="flex items-center gap-1 mt-1 overflow-x-auto no-scrollbar" onClick={(e) => e.stopPropagation()}>
-              {sizes.slice(0, 4).map((size) => {
+              {sizes.map((size) => {
+                const isAvailable = isProductSizeAvailable(product, size);
                 const isSelected = selectedSize === size;
                 return (
                   <button
                     key={size}
                     type="button"
+                    disabled={!isAvailable}
                     onClick={(e) => handleSizeClick(e, size)}
-                    title={isSelected ? `Size ${size} (Selected)` : `Select Size ${size}`}
-                    aria-label={`Select Size ${size}`}
-                    className={`px-2 py-0.5 text-[10px] rounded-md font-medium transition-colors cursor-pointer ${isSelected
-                      ? 'bg-[#1D1D1F] text-white'
-                      : 'bg-[#F5F5F7] text-[#555555] hover:bg-[#E8E8ED]'
-                      }`}
+                    title={
+                      !isAvailable
+                        ? `Size ${size} is out of stock`
+                        : isSelected
+                        ? `Size ${size} (Selected)`
+                        : `Select Size ${size}`
+                    }
+                    aria-label={!isAvailable ? `Size ${size} unavailable` : `Select Size ${size}`}
+                    className={`relative overflow-hidden px-2 py-0.5 text-[10px] rounded-md font-medium transition-all ${
+                      !isAvailable
+                        ? 'bg-black/[0.03] text-[#8E8E93] border border-dashed border-black/15 cursor-not-allowed opacity-55'
+                        : isSelected
+                        ? 'bg-[#1D1D1F] text-white shadow-2xs cursor-pointer'
+                        : 'bg-[#F5F5F7] text-[#555555] hover:bg-[#E8E8ED] hover:text-[#1D1D1F] cursor-pointer'
+                    }`}
                   >
-                    {size}
+                    <span>{size}</span>
+                    {!isAvailable && (
+                      <svg
+                        className="absolute inset-0 w-full h-full pointer-events-none text-black/50"
+                        viewBox="0 0 100 100"
+                        preserveAspectRatio="none"
+                        aria-hidden="true"
+                      >
+                        <line
+                          x1="0"
+                          y1="100"
+                          x2="100"
+                          y2="0"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          vectorEffect="non-scaling-stroke"
+                        />
+                        <line
+                          x1="0"
+                          y1="0"
+                          x2="100"
+                          y2="100"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          vectorEffect="non-scaling-stroke"
+                        />
+                      </svg>
+                    )}
                   </button>
                 );
               })}

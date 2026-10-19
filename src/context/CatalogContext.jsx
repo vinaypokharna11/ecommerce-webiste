@@ -1608,11 +1608,11 @@ export const CatalogProvider = ({ children, initialData = null }) => {
       { id: 'all', name: 'All Products', count: allCount, icon: 'LayoutGrid', color: '#6257FF', accentBg: 'bg-[#F5F3FF]', iconColor: 'text-[#6257FF]' },
       ...categories.map((c) => ({
         ...c,
-        count: catalogStats.countByCat[c.id] || 0,
+        count: catalogStats?.countByCat?.[c.id] || 0,
       })),
     ];
     return catList;
-  }, [categories, products.length, catalogStats.countByCat]);
+  }, [categories, products.length, catalogStats]);
 
   // Featured / Popular products for the home page
   const homePopularProducts = useMemo(() => {

@@ -46,8 +46,8 @@ const CheckoutModal = ({ cartList, products = [], subtotal, promoDiscountAmount,
     name: user?.name || defaultAddr.name || '',
     phone: user?.phone || defaultAddr.phone || '',
     address: defaultAddr.address || '',
-    city: defaultAddr.city || 'Vapi',
-    pincode: defaultAddr.pincode || '396195',
+    city: defaultAddr.city || '',
+    pincode: defaultAddr.pincode || '',
   });
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -103,7 +103,7 @@ const CheckoutModal = ({ cartList, products = [], subtotal, promoDiscountAmount,
       couponCode: couponCode ? String(couponCode).trim().toUpperCase() : '',
       status: 'pending',
       statusLabel: 'Pending',
-      payMethod: payMethod === 'cod' ? 'Cash on Delivery' : 'Online Payment (UPI/Card)',
+      payMethod: 'Cash on Delivery',
       deliveryAddress: `${form.address}, ${form.city} — ${form.pincode}`,
       date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
     };
@@ -246,7 +246,7 @@ const CheckoutModal = ({ cartList, products = [], subtotal, promoDiscountAmount,
                     type="text"
                     value={form.city}
                     onChange={(e) => setForm({ ...form, city: e.target.value })}
-                    placeholder="Vapi"
+                    placeholder="Enter city"
                     className="w-full px-4 py-2.5 rounded-full bg-[#F5F5F7]/60 border border-black/5 text-xs sm:text-sm text-[#1D1D1F] outline-none focus:ring-2 focus:ring-[#1D1D1F] focus:bg-white transition-all"
                   />
                   {errors.city && <p className="text-[11px] text-red-500 mt-1">{errors.city}</p>}
@@ -258,7 +258,7 @@ const CheckoutModal = ({ cartList, products = [], subtotal, promoDiscountAmount,
                     type="text"
                     value={form.pincode}
                     onChange={(e) => setForm({ ...form, pincode: e.target.value })}
-                    placeholder="396195"
+                    placeholder="Enter PIN code"
                     className="w-full px-4 py-2.5 rounded-full bg-[#F5F5F7]/60 border border-black/5 text-xs sm:text-sm text-[#1D1D1F] outline-none focus:ring-2 focus:ring-[#1D1D1F] focus:bg-white transition-all"
                   />
                   {errors.pincode && <p className="text-[11px] text-red-500 mt-1">{errors.pincode}</p>}
@@ -306,8 +306,17 @@ const CheckoutModal = ({ cartList, products = [], subtotal, promoDiscountAmount,
                     const availableSizes = getProductSizes(fullProduct);
                     const itemSize = (availableSizes.length > 0) ? (item.selectedSize || availableSizes[0]) : '';
                     return (
-                      <div key={item.id} className="pt-1.5 flex items-center justify-between text-xs">
-                        <div className="min-w-0 pr-2">
+                      <div key={item.id} className="pt-2 flex items-center gap-3 text-xs">
+                        <div className="w-12 h-12 rounded-xl bg-[#F5F5F7] overflow-hidden shrink-0 relative border border-black/5">
+                          <Image
+                            src={item.image || fullProduct?.image || fullProduct?.images?.[0] || '/assets/images/prod_headphones.jpg'}
+                            alt={item.name}
+                            fill
+                            sizes="48px"
+                            className="object-cover"
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0 pr-2">
                           <p className="font-bold text-[#1D1D1F] truncate">{item.name}</p>
                           <div className="flex items-center gap-1.5 text-[11px] text-[#777777] mt-0.5 flex-wrap">
                             <span>Qty: {item.quantity}</span>
@@ -354,7 +363,6 @@ const CheckoutModal = ({ cartList, products = [], subtotal, promoDiscountAmount,
                 <div className="space-y-2">
                   {[
                     { id: 'cod', title: 'Cash on Delivery (COD)', desc: 'Pay when your package arrives at your door' },
-                    { id: 'upi', title: 'UPI / Card / NetBanking', desc: 'Instant confirmation via QR / Gateway' },
                   ].map((m) => (
                     <label
                       key={m.id}
@@ -444,7 +452,7 @@ const CheckoutModal = ({ cartList, products = [], subtotal, promoDiscountAmount,
 
             <h3 className="text-xl font-extrabold text-[#1D1D1F]">Order Placed Successfully! 🎉</h3>
             <p className="text-xs text-[#777777] max-w-xs leading-relaxed">
-              Order <strong className="text-[#1D1D1F]">{orderId}</strong> has been saved. We will notify you on WhatsApp when it ships!
+              Your order is confirmed and you will get payment details soon.
             </p>
           </div>
         )}
@@ -773,8 +781,8 @@ export const CartPage = ({
                             </div>
                             <h3 className={`text-xs sm:text-sm font-bold mt-0.5 ${isUnavailable || isOutOfStock ? 'text-rose-700 line-through' : 'text-[#1D1D1F]'}`}>{item.name}</h3>
 
-                            {/* Size Option Selector (Only for Clothing & Shoes) */}
-                            {availableSizes.length > 0 && (
+                            {/* Size Option Selector (Only for Clothing & Shoes with at least one available size) */}
+                            {availableSizes.length > 0 && availableSizes.some((sz) => isProductSizeAvailable(fullProduct, sz)) && (
                               <div className="mt-2 flex items-center gap-1.5 flex-wrap">
                                 <span className="text-[11px] font-bold text-[#777777] uppercase tracking-wider">
                                   Size:
@@ -814,6 +822,15 @@ export const CartPage = ({
                                               y1="100"
                                               x2="100"
                                               y2="0"
+                                              stroke="currentColor"
+                                              strokeWidth="1.5"
+                                              vectorEffect="non-scaling-stroke"
+                                            />
+                                            <line
+                                              x1="0"
+                                              y1="0"
+                                              x2="100"
+                                              y2="100"
                                               stroke="currentColor"
                                               strokeWidth="1.5"
                                               vectorEffect="non-scaling-stroke"

@@ -25,17 +25,7 @@ export const NAV_ITEMS = [
   { id: 'profile', label: 'Profile', icon: 'User' },
 ];
 
-export const CATALOG_CATEGORIES = [
-  { id: 'all', name: 'All Products', count: 0, icon: 'LayoutGrid', image: '/assets/images/nakoda/hero.jpg' },
-  { id: 'bags-luggage', name: 'Bags & Trolleys', count: 0, icon: 'Briefcase', image: '/assets/images/prod_trolley.jpg' },
-  { id: 'jewelry', name: 'Jewelry & Watches', count: 0, icon: 'Sparkles', image: '/assets/images/nakoda/hero.jpg' },
-  { id: 'food-grocery', name: 'Papad & Gourmet', count: 0, icon: 'Utensils', image: '/assets/images/prod_papad.jpg' },
-  { id: 'undergarments', name: 'Undergarments', count: 0, icon: 'Layers', image: '/assets/images/prod_innerwear.jpg' },
-  { id: 'clothing', name: 'Fashion & Outfits', count: 0, icon: 'Shirt', image: '/assets/images/prod_denim_jacket.jpg' },
-  { id: 'footwear', name: 'Footwear & Shoes', count: 0, icon: 'Footprints', image: '/assets/images/prod_sneakers.jpg' },
-  { id: 'electronics', name: 'Electronics', count: 0, icon: 'Headphones', image: '/assets/images/prod_headphones.jpg' },
-  { id: 'home-living', name: 'Home & Living', count: 0, icon: 'Armchair', image: '/assets/images/hero_plant.jpg' },
-];
+export const CATALOG_CATEGORIES = [];
 
 export const CATEGORIES = CATALOG_CATEGORIES;
 
@@ -47,11 +37,7 @@ export const DEFAULT_EXPLORE_SECTION = {
     { id: 'bags-luggage', name: 'Bags & Trolleys', categoryId: 'bags-luggage', image: '/assets/images/prod_trolley.jpg', badge: 'Popular', order: 1, isActive: true },
     { id: 'jewelry', name: 'Jewelry & Watches', categoryId: 'jewelry', image: '/assets/images/nakoda/hero.jpg', badge: 'Trending', order: 2, isActive: true },
     { id: 'food-grocery', name: 'Papad & Gourmet', categoryId: 'food-grocery', image: '/assets/images/prod_papad.jpg', badge: 'Authentic', order: 3, isActive: true },
-    { id: 'undergarments', name: 'Undergarments', categoryId: 'undergarments', image: '/assets/images/prod_innerwear.jpg', badge: 'Essential', order: 4, isActive: true },
-    { id: 'electronics', name: 'Electronics', categoryId: 'electronics', image: '/assets/images/prod_headphones.jpg', badge: 'Audio', order: 5, isActive: true },
-    { id: 'clothing', name: 'Fashion & Outfits', categoryId: 'clothing', image: '/assets/images/prod_denim_jacket.jpg', badge: 'New', order: 6, isActive: true },
-    { id: 'footwear', name: 'Footwear & Shoes', categoryId: 'footwear', image: '/assets/images/prod_sneakers.jpg', badge: 'Comfort', order: 7, isActive: true },
-    { id: 'home-living', name: 'Home & Living', categoryId: 'home-living', image: '/assets/images/hero_plant.jpg', badge: 'Decor', order: 8, isActive: true },
+    { id: 'home-living', name: 'Home & Living', categoryId: 'home-living', image: '/assets/images/hero_plant.jpg', badge: 'Decor', order: 4, isActive: true },
   ],
 };
 

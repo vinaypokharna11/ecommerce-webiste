@@ -6,7 +6,7 @@ import { ShoppingBag, Eye, Star, Heart, ArrowRight } from 'lucide-react';
 import Image from 'next/image';
 import { STORE_CONFIG } from '@/data/constants';
 import { formatPrice } from '@/utils/formatPrice';
-import { getProductSizes } from '@/utils/productOptions';
+import { getProductSizes, getProductAvailableSizes } from '@/utils/productOptions';
 
 export const RecentlyViewed = ({
   products = [],
@@ -107,15 +107,15 @@ export const RecentlyViewed = ({
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      const sizes = getProductSizes(product);
-                      if (sizes.length > 0) {
+                      const availSizes = getProductAvailableSizes(product);
+                      if (availSizes.length > 0) {
                         onQuickView && onQuickView(product);
                         return;
                       }
                       onAddToCart && onAddToCart(product);
                     }}
                     className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#1D1D1F] text-white flex items-center justify-center hover:bg-black transition-colors cursor-pointer shrink-0"
-                    title={getProductSizes(product).length > 0 ? "Select Size in Quick View" : "Add to Cart"}
+                    title={getProductAvailableSizes(product).length > 0 ? "Select Size in Quick View" : "Add to Cart"}
                   >
                     <ShoppingBag className="w-3.5 h-3.5" />
                   </button>

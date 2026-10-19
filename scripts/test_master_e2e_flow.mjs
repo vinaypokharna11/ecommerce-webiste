@@ -29,7 +29,7 @@ import Order from '../src/models/Order.js';
 import User from '../src/models/User.js';
 import Cart from '../src/models/Cart.js';
 
-const BASE_URL = 'http://localhost:3000';
+const BASE_URL = 'http://127.0.0.1:3000';
 
 let totalTests = 0;
 let passedTests = 0;

@@ -488,10 +488,34 @@ export const ContactInquirePage = ({
                     </div>
                     <div className="min-w-0">
                       <p className="text-[10px] font-bold text-[#777777] uppercase tracking-wider">Email Us Directly</p>
-                      <a href={`mailto:${storeConfig.email || 'vinaypokharna36@gmail.com'}`} className="text-xs sm:text-sm font-extrabold text-[#1D1D1F] hover:text-[#0071E3] truncate block">
-                        {storeConfig.email || 'vinaypokharna36@gmail.com'}
+                      <a href={`mailto:${storeConfig?.email || 'vinaypokharna36@gmail.com'}`} className="text-xs sm:text-sm font-extrabold text-[#1D1D1F] hover:text-[#0071E3] truncate block">
+                        {storeConfig?.email || 'vinaypokharna36@gmail.com'}
                       </a>
                     </div>
+                  </div>
+
+                  {/* WhatsApp & Phone Support */}
+                  <div className="p-3 sm:p-3.5 rounded-xl sm:rounded-2xl bg-[#F5F5F7]/60 border border-black/5 flex items-center justify-between gap-2.5 sm:gap-3">
+                    <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                      <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-[#25D366]/20 text-[#25D366] flex items-center justify-center shrink-0">
+                        <MessageCircle className="w-4 h-4 text-[#25D366]" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-bold text-[#777777] uppercase tracking-wider">WhatsApp & Phone Support</p>
+                        <p className="text-xs sm:text-sm font-extrabold text-[#1D1D1F] truncate">
+                          {storeConfig?.phone || STORE_CONFIG?.phone || '+91 94271 18512'}
+                        </p>
+                      </div>
+                    </div>
+                    <a
+                      href={createHelpWhatsAppUrl(storeConfig?.whatsappNumber || STORE_CONFIG?.whatsappNumber)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3 py-1.5 rounded-full bg-[#25D366] text-white text-xs font-bold hover:bg-[#20bd5a] transition-colors shrink-0 flex items-center gap-1.5"
+                    >
+                      <MessageCircle className="w-3.5 h-3.5" />
+                      <span>Chat</span>
+                    </a>
                   </div>
 
                   {/* Retail Store Address */}

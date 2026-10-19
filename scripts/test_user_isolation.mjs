@@ -35,6 +35,14 @@ async function run() {
   const userBEmail = `user_b_${timestamp}@example.com`;
   const password = 'Password@123';
 
+  // Fetch valid products from catalog for relational testing
+  const prodsRes = await fetch(`${BASE_URL}/api/products`);
+  const prodsData = await prodsRes.json();
+  const catalogList = prodsData.products || [];
+  const prodId1 = catalogList[0]?.id || 'prod-1';
+  const prodId2 = catalogList[1]?.id || 'prod-2';
+  const prodId3 = catalogList[2]?.id || 'prod-3';
+
   // ─── TEST 1: Guest Behavior ───
   console.log('1️⃣  Testing Guest Unauthenticated Access:');
   const guestWishlistRes = await fetch(`${BASE_URL}/api/wishlist`);
@@ -46,7 +54,7 @@ async function run() {
   const guestWishlistPost = await fetch(`${BASE_URL}/api/wishlist`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ productId: 'prod-1' }),
+    body: JSON.stringify({ productId: prodId1 }),
   });
   assert(guestWishlistPost.status === 401, 'Guest POST /api/wishlist blocked with 401');
 
@@ -63,8 +71,8 @@ async function run() {
 
   // Add Product 1 and Product 2 to User A Cart
   const cartItemsA = [
-    { productId: 'prod-1', name: 'Wireless Headphones', price: 2999, quantity: 2 },
-    { productId: 'prod-2', name: 'Smart Watch', price: 4999, quantity: 1 },
+    { productId: prodId1, name: 'Wireless Headphones', price: 2999, quantity: 2 },
+    { productId: prodId2, name: 'Smart Watch', price: 4999, quantity: 1 },
   ];
   const syncCartARes = await fetch(`${BASE_URL}/api/cart`, {
     method: 'POST',
@@ -84,7 +92,7 @@ async function run() {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${tokenA}`,
     },
-    body: JSON.stringify({ productId: 'prod-1' }),
+    body: JSON.stringify({ productId: prodId1 }),
   });
   const wishAData = await wishARes.json();
   assert(wishAData.success, 'User A saved prod-1 to wishlist');
@@ -130,7 +138,7 @@ async function run() {
   // ─── TEST 4: User B adds Product 3 to Cart ───
   console.log('\n4️⃣  User B Adds Product 3 to Cart:');
   const cartItemsB = [
-    { productId: 'prod-3', name: 'Premium Backpack', price: 1499, quantity: 3 },
+    { productId: prodId3, name: 'Premium Backpack', price: 1499, quantity: 3 },
   ];
   const syncCartBRes = await fetch(`${BASE_URL}/api/cart`, {
     method: 'POST',
@@ -160,9 +168,9 @@ async function run() {
   });
   const restoredCartAData = await restoredCartARes.json();
   const restoredItems = restoredCartAData.cart?.items || [];
-  const hasProd1 = restoredItems.some((it) => it.productId === 'prod-1');
-  const hasProd2 = restoredItems.some((it) => it.productId === 'prod-2');
-  const hasProd3 = restoredItems.some((it) => it.productId === 'prod-3');
+  const hasProd1 = restoredItems.some((it) => it.productId === prodId1);
+  const hasProd2 = restoredItems.some((it) => it.productId === prodId2);
+  const hasProd3 = restoredItems.some((it) => it.productId === prodId3);
 
   assert(hasProd1 && hasProd2, 'User A previous cart items (Product 1 & 2) restored correctly');
   assert(!hasProd3, 'User B item (Product 3) is NOT in User A cart (Isolation Guaranteed)');
@@ -174,7 +182,7 @@ async function run() {
   const restoredWishAData = await restoredWishARes.json();
   const restoredWishItems = restoredWishAData.wishlist || [];
   assert(
-    restoredWishItems.some((w) => w.productId === 'prod-1'),
+    restoredWishItems.some((w) => w.productId === prodId1),
     'User A wishlist still contains Product 1 after re-login'
   );
 
@@ -182,7 +190,7 @@ async function run() {
   console.log('\n6️⃣  Testing Cart Update & Clearing:');
   // Update quantity of prod-1 to 5
   const updatedItemsA = [
-    { productId: 'prod-1', name: 'Wireless Headphones', price: 2999, quantity: 5 },
+    { productId: prodId1, name: 'Wireless Headphones', price: 2999, quantity: 5 },
   ];
   const updateRes = await fetch(`${BASE_URL}/api/cart`, {
     method: 'POST',
@@ -216,7 +224,7 @@ async function run() {
   );
 
   // Remove from Wishlist
-  const delWishRes = await fetch(`${BASE_URL}/api/wishlist?productId=prod-1`, {
+  const delWishRes = await fetch(`${BASE_URL}/api/wishlist?productId=${prodId1}`, {
     method: 'DELETE',
     headers: { Authorization: `Bearer ${freshTokenA}` },
   });

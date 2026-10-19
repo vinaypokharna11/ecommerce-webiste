@@ -248,7 +248,7 @@ export const QuickViewModal = ({
       }
       return;
     }
-    if (allSizes.length > 0 && !selectedSize) {
+    if (availableSizes.length > 0 && !selectedSize) {
       setShowSizeWarning(true);
       setTimeout(() => setShowSizeWarning(false), 3500);
       if (onNotify) {
@@ -454,7 +454,7 @@ export const QuickViewModal = ({
                   </div>
 
                   {/* Sizing Selection (Clothing & Footwear Only) */}
-                  {allSizes.length > 0 && (
+                  {allSizes.length > 0 && availableSizes.length > 0 && (
                     <div className="space-y-1.5 sm:space-y-2 pt-2 border-t border-black/[0.06]">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-sans font-semibold text-[#1D1D1F]">
@@ -529,6 +529,15 @@ export const QuickViewModal = ({
                                     y1="100"
                                     x2="100"
                                     y2="0"
+                                    stroke="currentColor"
+                                    strokeWidth="1.5"
+                                    vectorEffect="non-scaling-stroke"
+                                  />
+                                  <line
+                                    x1="0"
+                                    y1="0"
+                                    x2="100"
+                                    y2="100"
                                     stroke="currentColor"
                                     strokeWidth="1.5"
                                     vectorEffect="non-scaling-stroke"
