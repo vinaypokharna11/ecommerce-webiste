@@ -83,3 +83,4 @@ Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-eval' 'un
 * Input sanitation enforced using Zod schemas (`zod@4.6.7`).
 * Database interactions utilize Mongoose parameterized query builders and safe document schemas, preventing SQL/NoSQL injection.
 * JSON-LD scripts on product pages escape angle brackets (`JSON.stringify(jsonLd).replace(/</g, '\\u003c')`) preventing script breakout XSS.
+

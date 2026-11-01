@@ -52,3 +52,4 @@ Build benchmarks before and after migration:
 
 ## 4. Error State & Resilience
 * Added `src/app/error.jsx` providing a resilient boundary that catches React rendering errors, renders a friendly interface, and allows the customer to recover with a single click rather than encountering a broken white screen.
+

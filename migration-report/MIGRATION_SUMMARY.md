@@ -86,3 +86,4 @@ This document records the migration of the Nakoda Store / ShopEase e-commerce pl
 | `src/app/product/[id]/page.jsx` | Modified | Awaited async `params`. |
 | `src/components/home/PromoBanner.jsx` | Modified | Added responsive `sizes` attribute to fill image. |
 | 14 Dynamic Route Handler Files | Modified | Added asynchronous `await params` resolution. |
+

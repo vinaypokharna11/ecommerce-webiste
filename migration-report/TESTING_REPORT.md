@@ -41,3 +41,4 @@ The migration was validated using automated end-to-end browser testing (Playwrig
    - Direct navigation to `/admin` triggers Next.js 16 `src/proxy.js` Edge interception.
    - Unauthorized requests are redirected to `/admin/login?redirect=%2Fadmin`.
    - Admin login validates credentials server-side and issues cryptographic HMAC SHA-256 session cookie.
+

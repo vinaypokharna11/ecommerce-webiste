@@ -64,3 +64,4 @@ If reverting files manually on the current branch:
 * **Zero Schema Migrations:** No destructive database migrations or schema alterations were performed during this migration.
 * **Storage Safety:** Both MongoDB collections and the fallback `src/data/db.json` store remain completely compatible with both Next.js 14 and Next.js 16.
 * **Customer Data Integrity:** Customer accounts, orders, reviews, and inquiries require no rollback actions.
+
