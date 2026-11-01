@@ -15,7 +15,7 @@ export async function POST(request, { params }) {
       return unauthorizedResponse('Please sign in to vote on reviews');
     }
 
-    const { id: reviewId } = params;
+    const { id: reviewId } = await params;
     if (!reviewId) {
       return NextResponse.json({ success: false, error: 'Review ID is required' }, { status: 400 });
     }

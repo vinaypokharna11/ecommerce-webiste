@@ -12,7 +12,7 @@ export async function PUT(request, { params }) {
       return unauthorizedResponse();
     }
 
-    const { id } = params;
+    const { id } = await params;
     const body = await request.json();
     const updated = await updateCategory(id, body);
 
@@ -33,7 +33,7 @@ export async function DELETE(request, { params }) {
       return unauthorizedResponse();
     }
 
-    const { id } = params;
+    const { id } = await params;
     const deleted = await deleteCategory(id);
 
     if (!deleted) {

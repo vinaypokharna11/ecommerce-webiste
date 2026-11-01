@@ -5,7 +5,8 @@ export const metadata = {
   description: 'Explore the complete jewelry and fashion accessories catalog at Nakoda Imitation.',
 };
 
-export default function CatalogRoutePage({ searchParams }) {
-  const category = searchParams?.category;
+export default async function CatalogRoutePage({ searchParams }) {
+  const resolvedParams = await searchParams;
+  const category = resolvedParams?.category;
   redirect(category ? `/?tab=catalog&category=${encodeURIComponent(category)}` : '/?tab=catalog');
 }

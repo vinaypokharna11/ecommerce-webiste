@@ -100,7 +100,7 @@ export default async function ProductDetailPage({ params }) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }}
       />
       <Navbar />
-      <TrackProductView productId={product.id || params.id} />
+      <TrackProductView productId={product.id || resolvedParams?.id} />
 
       <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
         {/* Breadcrumb / Back Link */}

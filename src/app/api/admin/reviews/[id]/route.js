@@ -15,7 +15,7 @@ export async function PATCH(request, { params }) {
       return unauthorizedResponse('Administrative access required');
     }
 
-    const { id: reviewId } = params;
+    const { id: reviewId } = await params;
     const { status } = await request.json();
 
     const result = await moderateReviewAdminDB(reviewId, status);
@@ -44,7 +44,7 @@ export async function DELETE(request, { params }) {
       return unauthorizedResponse('Administrative access required');
     }
 
-    const { id: reviewId } = params;
+    const { id: reviewId } = await params;
     const result = await deleteReviewDB(reviewId, null, true);
 
     return NextResponse.json({

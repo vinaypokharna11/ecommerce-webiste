@@ -17,7 +17,8 @@ export async function PATCH(request, { params }) {
       return unauthorizedResponse();
     }
 
-    const rawId = params?.id || '';
+    const resolvedParams = await params;
+    const rawId = resolvedParams?.id || '';
     const id = decodeURIComponent(rawId).trim();
     if (!id) {
       return NextResponse.json({ success: false, error: 'Product ID is required' }, { status: 400 });

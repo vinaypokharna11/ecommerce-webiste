@@ -18,7 +18,7 @@ export async function POST(request, { params }) {
       return unauthorizedResponse('Administrator / Seller authorization required');
     }
 
-    const { id } = params;
+    const { id } = await params;
     if (!id) {
       return NextResponse.json({ success: false, error: 'Order ID is required' }, { status: 400 });
     }

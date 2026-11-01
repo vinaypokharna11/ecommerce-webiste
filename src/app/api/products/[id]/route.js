@@ -7,7 +7,8 @@ export const runtime = 'nodejs';
 
 export async function GET(request, { params }) {
   try {
-    const rawId = params?.id || '';
+    const resolvedParams = await params;
+    const rawId = resolvedParams?.id || '';
     const id = decodeURIComponent(rawId).trim();
     if (!id) {
       return NextResponse.json({ success: false, error: 'Product ID is required' }, { status: 400 });
@@ -43,7 +44,8 @@ export async function PUT(request, { params }) {
       return unauthorizedResponse();
     }
 
-    const rawId = params?.id || '';
+    const resolvedParams = await params;
+    const rawId = resolvedParams?.id || '';
     const id = decodeURIComponent(rawId).trim();
     if (!id) {
       return NextResponse.json({ success: false, error: 'Product ID is required' }, { status: 400 });
@@ -70,7 +72,8 @@ export async function DELETE(request, { params }) {
       return unauthorizedResponse();
     }
 
-    const rawId = params?.id || '';
+    const resolvedParams = await params;
+    const rawId = resolvedParams?.id || '';
     const id = decodeURIComponent(rawId).trim();
     if (!id) {
       return NextResponse.json({ success: false, error: 'Product ID is required' }, { status: 400 });

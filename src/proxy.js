@@ -46,10 +46,10 @@ async function isValidAdminToken(token) {
 }
 
 /**
- * Edge Middleware for Server-Side Route Protection
+ * Next.js 16 Proxy for Server-Side Route Protection
  * Cryptographically validates admin credentials before allowing access to /admin routes.
  */
-export async function middleware(request) {
+export async function proxy(request) {
   const { pathname } = request.nextUrl;
 
   // Protect /admin and any sub-routes, except the login page
@@ -70,6 +70,9 @@ export async function middleware(request) {
 
   return NextResponse.next();
 }
+
+// Support fallback naming
+export const middleware = proxy;
 
 export const config = {
   matcher: ['/admin/:path*'],

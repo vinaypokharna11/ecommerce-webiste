@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET(request, { params }) {
   try {
-    const { id } = params;
+    const { id } = await params;
     if (!id) {
       return NextResponse.json({ success: false, error: 'Order ID is required' }, { status: 400 });
     }
@@ -47,7 +47,7 @@ export async function GET(request, { params }) {
  */
 export async function POST(request, { params }) {
   try {
-    const { id } = params;
+    const { id } = await params;
     if (!id) {
       return NextResponse.json({ success: false, error: 'Order ID is required' }, { status: 400 });
     }

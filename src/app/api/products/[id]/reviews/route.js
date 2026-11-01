@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET(request, { params }) {
   try {
-    const { id: productId } = params;
+    const { id: productId } = await params;
     if (!productId) {
       return NextResponse.json({ success: false, error: 'Product ID is required' }, { status: 400 });
     }
@@ -63,7 +63,7 @@ export async function POST(request, { params }) {
       return unauthorizedResponse('Please sign in to write a review');
     }
 
-    const { id: productId } = params;
+    const { id: productId } = await params;
     if (!productId) {
       return NextResponse.json({ success: false, error: 'Product ID is required' }, { status: 400 });
     }

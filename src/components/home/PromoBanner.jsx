@@ -82,6 +82,7 @@ export const PromoBanner = ({ onCheckOffers }) => {
                   src="/assets/images/prod_trolley.jpg"
                   alt="Special Trolley Bag Exchange Offer"
                   fill
+                  sizes="(max-width: 640px) 256px, 320px"
                   className="object-cover"
                 />
                 <div className="absolute bottom-3 left-3 right-3 px-3 py-1.5 rounded-xl bg-black/60 backdrop-blur-md border border-white/10 text-center">
